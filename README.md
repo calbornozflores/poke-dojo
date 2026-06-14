@@ -46,7 +46,7 @@ Track your accuracy across both game types, your personal history, and compare w
 
 ```bash
 # 1. Clone the repo
-git clone <repo-url>
+git clone https://github.com/calbornozflores/poke-dojo.git
 cd poke-dojo
 
 # 2. Install dependencies (creates .venv automatically)
@@ -66,7 +66,7 @@ uv run uvicorn app.main:app --reload
 
 Open **http://localhost:8000** in your browser.
 
-**First run:** The app detects an empty database and automatically fetches all 1025 Pokémon from PokéAPI in the background (~30–40 minutes due to polite rate limiting). You'll see the loading screen with a progress bar. Subsequent starts are instant.
+**First run:** The app detects an empty database and automatically fetches all 1025 Pokémon from PokéAPI in the background (~3–4 minutes). You'll see the loading screen with a progress bar. Subsequent starts are instant.
 
 **Optional — pre-fetch before starting the server:**
 ```bash

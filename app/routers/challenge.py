@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -23,12 +23,20 @@ class TrainResponse(BaseModel):
 
 
 @router.get("/status/{username}", response_model=UnlockStatus)
-def challenge_status(username: str, db: Session = Depends(get_db)):
+def challenge_status(
+    username: str,
+    game_type: str = Query(default="name_guess", pattern="^(name_guess|number_guess)$"),
+    db: Session = Depends(get_db),
+):
     user = db.query(User).filter(User.username == username).first()
     if not user:
         return UnlockStatus(unlocked=False, games_played=0, games_needed=CHALLENGE_THRESHOLD)
 
-    games_played = db.query(GameResult).filter(GameResult.user_id == user.id).count()
+    games_played = (
+        db.query(GameResult)
+        .filter(GameResult.user_id == user.id, GameResult.game_type == game_type)
+        .count()
+    )
     return UnlockStatus(
         unlocked=games_played >= CHALLENGE_THRESHOLD,
         games_played=games_played,

@@ -24,8 +24,12 @@ def _upsert_user(username: str, db: Session) -> User:
     return user
 
 
-def _game_count(user_id: int, db: Session) -> int:
-    return db.query(GameResult).filter(GameResult.user_id == user_id).count()
+def _game_count(user_id: int, game_type: str, db: Session) -> int:
+    return (
+        db.query(GameResult)
+        .filter(GameResult.user_id == user_id, GameResult.game_type == game_type)
+        .count()
+    )
 
 
 class StartRequest(BaseModel):
@@ -62,7 +66,7 @@ class SubmitResponse(BaseModel):
 @router.post("/start", response_model=StartResponse)
 def start_game(req: StartRequest, db: Session = Depends(get_db)):
     user = _upsert_user(req.username, db)
-    games_played = _game_count(user.id, db)
+    games_played = _game_count(user.id, req.game_type, db)
     challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
 
     if req.challenge_mode and challenge_unlocked:
@@ -131,10 +135,10 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
     db.add(result)
     db.commit()
 
-    games_played = _game_count(user.id, db)
+    games_played = _game_count(user.id, req.game_type, db)
     challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
 
-    # Retrain model every 10 new results once challenge mode is available
+    # Retrain model every 10 new results of this game type once challenge is active
     if challenge_unlocked and games_played % 10 == 0:
         xgboost_model.train(user.id, db)
 

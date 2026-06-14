@@ -8,10 +8,10 @@
   <aside class="sidebar">
     <div class="game-selector">
       <button class="mode-btn active" id="btn-game1" data-game="name_guess">
-        🏷️ Name It
+        🌳 Name It
       </button>
       <button class="mode-btn" id="btn-game2" data-game="number_guess">
-        🔢 Guess Number
+        📱 Guess Number
       </button>
     </div>
 
@@ -132,6 +132,8 @@
 
   function switchGame(type) {
     currentGame = type;
+    challengeMode = false;
+    challengeCheckbox.checked = false;
     btn1.classList.toggle("active", type === "name_guess");
     btn2.classList.toggle("active", type === "number_guess");
     document.getElementById("game1-input-area").classList.toggle("hidden", type !== "name_guess");
