@@ -204,6 +204,54 @@ a:hover { color: var(--accent-hover); }
   border-radius: 999px;
   transition: width 0.4s ease;
 }
+/* ── Music player ── */
+.music-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+}
+.music-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+.music-icon { font-size: 1rem; }
+.music-title {
+  flex: 1;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.music-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+  line-height: 1;
+}
+.music-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+.music-nav {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 0.3rem;
+  cursor: pointer;
+  transition: all .15s;
+}
+.music-nav:hover { color: var(--text); border-color: var(--accent); }
+
 .challenge-toggle {
   display: flex;
   align-items: center;

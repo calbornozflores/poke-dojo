@@ -30,6 +30,19 @@
       </div>
     </div>
 
+    <!-- Music player -->
+    <div class="music-box" id="music-box">
+      <div class="music-header">
+        <span class="music-icon">🎵</span>
+        <span class="music-title" id="music-track-name">Pallet Town</span>
+        <button id="music-toggle" class="music-btn" title="Mute/Unmute">🔊</button>
+      </div>
+      <div class="music-controls">
+        <button class="music-nav" id="music-prev" title="Previous track">&#9664;</button>
+        <button class="music-nav" id="music-next" title="Next track">&#9654;</button>
+      </div>
+    </div>
+
     <div id="challenge-section" class="challenge-box hidden">
       <div class="challenge-locked" id="challenge-locked">
         <p>Challenge Mode unlocks after <span id="games-needed">20</span> games</p>
@@ -106,6 +119,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 <script src="/static/js/game1.js"></script>
 <script src="/static/js/game2.js"></script>
 <script>
@@ -148,6 +162,15 @@
 
   document.getElementById("name-input").addEventListener("keydown", e => { if (e.key === "Enter") submitBtn.click(); });
   document.getElementById("number-input").addEventListener("keydown", e => { if (e.key === "Enter") submitBtn.click(); });
+
+  // Global Enter: after result is shown, Enter advances to next Pokémon
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    if (!resultZone.classList.contains("hidden")) {
+      e.preventDefault();
+      nextBtn.click();
+    }
+  });
 
   async function loadNext() {
     showLoading();
@@ -278,5 +301,241 @@
 
   // Initial load
   loadNext();
+
+  // ── Music player ─────────────────────────────────────────────────────────
+  // Pokémon Red/Blue OST synthesised with Tone.js (square + triangle waves)
+  const TRACKS = [
+    { name: "Pallet Town",        fn: playPalletTown   },
+    { name: "Route 1",            fn: playRoute1        },
+    { name: "Pokémon Center",     fn: playPokemonCenter },
+    { name: "Wild Battle",        fn: playWildBattle    },
+    { name: "Gym Leader Battle",  fn: playGymLeader     },
+  ];
+  let trackIdx = 0;
+  let musicMuted = false;
+  let currentPart = null;
+  let musicStarted = false;
+
+  // Game Boy square-wave synth
+  function makeSynth() {
+    return new Tone.Synth({
+      oscillator: { type: "square" },
+      envelope: { attack: 0.005, decay: 0.1, sustain: 0.6, release: 0.1 },
+      volume: -14,
+    }).toDestination();
+  }
+
+  // Softer triangle-wave for bass
+  function makeBass() {
+    return new Tone.Synth({
+      oscillator: { type: "triangle" },
+      envelope: { attack: 0.01, decay: 0.05, sustain: 0.8, release: 0.1 },
+      volume: -18,
+    }).toDestination();
+  }
+
+  function stopMusic() {
+    if (currentPart) {
+      currentPart.forEach(p => { try { p.stop(); p.dispose(); } catch {} });
+      currentPart = null;
+    }
+    Tone.Transport.stop();
+    Tone.Transport.cancel();
+  }
+
+  function startTrack(idx) {
+    stopMusic();
+    trackIdx = ((idx % TRACKS.length) + TRACKS.length) % TRACKS.length;
+    document.getElementById("music-track-name").textContent = TRACKS[trackIdx].name;
+    if (!musicMuted) TRACKS[trackIdx].fn();
+  }
+
+  function toggleMute() {
+    musicMuted = !musicMuted;
+    document.getElementById("music-toggle").textContent = musicMuted ? "🔇" : "🔊";
+    if (musicMuted) {
+      stopMusic();
+    } else {
+      TRACKS[trackIdx].fn();
+    }
+  }
+
+  document.getElementById("music-toggle").addEventListener("click", () => {
+    Tone.start().then(toggleMute);
+  });
+  document.getElementById("music-prev").addEventListener("click", () => {
+    Tone.start().then(() => startTrack(trackIdx - 1));
+  });
+  document.getElementById("music-next").addEventListener("click", () => {
+    Tone.start().then(() => startTrack(trackIdx + 1));
+  });
+
+  // Auto-start on first user interaction
+  document.addEventListener("click", function startOnce() {
+    if (!musicStarted) {
+      musicStarted = true;
+      Tone.start().then(() => TRACKS[trackIdx].fn());
+    }
+    document.removeEventListener("click", startOnce);
+  }, { once: true });
+
+  // ── Track definitions ─────────────────────────────────────────────────────
+  // Each track is two looping Tone.Parts: melody (square) + bass (triangle)
+  // Notes use scientific pitch notation, "0" = rest
+
+  function schedulePart(synth, notes, loop) {
+    let time = 0;
+    const events = [];
+    for (const [note, dur] of notes) {
+      if (note !== "0") events.push([time, { note, dur }]);
+      time += Tone.Time(dur).toSeconds();
+    }
+    const part = new Tone.Part((t, v) => {
+      synth.triggerAttackRelease(v.note, v.dur, t);
+    }, events);
+    part.loop = loop;
+    part.loopEnd = time;
+    part.start(0);
+    return { part, synth };
+  }
+
+  function runParts(parts, bpm) {
+    Tone.Transport.bpm.value = bpm;
+    Tone.Transport.start();
+    currentPart = parts.map(p => ({
+      stop: () => { p.part.stop(); p.part.dispose(); p.synth.dispose(); },
+      dispose: () => {},
+    }));
+  }
+
+  // ── Pallet Town ──────────────────────────────────────────────────────────
+  function playPalletTown() {
+    const bpm = 76;
+    const mel = makeSynth();
+    const bas = makeBass();
+    // Melody (simplified lead)
+    const melody = [
+      ["D5","8n"],["0","16n"],["D5","16n"],["E5","8n"],["D5","8n"],["B4","8n"],["D5","4n"],
+      ["A4","8n"],["0","16n"],["A4","16n"],["B4","8n"],["A4","8n"],["F#4","8n"],["A4","4n"],
+      ["D5","8n"],["0","16n"],["D5","16n"],["E5","8n"],["D5","8n"],["B4","8n"],["D5","8n"],["A5","8n"],
+      ["G5","4n"],["F#5","4n"],["0","4n"],
+    ];
+    // Bass line
+    const bass = [
+      ["D3","4n"],["F#3","4n"],["A3","4n"],["D3","4n"],
+      ["A2","4n"],["C#3","4n"],["E3","4n"],["A2","4n"],
+      ["D3","4n"],["F#3","4n"],["A3","4n"],["D3","4n"],
+      ["G3","4n"],["B3","4n"],["0","4n"],["0","4n"],
+    ];
+    const p1 = schedulePart(mel, melody, true);
+    const p2 = schedulePart(bas, bass, true);
+    runParts([p1, p2], bpm);
+  }
+
+  // ── Route 1 ──────────────────────────────────────────────────────────────
+  function playRoute1() {
+    const bpm = 140;
+    const mel = makeSynth();
+    const bas = makeBass();
+    const melody = [
+      ["A4","8n"],["A4","16n"],["B4","16n"],["A4","8n"],["G4","8n"],["E4","4n"],
+      ["E4","8n"],["E4","16n"],["F#4","16n"],["E4","8n"],["D4","8n"],["B3","4n"],
+      ["D4","8n"],["E4","8n"],["F#4","8n"],["G4","8n"],["A4","8n"],["B4","8n"],["C#5","8n"],["D5","8n"],
+      ["E5","4n"],["D5","4n"],["B4","4n"],["0","4n"],
+    ];
+    const bass = [
+      ["A2","4n"],["E3","4n"],["A2","4n"],["E3","4n"],
+      ["E2","4n"],["B2","4n"],["E2","4n"],["B2","4n"],
+      ["D3","4n"],["A2","4n"],["F#2","4n"],["D2","4n"],
+      ["A2","4n"],["E3","4n"],["A2","4n"],["0","4n"],
+    ];
+    const p1 = schedulePart(mel, melody, true);
+    const p2 = schedulePart(bas, bass, true);
+    runParts([p1, p2], bpm);
+  }
+
+  // ── Pokémon Center ────────────────────────────────────────────────────────
+  function playPokemonCenter() {
+    const bpm = 100;
+    const mel = makeSynth();
+    const bas = makeBass();
+    const melody = [
+      ["C5","4n"],["E5","4n"],["G5","4n"],["E5","4n"],
+      ["F5","4n"],["A5","4n"],["G5","4n"],["0","4n"],
+      ["E5","4n"],["G5","4n"],["C6","4n"],["B5","4n"],
+      ["A5","2n"],["0","2n"],
+      ["G5","4n"],["F5","4n"],["E5","4n"],["D5","4n"],
+      ["C5","4n"],["E5","4n"],["G5","4n"],["0","4n"],
+      ["A4","4n"],["C5","4n"],["E5","4n"],["D5","4n"],
+      ["C5","2n"],["0","2n"],
+    ];
+    const bass = [
+      ["C3","4n"],["G3","4n"],["E3","4n"],["G3","4n"],
+      ["F3","4n"],["C4","4n"],["G3","4n"],["0","4n"],
+      ["C3","4n"],["G3","4n"],["E4","4n"],["G3","4n"],
+      ["F3","2n"],["0","2n"],
+      ["G2","4n"],["D3","4n"],["G2","4n"],["D3","4n"],
+      ["C3","4n"],["G3","4n"],["C3","4n"],["0","4n"],
+      ["A2","4n"],["E3","4n"],["A2","4n"],["D3","4n"],
+      ["C3","2n"],["0","2n"],
+    ];
+    const p1 = schedulePart(mel, melody, true);
+    const p2 = schedulePart(bas, bass, true);
+    runParts([p1, p2], bpm);
+  }
+
+  // ── Wild Battle ───────────────────────────────────────────────────────────
+  function playWildBattle() {
+    const bpm = 160;
+    const mel = makeSynth();
+    const bas = makeBass();
+    const melody = [
+      ["E5","16n"],["0","16n"],["E5","16n"],["0","16n"],["G5","8n"],["E5","8n"],["C5","8n"],["D5","8n"],
+      ["E5","16n"],["0","16n"],["E5","16n"],["0","16n"],["G5","8n"],["B5","8n"],["A5","4n"],
+      ["A5","16n"],["0","16n"],["A5","16n"],["0","16n"],["C6","8n"],["A5","8n"],["F5","8n"],["G5","8n"],
+      ["A5","16n"],["0","16n"],["A5","16n"],["0","16n"],["C6","8n"],["E6","8n"],["D6","4n"],
+      ["G5","8n"],["F#5","8n"],["F5","8n"],["E5","4n"],["C5","8n"],["D5","8n"],
+      ["E5","4n"],["0","4n"],["0","4n"],["0","4n"],
+    ];
+    const bass = [
+      ["E2","8n"],["E3","8n"],["E2","8n"],["E3","8n"],["E2","8n"],["E3","8n"],["E2","8n"],["E3","8n"],
+      ["E2","8n"],["E3","8n"],["E2","8n"],["E3","8n"],["E2","8n"],["E3","8n"],["E2","4n"],
+      ["A2","8n"],["A3","8n"],["A2","8n"],["A3","8n"],["A2","8n"],["A3","8n"],["A2","8n"],["A3","8n"],
+      ["A2","8n"],["A3","8n"],["A2","8n"],["A3","8n"],["A2","8n"],["A3","8n"],["A2","4n"],
+      ["G2","8n"],["F#2","8n"],["F2","8n"],["E2","4n"],["C2","8n"],["D2","8n"],
+      ["E2","4n"],["0","4n"],["0","4n"],["0","4n"],
+    ];
+    const p1 = schedulePart(mel, melody, true);
+    const p2 = schedulePart(bas, bass, true);
+    runParts([p1, p2], bpm);
+  }
+
+  // ── Gym Leader Battle ─────────────────────────────────────────────────────
+  function playGymLeader() {
+    const bpm = 155;
+    const mel = makeSynth();
+    const bas = makeBass();
+    const melody = [
+      ["B4","16n"],["C5","16n"],["C#5","8n"],["C#5","8n"],["0","8n"],["C#5","8n"],["D5","8n"],
+      ["D#5","16n"],["E5","16n"],["F5","8n"],["F5","8n"],["0","8n"],["F5","8n"],["F#5","8n"],
+      ["G5","8n"],["G#5","8n"],["A5","4n"],["A5","8n"],["G#5","8n"],["G5","8n"],
+      ["F#5","4n"],["F5","4n"],["E5","4n"],["0","4n"],
+      ["E5","8n"],["0","8n"],["E5","8n"],["0","8n"],["F5","4n"],["E5","4n"],
+      ["D#5","8n"],["0","8n"],["D#5","8n"],["0","8n"],["E5","4n"],["D5","4n"],
+      ["C#5","4n"],["B4","4n"],["C#5","4n"],["0","4n"],
+    ];
+    const bass = [
+      ["E2","8n"],["E3","8n"],["C#3","8n"],["0","8n"],["E2","8n"],["E3","8n"],["C#3","8n"],["0","8n"],
+      ["F2","8n"],["F3","8n"],["D3","8n"],["0","8n"],["F2","8n"],["F3","8n"],["D3","8n"],["0","8n"],
+      ["A2","8n"],["A3","8n"],["F#3","8n"],["G#3","8n"],["A2","8n"],["A3","8n"],["0","8n"],["0","8n"],
+      ["F#2","4n"],["F2","4n"],["E2","4n"],["0","4n"],
+      ["A2","8n"],["0","8n"],["A2","8n"],["0","8n"],["A2","4n"],["A2","4n"],
+      ["G#2","8n"],["0","8n"],["G#2","8n"],["0","8n"],["G#2","4n"],["G#2","4n"],
+      ["C#2","4n"],["B1","4n"],["C#2","4n"],["0","4n"],
+    ];
+    const p1 = schedulePart(mel, melody, true);
+    const p2 = schedulePart(bas, bass, true);
+    runParts([p1, p2], bpm);
+  }
 </script>
 {% endblock %}
