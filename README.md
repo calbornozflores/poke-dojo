@@ -1,4 +1,4 @@
-# Poke-Dojo ⚔️
+# Poke-Dojo <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/107.png" height="32" align="absmiddle"> (Hitmonchan)
 
 A local Pokémon training web app with two quiz games, a leaderboard, and an XGBoost-powered **Challenge Mode** that learns which Pokémon trip you up and serves them more often.
 
@@ -18,12 +18,12 @@ Enter your trainer name to begin. No account required — your name is saved in 
 
 ![Home page](static/home-page.png)
 
-### Game 1 — Name the Pokémon
+### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" height="28" align="absmiddle"> Game 1 — Name the Pokémon
 A Pokémon sprite is shown. Type the name and press **Enter**. Accuracy is scored using fuzzy string matching (rapidfuzz), so near-misses are rewarded.
 
 ![Game 1 – Name It](static/game1-real.png)
 
-### Game 2 — Guess the Pokédex Number
+### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" height="28" align="absmiddle"> Game 2 — Guess the Pokédex Number
 The sprite and name are shown. Enter the Pokédex number (1–1025) and press **Enter**. The closer you are, the higher your score.
 
 ![Game 2 – Guess Number](static/game2-real.png)
@@ -80,14 +80,14 @@ uv run python data/fetch_data.py
 ### Trainer Name
 Enter any name on the home screen. It's saved in your browser — no account needed.
 
-### Game 1 — Name the Pokémon
+### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" height="24" align="absmiddle"> Game 1 — Name the Pokémon
 1. A Pokémon sprite appears (name hidden).
 2. Type the Pokémon's name in the text box.
 3. Press **Enter** to submit.
 4. See your accuracy score (0–100%).
 5. Press **Enter** again (or click **Next Pokémon**) to continue.
 
-### Game 2 — Guess the Pokédex Number
+### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" height="24" align="absmiddle"> Game 2 — Guess the Pokédex Number
 1. A Pokémon sprite and its name appear.
 2. Enter what you think its Pokédex number is (1–1025).
 3. Press **Enter** to submit.
@@ -100,7 +100,7 @@ Enter any name on the home screen. It's saved in your browser — no account nee
 - A score ≥ 80% counts toward your streak counter.
 
 ### Challenge Mode
-After **20 games** a "Challenge Mode" toggle appears in the sidebar. When enabled, an **XGBoost model** trained on your personal game history picks the Pokémon it predicts you'll find hardest. The model retrains every 10 games.
+Each game mode has its own Challenge Mode toggle that unlocks independently — **20 Name It games** unlocks challenge for Name It, and **20 Guess Number games** unlocks it for Guess Number. When enabled, an **XGBoost model** trained on your personal game history picks the Pokémon it predicts you'll find hardest. The model retrains every 10 games.
 
 ---
 
