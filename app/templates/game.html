@@ -8,10 +8,10 @@
   <aside class="sidebar">
     <div class="game-selector">
       <button class="mode-btn active" id="btn-game1" data-game="name_guess">
-        🌳 Name It
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" class="mode-sprite">Name It
       </button>
       <button class="mode-btn" id="btn-game2" data-game="number_guess">
-        📱 Guess Number
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" alt="" class="mode-sprite">Guess Number
       </button>
     </div>
 
@@ -115,7 +115,7 @@
 
   let currentGame = "name_guess";
   let currentPokemon = null;
-  let challengeMode = false;
+  let challengeModeByType = { name_guess: false, number_guess: false };
   let sessionAccuracies = [];
   let streak = 0;
 
@@ -132,8 +132,7 @@
 
   function switchGame(type) {
     currentGame = type;
-    challengeMode = false;
-    challengeCheckbox.checked = false;
+    challengeCheckbox.checked = challengeModeByType[type];
     btn1.classList.toggle("active", type === "name_guess");
     btn2.classList.toggle("active", type === "number_guess");
     document.getElementById("game1-input-area").classList.toggle("hidden", type !== "name_guess");
@@ -144,7 +143,7 @@
 
   btn1.addEventListener("click", () => switchGame("name_guess"));
   btn2.addEventListener("click", () => switchGame("number_guess"));
-  challengeCheckbox.addEventListener("change", e => { challengeMode = e.target.checked; loadNext(); });
+  challengeCheckbox.addEventListener("change", e => { challengeModeByType[currentGame] = e.target.checked; loadNext(); });
   submitBtn.addEventListener("click", submitAnswer);
   nextBtn.addEventListener("click", loadNext);
 
@@ -166,7 +165,7 @@
       const res = await fetch("/game/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, game_type: currentGame, challenge_mode: challengeMode }),
+        body: JSON.stringify({ username, game_type: currentGame, challenge_mode: challengeModeByType[currentGame] }),
       });
       if (!res.ok) { showNoData(); return; }
       const data = await res.json();

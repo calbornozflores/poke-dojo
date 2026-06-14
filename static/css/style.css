@@ -172,6 +172,7 @@ a:hover { color: var(--accent-hover); }
 }
 .mode-btn:hover { border-color: var(--accent); color: var(--text); }
 .mode-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.mode-sprite { width: 32px; height: 32px; image-rendering: pixelated; flex-shrink: 0; }
 
 .stats-box {
   background: var(--surface);
