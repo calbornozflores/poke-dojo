@@ -102,9 +102,6 @@ Enter any name on the home screen. It's saved in your browser — no account nee
 ### Challenge Mode
 After **20 games** a "Challenge Mode" toggle appears in the sidebar. When enabled, an **XGBoost model** trained on your personal game history picks the Pokémon it predicts you'll find hardest. The model retrains every 10 games.
 
-### Music
-The game plays synthesised Pokémon Red/Blue soundtrack (Pallet Town, Route 1, Pokémon Center, Wild Battle, Gym Leader Battle) via the Web Audio API. Use the 🔊 button in the sidebar to mute, and the ◀ ▶ buttons to switch tracks. Music starts on your first click.
-
 ---
 
 ## Package Management
@@ -155,6 +152,5 @@ poke-dojo/
 | Database | SQLite via SQLAlchemy |
 | String matching | rapidfuzz |
 | ML (Challenge Mode) | XGBoost |
-| Music synthesis | Tone.js (Web Audio API) |
 | Package manager | uv |
 | Data source | PokéAPI (pokeapi.co) |
