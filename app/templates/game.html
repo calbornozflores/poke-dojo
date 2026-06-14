@@ -193,7 +193,7 @@
         pokemon_id: currentPokemon.pokemon_id,
         game_type: currentGame,
         guess: String(guess),
-        was_challenge: challengeMode,
+        was_challenge: challengeModeByType[currentGame],
       }),
     });
     const data = await res.json();
