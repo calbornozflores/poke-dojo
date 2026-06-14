@@ -21,12 +21,16 @@ Enter your trainer name to begin. No account required — your name is saved in 
 ### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" height="28" align="absmiddle"> Game 1 — Name the Pokémon
 A Pokémon sprite is shown. Type the name and press **Enter**. Accuracy is scored using fuzzy string matching (rapidfuzz), so near-misses are rewarded.
 
-![Game 1 – Name It](static/game1-real.png)
+| Guess | Result |
+|---|---|
+| ![Game 1 – Name It](static/game1-real.png) | ![Game 1 – Result](static/game1-result.png) |
 
 ### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" height="28" align="absmiddle"> Game 2 — Guess the Pokédex Number
 The sprite and name are shown. Enter the Pokédex number (1–1025) and press **Enter**. The closer you are, the higher your score.
 
-![Game 2 – Guess Number](static/game2-real.png)
+| Guess | Result |
+|---|---|
+| ![Game 2 – Guess Number](static/game2-real.png) | ![Game 2 – Result](static/game2-result.png) |
 
 ### Leaderboard
 Track your accuracy across both game types, your personal history, and compare with other trainers.
