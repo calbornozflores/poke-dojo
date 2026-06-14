@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+data/pokemon.db
+data/challenge_model_*.json
+.env
+*.egg-info/
+dist/

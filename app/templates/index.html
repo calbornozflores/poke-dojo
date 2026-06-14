@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Welcome — Poke-Dojo{% endblock %}
+
+{% block content %}
+<div class="hero">
+  <div class="hero-card">
+    <h1>Welcome to <span class="brand">Poke-Dojo</span></h1>
+    <p class="subtitle">Train your Pokémon knowledge with two quiz games.<br>
+      Name that Pokémon, or guess its Pokédex number!</p>
+
+    <div class="username-form" id="username-section">
+      <label for="username-input">Choose your trainer name:</label>
+      <div class="input-row">
+        <input
+          type="text"
+          id="username-input"
+          placeholder="Ash Ketchum"
+          maxlength="30"
+          autocomplete="off"
+        />
+        <button id="start-btn" class="btn btn-primary">Start Training</button>
+      </div>
+      <p class="hint" id="username-hint"></p>
+    </div>
+
+    <div id="returning-section" class="hidden">
+      <p>Welcome back, <strong id="returning-name"></strong>!</p>
+      <div class="hero-actions">
+        <a href="/play" class="btn btn-primary">Continue Training</a>
+        <button id="change-user-btn" class="btn btn-ghost">Change Trainer</button>
+      </div>
+    </div>
+
+    <div class="game-preview">
+      <div class="game-card">
+        <div class="game-icon">🏷️</div>
+        <h3>Name the Pokémon</h3>
+        <p>See the sprite, type the name. Scored by string accuracy.</p>
+      </div>
+      <div class="game-card">
+        <div class="game-icon">🔢</div>
+        <h3>Guess the Number</h3>
+        <p>See the sprite and name, guess the Pokédex number.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const usernameInput = document.getElementById("username-input");
+  const startBtn = document.getElementById("start-btn");
+  const hint = document.getElementById("username-hint");
+  const usernameSection = document.getElementById("username-section");
+  const returningSection = document.getElementById("returning-section");
+  const returningName = document.getElementById("returning-name");
+  const changeUserBtn = document.getElementById("change-user-btn");
+
+  const stored = localStorage.getItem("poke_username");
+  if (stored) {
+    usernameSection.classList.add("hidden");
+    returningSection.classList.remove("hidden");
+    returningName.textContent = stored;
+    document.getElementById("nav-user").textContent = stored;
+  }
+
+  startBtn.addEventListener("click", () => {
+    const name = usernameInput.value.trim();
+    if (!name) {
+      hint.textContent = "Please enter a trainer name.";
+      hint.className = "hint error";
+      return;
+    }
+    localStorage.setItem("poke_username", name);
+    window.location.href = "/play";
+  });
+
+  usernameInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") startBtn.click();
+  });
+
+  changeUserBtn.addEventListener("click", () => {
+    localStorage.removeItem("poke_username");
+    returningSection.classList.add("hidden");
+    usernameSection.classList.remove("hidden");
+    usernameInput.focus();
+  });
+</script>
+{% endblock %}

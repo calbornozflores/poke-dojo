@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Poke-Dojo — Loading</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f1a;
+      --surface: #1a1a2e;
+      --border: #2a2a4a;
+      --accent: #6c63ff;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --red: #e63946;
+      --white: #f1faee;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5rem;
+      overflow: hidden;
+    }
+
+    /* ── Stars background ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.2) 0%, transparent 100%),
+        radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.2) 0%, transparent 100%),
+        radial-gradient(1px 1px at 85% 35%, rgba(255,255,255,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 15% 75%, rgba(255,255,255,0.2) 0%, transparent 100%),
+        radial-gradient(1px 1px at 60% 45%, rgba(255,255,255,0.15) 0%, transparent 100%),
+        radial-gradient(1px 1px at 90% 65%, rgba(255,255,255,0.25) 0%, transparent 100%),
+        radial-gradient(1px 1px at 40% 90%, rgba(255,255,255,0.2) 0%, transparent 100%),
+        radial-gradient(1px 1px at 5% 50%, rgba(255,255,255,0.15) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2.5rem;
+      width: 100%;
+      max-width: 480px;
+      padding: 0 2rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      background: linear-gradient(135deg, #6c63ff, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── Pokéball ── */
+    .pokeball-wrapper {
+      position: relative;
+      width: 140px;
+      height: 140px;
+    }
+
+    .pokeball {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      position: relative;
+      animation: spin 1.6s linear infinite;
+      filter: drop-shadow(0 0 24px rgba(108,99,255,0.45));
+    }
+
+    @keyframes spin {
+      0%   { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Top half — red */
+    .pokeball::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 50%;
+      background: var(--red);
+      border-radius: 70px 70px 0 0;
+      border: 4px solid #111;
+      border-bottom: none;
+    }
+
+    /* Bottom half — white */
+    .pokeball::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 100%;
+      height: 50%;
+      background: var(--white);
+      border-radius: 0 0 70px 70px;
+      border: 4px solid #111;
+      border-top: none;
+    }
+
+    /* Center band */
+    .pokeball-band {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 10px;
+      background: #111;
+      transform: translateY(-50%);
+      z-index: 2;
+    }
+
+    /* Center button */
+    .pokeball-button {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 28px;
+      height: 28px;
+      background: var(--white);
+      border: 4px solid #111;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 3;
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(108,99,255,0); }
+      50%       { box-shadow: 0 0 0 8px rgba(108,99,255,0.35); }
+    }
+
+    /* ── Message ── */
+    .message-box {
+      text-align: center;
+      min-height: 3rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .message {
+      font-size: 1.1rem;
+      color: var(--text);
+      font-weight: 500;
+      transition: opacity 0.4s ease;
+    }
+
+    .message.fade {
+      opacity: 0;
+    }
+
+    .sub-message {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Progress bar ── */
+    .progress-section {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6c63ff, #a78bfa);
+      border-radius: 999px;
+      width: 0%;
+      transition: width 0.8s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="content">
+    <h1>Poke-Dojo</h1>
+
+    <div class="pokeball-wrapper">
+      <div class="pokeball">
+        <div class="pokeball-band"></div>
+        <div class="pokeball-button"></div>
+      </div>
+    </div>
+
+    <div class="message-box">
+      <div class="message" id="message">Choosing your starter Pokémon...</div>
+      <div class="sub-message" id="sub-message">Setting up your Pokédex for the first time</div>
+    </div>
+
+    <div class="progress-section">
+      <div class="progress-label">
+        <span id="progress-text">Loading Pokémon data...</span>
+        <span id="progress-pct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const MESSAGES = [
+      "Choosing your starter Pokémon...",
+      "Asking Professor Oak for your Pokédex...",
+      "Catching Pokémon in the tall grass...",
+      "Healing at the Pokémon Center...",
+      "Preparing your Poké Balls...",
+      "Defeating Team Rocket...",
+      "Earning the Boulder Badge...",
+      "Surfing across the ocean...",
+      "Teaching your Pokémon new moves...",
+      "Visiting Pallet Town...",
+      "Exploring Mt. Moon...",
+      "Training at the Pokémon Gym...",
+      "Filling up the Pokédex...",
+      "Trading Pokémon with your rival...",
+      "Discovering a rare shiny...",
+      "Setting up your PC Box...",
+      "Buying Potions at the Mart...",
+      "Battling the Elite Four...",
+      "Unlocking your National Pokédex...",
+    ];
+
+    let msgIndex = 0;
+    const msgEl = document.getElementById("message");
+    const fillEl = document.getElementById("progress-fill");
+    const pctEl = document.getElementById("progress-pct");
+    const textEl = document.getElementById("progress-text");
+
+    function nextMessage() {
+      msgEl.classList.add("fade");
+      setTimeout(() => {
+        msgIndex = (msgIndex + 1) % MESSAGES.length;
+        msgEl.textContent = MESSAGES[msgIndex];
+        msgEl.classList.remove("fade");
+      }, 400);
+    }
+
+    const msgInterval = setInterval(nextMessage, 3200);
+
+    async function poll() {
+      try {
+        const res = await fetch("/api/status");
+        const data = await res.json();
+
+        const pct = data.percent;
+        fillEl.style.width = pct + "%";
+        pctEl.textContent = pct + "%";
+        textEl.textContent = `${data.fetched} / ${data.total} Pokémon loaded`;
+
+        if (data.ready) {
+          clearInterval(msgInterval);
+          msgEl.textContent = "Your Pokédex is ready!";
+          fillEl.style.width = "100%";
+          pctEl.textContent = "100%";
+          // Short pause so the user sees 100%, then redirect
+          setTimeout(() => { window.location.href = "/"; }, 800);
+          return;
+        }
+      } catch {
+        // Network hiccup — keep polling
+      }
+      setTimeout(poll, 1200);
+    }
+
+    poll();
+  </script>
+</body>
+</html>
