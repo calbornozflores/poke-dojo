@@ -1,11 +1,11 @@
 """
-Per-user XGBoost model for Challenge Mode.
+Per-user, per-game-type XGBoost model for Challenge Mode.
 
-Trains on the user's game_results to predict which Pokémon they'll find hardest.
-Model artifacts are saved to data/challenge_model_{user_id}.json.
+Trains only on the user's results for the active game type so that accuracy
+from Name It does not bleed into Guess Number rankings, etc.
+Model artifacts: data/challenge_model_{user_id}_{game_type}.json
 """
 from pathlib import Path
-import numpy as np
 import pandas as pd
 import xgboost as xgb
 from sqlalchemy.orm import Session
@@ -16,12 +16,11 @@ STAGE_MAP = {"basic": 0, "stage_1": 1, "stage_2": 2}
 MIN_RESULTS = 20
 
 
-def _model_path(user_id: int) -> Path:
-    return MODEL_DIR / f"challenge_model_{user_id}.json"
+def _model_path(user_id: int, game_type: str) -> Path:
+    return MODEL_DIR / f"challenge_model_{user_id}_{game_type}.json"
 
 
 def _build_features(pokemon: Pokemon, user_history: dict) -> dict:
-    """Build a feature row for one (user, pokemon) pair."""
     hist = user_history.get(pokemon.id, {"count": 0, "avg_accuracy": 50.0})
     return {
         "prior_attempts": hist["count"],
@@ -39,33 +38,31 @@ def _build_features(pokemon: Pokemon, user_history: dict) -> dict:
     }
 
 
-def train(user_id: int, db: Session) -> bool:
-    """Train the model for a user. Returns True if successful."""
-    results = (
-        db.query(GameResult)
-        .filter(GameResult.user_id == user_id)
-        .all()
-    )
-    if len(results) < MIN_RESULTS:
-        return False
-
-    # Build user history lookup: {pokemon_id: {count, avg_accuracy}}
+def _build_history(results) -> dict:
     history: dict[int, dict] = {}
     for r in results:
         if r.pokemon_id not in history:
             history[r.pokemon_id] = {"count": 0, "total_acc": 0.0}
         history[r.pokemon_id]["count"] += 1
         history[r.pokemon_id]["total_acc"] += r.accuracy
-
-    user_history = {
-        pid: {
-            "count": v["count"],
-            "avg_accuracy": v["total_acc"] / v["count"],
-        }
+    return {
+        pid: {"count": v["count"], "avg_accuracy": v["total_acc"] / v["count"]}
         for pid, v in history.items()
     }
 
-    # Build training rows from actual results
+
+def train(user_id: int, game_type: str, db: Session) -> bool:
+    """Train the per-game-type model for a user. Returns True if successful."""
+    results = (
+        db.query(GameResult)
+        .filter(GameResult.user_id == user_id, GameResult.game_type == game_type)
+        .all()
+    )
+    if len(results) < MIN_RESULTS:
+        return False
+
+    user_history = _build_history(results)
+
     rows = []
     for r in results:
         poke = db.query(Pokemon).get(r.pokemon_id)
@@ -86,39 +83,33 @@ def train(user_id: int, db: Session) -> bool:
     model.fit(X, y)
 
     MODEL_DIR.mkdir(exist_ok=True)
-    model.save_model(str(_model_path(user_id)))
+    model.save_model(str(_model_path(user_id, game_type)))
     return True
 
 
-def predict_hardest(user_id: int, db: Session, n: int = 50) -> list[int]:
+def predict_hardest(user_id: int, game_type: str, db: Session, n: int = 50) -> list[int]:
     """
-    Return up to n pokemon IDs ranked hardest-first for this user.
-    Falls back to random if no model exists.
+    Return up to n Pokémon IDs ranked hardest-first for this user and game type.
+    Falls back to random if not enough data to train yet.
     """
-    path = _model_path(user_id)
+    import random
+
+    path = _model_path(user_id, game_type)
     if not path.exists():
-        trained = train(user_id, db)
+        trained = train(user_id, game_type, db)
         if not trained:
             all_ids = [row[0] for row in db.query(Pokemon).with_entities(Pokemon.id).all()]
-            import random
             return random.sample(all_ids, min(n, len(all_ids)))
 
     model = xgb.XGBRegressor()
     model.load_model(str(path))
 
-    # Build user history for feature construction
-    results = db.query(GameResult).filter(GameResult.user_id == user_id).all()
-    history: dict[int, dict] = {}
-    for r in results:
-        if r.pokemon_id not in history:
-            history[r.pokemon_id] = {"count": 0, "total_acc": 0.0}
-        history[r.pokemon_id]["count"] += 1
-        history[r.pokemon_id]["total_acc"] += r.accuracy
-
-    user_history = {
-        pid: {"count": v["count"], "avg_accuracy": v["total_acc"] / v["count"]}
-        for pid, v in history.items()
-    }
+    results = (
+        db.query(GameResult)
+        .filter(GameResult.user_id == user_id, GameResult.game_type == game_type)
+        .all()
+    )
+    user_history = _build_history(results)
 
     all_pokemon = db.query(Pokemon).all()
     rows = []

@@ -57,7 +57,7 @@ def train_model(username: str, db: Session = Depends(get_db)):
             message=f"Need {CHALLENGE_THRESHOLD - games_played} more games to unlock challenge mode",
         )
 
-    success = xgboost_model.train(user.id, db)
+    success = xgboost_model.train(user.id, game_type, db)
     if success:
         return TrainResponse(success=True, message="Challenge model trained successfully")
     return TrainResponse(success=False, message="Not enough data to train model")

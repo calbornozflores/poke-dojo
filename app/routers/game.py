@@ -88,7 +88,7 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
             .limit(10)
             .all()
         ]
-        hard_ids = xgboost_model.predict_hardest(user.id, db, n=50)
+        hard_ids = xgboost_model.predict_hardest(user.id, req.game_type, db, n=50)
         candidates = [pid for pid in hard_ids if pid not in recent_ids] or hard_ids
         pokemon_id = random.choice(candidates[:20])
         pokemon = db.query(Pokemon).get(pokemon_id)
@@ -186,7 +186,7 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
     challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
 
     if challenge_unlocked:
-        xgboost_model.train(user.id, db)
+        xgboost_model.train(user.id, req.game_type, db)
 
     return SubmitResponse(
         accuracy=round(accuracy, 1),
