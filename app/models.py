@@ -20,6 +20,8 @@ class Pokemon(Base):
     sp_attack: Mapped[int] = mapped_column(Integer, nullable=False)
     sp_defense: Mapped[int] = mapped_column(Integer, nullable=False)
     speed: Mapped[int] = mapped_column(Integer, nullable=False)
+    height: Mapped[int] = mapped_column(Integer, nullable=True, default=0)
+    weight: Mapped[int] = mapped_column(Integer, nullable=True, default=0)
 
     results: Mapped[list["GameResult"]] = relationship(back_populates="pokemon")
 

@@ -89,6 +89,8 @@ def _fetch_one(pokemon_id: int, http: requests.Session) -> dict | None:
             "sp_attack": stats.get("special-attack", 0),
             "sp_defense": stats.get("special-defense", 0),
             "speed": stats.get("speed", 0),
+            "height": data.get("height", 0),
+            "weight": data.get("weight", 0),
         }
     except Exception:
         return None

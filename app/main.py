@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.database import engine
+from app.database import engine, run_migrations
 from app.models import Base
 from app.routers import game, scores, challenge
 from app.services.data_loader import (
@@ -16,6 +16,7 @@ from app.services.data_loader import (
 )
 
 Base.metadata.create_all(bind=engine)
+run_migrations()
 
 app = FastAPI(title="poke-dojo")
 
