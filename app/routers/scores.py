@@ -27,9 +27,15 @@ class UserDetailResponse(BaseModel):
     scores: list[dict]
 
 
+@router.get("/games")
+def list_game_types(db: Session = Depends(get_db)):
+    rows = db.query(GameResult.game_type).distinct().order_by(GameResult.game_type).all()
+    return {"game_types": [r[0] for r in rows]}
+
+
 @router.get("/leaderboard", response_model=LeaderboardResponse)
 def leaderboard(
-    game_type: Optional[str] = Query(default=None, pattern="^(name_guess|number_guess)$"),
+    game_type: Optional[str] = Query(default=None, pattern="^(name_guess|number_guess|type_easy|type_hard)$"),
     db: Session = Depends(get_db),
 ):
     q = db.query(

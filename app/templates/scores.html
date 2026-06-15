@@ -10,12 +10,7 @@
 
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="global">Global Ranking</button>
-    <button class="tab-btn" data-tab="nameit">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Name It
-    </button>
-    <button class="tab-btn" data-tab="guessnumber">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Guess Number
-    </button>
+    <button class="tab-btn" data-tab="bygame">By Game</button>
   </div>
 
   <!-- Global leaderboard -->
@@ -37,42 +32,26 @@
     <p id="global-empty" class="centered-msg hidden">No scores yet. Go play some games!</p>
   </div>
 
-  <!-- Name It leaderboard -->
-  <div id="tab-nameit" class="tab-content hidden">
-    <div id="nameit-loading" class="centered-msg">Loading...</div>
-    <table id="nameit-table" class="score-table hidden">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Trainer</th>
-          <th>Games</th>
-          <th>Avg Accuracy</th>
-          <th>Best</th>
-          <th>Worst</th>
-        </tr>
-      </thead>
-      <tbody id="nameit-body"></tbody>
-    </table>
-    <p id="nameit-empty" class="centered-msg hidden">No Name It scores yet.</p>
-  </div>
-
-  <!-- Guess Number leaderboard -->
-  <div id="tab-guessnumber" class="tab-content hidden">
-    <div id="guessnumber-loading" class="centered-msg">Loading...</div>
-    <table id="guessnumber-table" class="score-table hidden">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Trainer</th>
-          <th>Games</th>
-          <th>Avg Accuracy</th>
-          <th>Best</th>
-          <th>Worst</th>
-        </tr>
-      </thead>
-      <tbody id="guessnumber-body"></tbody>
-    </table>
-    <p id="guessnumber-empty" class="centered-msg hidden">No Guess Number scores yet.</p>
+  <!-- By Game leaderboard (dynamic game picker) -->
+  <div id="tab-bygame" class="tab-content hidden">
+    <div id="bygame-loading" class="centered-msg">Loading...</div>
+    <div id="bygame-content" class="hidden">
+      <div id="game-picker" class="game-picker"></div>
+      <table id="bygame-table" class="score-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Trainer</th>
+            <th>Games</th>
+            <th>Avg Accuracy</th>
+            <th>Best</th>
+            <th>Worst</th>
+          </tr>
+        </thead>
+        <tbody id="bygame-body"></tbody>
+      </table>
+      <p id="bygame-empty" class="centered-msg hidden">No scores for this game yet.</p>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -81,44 +60,51 @@
 <script>
   const username = localStorage.getItem("poke_username");
 
-  const tabs = document.querySelectorAll(".tab-btn");
-  tabs.forEach(btn => {
+  const GAME_LABELS = {
+    name_guess:   "Name It",
+    number_guess: "Guess Number",
+    type_easy:    "Type (Easy)",
+    type_hard:    "Type (Hard)",
+  };
+
+  // ── Tab switching ─────────────────────────────────────────────────────────
+  const tabBtns = document.querySelectorAll(".tab-btn");
+  tabBtns.forEach(btn => {
     btn.addEventListener("click", () => {
-      tabs.forEach(b => b.classList.remove("active"));
+      tabBtns.forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       document.querySelectorAll(".tab-content").forEach(t => t.classList.add("hidden"));
       const key = btn.dataset.tab;
       document.getElementById("tab-" + key).classList.remove("hidden");
-      if (key === "nameit" && !nameitLoaded) loadTab("name_guess", "nameit");
-      if (key === "guessnumber" && !guessnumberLoaded) loadTab("number_guess", "guessnumber");
+      if (key === "bygame" && !bygameInitialized) initByGame();
     });
   });
 
   document.getElementById("refresh-btn").addEventListener("click", () => {
-    globalLoaded = nameitLoaded = guessnumberLoaded = false;
-    resetTab("global");
-    resetTab("nameit");
-    resetTab("guessnumber");
-    loadTab(null, "global");
+    globalLoaded = false;
+    bygameInitialized = false;
+    selectedGameType = null;
+    document.getElementById("global-loading").classList.remove("hidden");
+    document.getElementById("global-table").classList.add("hidden");
+    document.getElementById("global-empty").classList.add("hidden");
+    loadGlobal();
+    if (!document.getElementById("tab-bygame").classList.contains("hidden")) initByGame();
   });
 
   function fmtAcc(val) {
     return val !== null && val !== undefined ? val.toFixed(1) + "%" : "—";
   }
 
-  function resetTab(key) {
-    document.getElementById(key + "-loading").classList.remove("hidden");
-    document.getElementById(key + "-table").classList.add("hidden");
-    document.getElementById(key + "-empty").classList.add("hidden");
-  }
-
-  function renderTable(key, scores) {
-    const loading = document.getElementById(key + "-loading");
-    const table = document.getElementById(key + "-table");
-    const empty = document.getElementById(key + "-empty");
-    const tbody = document.getElementById(key + "-body");
-    loading.classList.add("hidden");
-    if (!scores.length) { empty.classList.remove("hidden"); return; }
+  function renderRows(tbodyId, tableId, emptyId, scores) {
+    const tbody = document.getElementById(tbodyId);
+    const table = document.getElementById(tableId);
+    const empty = document.getElementById(emptyId);
+    if (!scores.length) {
+      table.classList.add("hidden");
+      empty.classList.remove("hidden");
+      return;
+    }
+    empty.classList.add("hidden");
     tbody.innerHTML = scores.map((s, i) => `
       <tr class="${username && s.username === username ? 'highlight-row' : ''}">
         <td>${i + 1}</td>
@@ -132,18 +118,70 @@
     table.classList.remove("hidden");
   }
 
-  let globalLoaded = false, nameitLoaded = false, guessnumberLoaded = false;
+  // ── Global tab ────────────────────────────────────────────────────────────
+  let globalLoaded = false;
 
-  async function loadTab(game_type, key) {
-    const url = game_type ? `/scores/leaderboard?game_type=${game_type}` : "/scores/leaderboard";
-    const res = await fetch(url);
+  async function loadGlobal() {
+    const res = await fetch("/scores/leaderboard");
     const data = await res.json();
-    renderTable(key, data.scores);
-    if (key === "global") globalLoaded = true;
-    if (key === "nameit") nameitLoaded = true;
-    if (key === "guessnumber") guessnumberLoaded = true;
+    document.getElementById("global-loading").classList.add("hidden");
+    renderRows("global-body", "global-table", "global-empty", data.scores);
+    globalLoaded = true;
   }
 
-  loadTab(null, "global");
+  // ── By Game tab ───────────────────────────────────────────────────────────
+  let bygameInitialized = false;
+  let selectedGameType = null;
+
+  async function initByGame() {
+    const loadEl    = document.getElementById("bygame-loading");
+    const contentEl = document.getElementById("bygame-content");
+    loadEl.classList.remove("hidden");
+    contentEl.classList.add("hidden");
+
+    const res = await fetch("/scores/games");
+    const data = await res.json();
+    const gameTypes = data.game_types;
+
+    const picker = document.getElementById("game-picker");
+    picker.innerHTML = gameTypes.length
+      ? gameTypes.map(gt =>
+          `<button class="game-pill" data-gt="${gt}">${GAME_LABELS[gt] || gt}</button>`
+        ).join("")
+      : `<p class="centered-msg" style="padding:0.5rem">No games played yet.</p>`;
+
+    picker.querySelectorAll(".game-pill").forEach(btn => {
+      btn.addEventListener("click", () => {
+        picker.querySelectorAll(".game-pill").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        loadByGame(btn.dataset.gt);
+      });
+    });
+
+    loadEl.classList.add("hidden");
+    contentEl.classList.remove("hidden");
+    bygameInitialized = true;
+
+    // Auto-select first game type
+    const first = picker.querySelector(".game-pill");
+    if (first) first.click();
+  }
+
+  async function loadByGame(gameType) {
+    selectedGameType = gameType;
+    const tbody = document.getElementById("bygame-body");
+    const table = document.getElementById("bygame-table");
+    const empty = document.getElementById("bygame-empty");
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem">Loading...</td></tr>`;
+    table.classList.remove("hidden");
+    empty.classList.add("hidden");
+
+    const res = await fetch(`/scores/leaderboard?game_type=${gameType}`);
+    const data = await res.json();
+    renderRows("bygame-body", "bygame-table", "bygame-empty", data.scores);
+  }
+
+  // Init
+  loadGlobal();
 </script>
 {% endblock %}

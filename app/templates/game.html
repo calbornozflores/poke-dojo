@@ -13,6 +13,12 @@
       <button class="mode-btn" id="btn-game2" data-game="number_guess">
         <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" alt="" class="mode-sprite">Guess Number
       </button>
+      <button class="mode-btn" id="btn-type-easy" data-game="type_easy">
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" alt="" class="mode-sprite">Type (Easy)
+      </button>
+      <button class="mode-btn" id="btn-type-hard" data-game="type_hard">
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png" alt="" class="mode-sprite">Type (Hard)
+      </button>
     </div>
 
     <div class="stats-box">
@@ -65,7 +71,6 @@
         <div class="sprite-wrapper">
           <img id="pokemon-sprite" src="" alt="Pokémon sprite" class="pokemon-sprite" />
         </div>
-        <!-- Game 1: name is hidden, Game 2: name is shown -->
         <div id="game2-name" class="pokemon-name-display hidden"></div>
       </div>
 
@@ -79,6 +84,16 @@
         <div id="game2-input-area" class="hidden">
           <label>What's its Pokédex number?</label>
           <input type="number" id="number-input" placeholder="1 – 1025" min="1" max="1025" />
+        </div>
+        <!-- Type Easy: 4 choice buttons (clicking one submits immediately) -->
+        <div id="type-easy-area" class="hidden">
+          <label>What type is this Pokémon?</label>
+          <div id="type-choices" class="type-choices"></div>
+        </div>
+        <!-- Type Hard: all 18 type toggles + submit -->
+        <div id="type-hard-area" class="hidden">
+          <label>Select all types this Pokémon has (max 2):</label>
+          <div id="type-grid" class="type-grid"></div>
         </div>
         <button id="submit-btn" class="btn btn-primary btn-lg">Submit</button>
       </div>
@@ -98,6 +113,7 @@
           <p id="result-name-text"></p>
           <p id="result-number-text"></p>
           <p id="result-distance-text"></p>
+          <div id="result-types-html"></div>
         </div>
         <button id="next-btn" class="btn btn-primary btn-lg">Next Pokémon</button>
       </div>
@@ -110,56 +126,98 @@
 <script src="/static/js/game1.js"></script>
 <script src="/static/js/game2.js"></script>
 <script>
-  // Redirect if no username
+  // ── Type constants ────────────────────────────────────────────────────────
+  const TYPE_COLORS = {
+    normal:'#A8A77A', fire:'#EE8130', water:'#6390F0', electric:'#F7D02C',
+    grass:'#7AC74C', ice:'#96D9D6', fighting:'#C22E28', poison:'#A33EA1',
+    ground:'#E2BF65', flying:'#A98FF3', psychic:'#F95587', bug:'#A6B91A',
+    rock:'#B6A136', ghost:'#735797', dragon:'#6F35FC', dark:'#705746',
+    steel:'#B7B7CE', fairy:'#D685AD',
+  };
+
+  function typeBadge(type) {
+    const color = TYPE_COLORS[type] || '#888';
+    return `<span class="type-badge" style="background:${color}">${type}</span>`;
+  }
+
+  // ── State ─────────────────────────────────────────────────────────────────
   const username = localStorage.getItem("poke_username");
   if (!username) window.location.href = "/";
 
   let currentGame = "name_guess";
   let currentPokemon = null;
-  let challengeModeByType = { name_guess: false, number_guess: false };
+  let challengeModeByType = { name_guess: false, number_guess: false, type_easy: false, type_hard: false };
   let sessionAccuracies = [];
   let streak = 0;
+  let selectedTypes = [];
 
-  const btn1 = document.getElementById("btn-game1");
-  const btn2 = document.getElementById("btn-game2");
+  // ── DOM refs ──────────────────────────────────────────────────────────────
   const loadingScreen = document.getElementById("loading-screen");
-  const noDataScreen = document.getElementById("no-data-screen");
-  const gameScreen = document.getElementById("game-screen");
-  const submitBtn = document.getElementById("submit-btn");
-  const nextBtn = document.getElementById("next-btn");
-  const resultZone = document.getElementById("result-zone");
-  const answerZone = document.querySelector(".answer-zone");
+  const noDataScreen  = document.getElementById("no-data-screen");
+  const gameScreen    = document.getElementById("game-screen");
+  const submitBtn     = document.getElementById("submit-btn");
+  const nextBtn       = document.getElementById("next-btn");
+  const resultZone    = document.getElementById("result-zone");
+  const answerZone    = document.querySelector(".answer-zone");
   const challengeCheckbox = document.getElementById("challenge-checkbox");
 
+  const MODE_BTNS = {
+    name_guess:   document.getElementById("btn-game1"),
+    number_guess: document.getElementById("btn-game2"),
+    type_easy:    document.getElementById("btn-type-easy"),
+    type_hard:    document.getElementById("btn-type-hard"),
+  };
+
+  // ── Mode switching ────────────────────────────────────────────────────────
   function switchGame(type) {
     currentGame = type;
-    challengeCheckbox.checked = challengeModeByType[type];
-    btn1.classList.toggle("active", type === "name_guess");
-    btn2.classList.toggle("active", type === "number_guess");
+    selectedTypes = [];
+    challengeCheckbox.checked = challengeModeByType[type] || false;
+
+    Object.values(MODE_BTNS).forEach(b => b.classList.remove("active"));
+    MODE_BTNS[type].classList.add("active");
+
     document.getElementById("game1-input-area").classList.toggle("hidden", type !== "name_guess");
     document.getElementById("game2-input-area").classList.toggle("hidden", type !== "number_guess");
-    document.getElementById("game2-name").classList.toggle("hidden", type !== "number_guess");
+    document.getElementById("type-easy-area").classList.toggle("hidden",   type !== "type_easy");
+    document.getElementById("type-hard-area").classList.toggle("hidden",   type !== "type_hard");
+
+    // Name display: visible for number_guess and type_easy
+    document.getElementById("game2-name").classList.toggle("hidden",
+      type !== "number_guess" && type !== "type_easy");
+
+    // Submit button hidden for type_easy (clicking a type badge submits instead)
+    submitBtn.classList.toggle("hidden", type === "type_easy");
+
     loadNext();
   }
 
-  btn1.addEventListener("click", () => switchGame("name_guess"));
-  btn2.addEventListener("click", () => switchGame("number_guess"));
-  challengeCheckbox.addEventListener("change", e => { challengeModeByType[currentGame] = e.target.checked; loadNext(); });
+  Object.values(MODE_BTNS).forEach(btn =>
+    btn.addEventListener("click", () => switchGame(btn.dataset.game))
+  );
+
+  challengeCheckbox.addEventListener("change", e => {
+    challengeModeByType[currentGame] = e.target.checked;
+    loadNext();
+  });
   submitBtn.addEventListener("click", submitAnswer);
   nextBtn.addEventListener("click", loadNext);
 
-  document.getElementById("name-input").addEventListener("keydown", e => { if (e.key === "Enter") submitBtn.click(); });
+  document.getElementById("name-input").addEventListener("keydown",   e => { if (e.key === "Enter") submitBtn.click(); });
   document.getElementById("number-input").addEventListener("keydown", e => { if (e.key === "Enter") submitBtn.click(); });
 
-  // Global Enter: after result is shown, Enter advances to next Pokémon
   document.addEventListener("keydown", e => {
     if (e.key !== "Enter") return;
     if (!resultZone.classList.contains("hidden")) {
       e.preventDefault();
       nextBtn.click();
+    } else if (currentGame === "type_hard" && !answerZone.classList.contains("hidden")) {
+      e.preventDefault();
+      submitBtn.click();
     }
   });
 
+  // ── API calls ─────────────────────────────────────────────────────────────
   async function loadNext() {
     showLoading();
     try {
@@ -180,10 +238,13 @@
 
   async function submitAnswer() {
     if (!currentPokemon) return;
-    const guess = currentGame === "name_guess"
-      ? document.getElementById("name-input").value
-      : document.getElementById("number-input").value;
-    if (!guess.trim()) return;
+
+    let guess;
+    if      (currentGame === "name_guess")   guess = document.getElementById("name-input").value;
+    else if (currentGame === "number_guess") guess = document.getElementById("number-input").value;
+    else if (currentGame === "type_hard")    guess = selectedTypes.join(",");
+
+    if (!guess || !String(guess).trim()) return;
 
     submitBtn.disabled = true;
     const res = await fetch("/game/submit", {
@@ -203,6 +264,27 @@
     updateStats(data);
   }
 
+  async function submitTypeEasy(selectedType) {
+    if (!currentPokemon) return;
+    document.querySelectorAll(".type-choice-btn").forEach(b => b.disabled = true);
+
+    const res = await fetch("/game/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username,
+        pokemon_id: currentPokemon.pokemon_id,
+        game_type: "type_easy",
+        guess: selectedType,
+        was_challenge: challengeModeByType["type_easy"],
+      }),
+    });
+    const data = await res.json();
+    showResult(data, selectedType);
+    updateStats(data);
+  }
+
+  // ── Screen transitions ────────────────────────────────────────────────────
   function showLoading() {
     loadingScreen.classList.remove("hidden");
     noDataScreen.classList.add("hidden");
@@ -213,6 +295,7 @@
     noDataScreen.classList.remove("hidden");
     gameScreen.classList.add("hidden");
   }
+
   function showGame(data) {
     loadingScreen.classList.add("hidden");
     noDataScreen.classList.add("hidden");
@@ -223,30 +306,65 @@
     document.getElementById("pokemon-sprite").src = data.artwork_url;
     document.getElementById("name-input").value = "";
     document.getElementById("number-input").value = "";
+    selectedTypes = [];
 
     if (currentGame === "number_guess") {
       document.getElementById("game2-name").textContent = data.name;
+    } else if (currentGame === "type_easy") {
+      document.getElementById("game2-name").textContent = data.name;
+      renderTypeChoices(data.type_choices || []);
+    } else if (currentGame === "type_hard") {
+      renderTypeGrid();
     }
 
-    // Focus the right input
     setTimeout(() => {
-      if (currentGame === "name_guess") document.getElementById("name-input").focus();
-      else document.getElementById("number-input").focus();
+      if (currentGame === "name_guess")        document.getElementById("name-input").focus();
+      else if (currentGame === "number_guess") document.getElementById("number-input").focus();
     }, 50);
   }
 
-  function showResult(data) {
+  function renderTypeChoices(choices) {
+    const container = document.getElementById("type-choices");
+    container.innerHTML = choices.map(type => {
+      const color = TYPE_COLORS[type] || '#888';
+      return `<button class="type-choice-btn" style="background:${color}" data-type="${type}">${type}</button>`;
+    }).join("");
+    container.querySelectorAll(".type-choice-btn").forEach(btn =>
+      btn.addEventListener("click", () => submitTypeEasy(btn.dataset.type))
+    );
+  }
+
+  function renderTypeGrid() {
+    const grid = document.getElementById("type-grid");
+    selectedTypes = [];
+    grid.innerHTML = Object.keys(TYPE_COLORS).map(type => {
+      const color = TYPE_COLORS[type];
+      return `<button class="type-toggle-btn" style="background:${color}" data-type="${type}">${type}</button>`;
+    }).join("");
+    grid.querySelectorAll(".type-toggle-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const type = btn.dataset.type;
+        if (selectedTypes.includes(type)) {
+          selectedTypes = selectedTypes.filter(t => t !== type);
+          btn.classList.remove("selected");
+        } else {
+          if (selectedTypes.length >= 2) return; // Pokémon have at most 2 types
+          selectedTypes.push(type);
+          btn.classList.add("selected");
+        }
+      });
+    });
+  }
+
+  function showResult(data, userGuessType = null) {
     answerZone.classList.add("hidden");
     resultZone.classList.remove("hidden");
 
     const acc = data.accuracy;
     document.getElementById("accuracy-number").textContent = acc.toFixed(1) + "%";
 
-    // Animate ring
-    const circumference = 314;
-    const offset = circumference - (acc / 100) * circumference;
     const ring = document.getElementById("ring-fill");
-    ring.style.strokeDashoffset = offset;
+    ring.style.strokeDashoffset = 314 - (acc / 100) * 314;
     ring.style.stroke = acc >= 80 ? "#22c55e" : acc >= 50 ? "#f59e0b" : "#ef4444";
 
     document.getElementById("result-name-text").textContent =
@@ -254,7 +372,34 @@
     document.getElementById("result-number-text").textContent =
       currentGame === "number_guess" ? `Pokédex #${data.correct_number}` : "";
     document.getElementById("result-distance-text").textContent =
-      data.distance !== null ? `You were off by ${data.distance}` : "";
+      (data.distance !== null && data.distance !== undefined) ? `You were off by ${data.distance}` : "";
+
+    // Type result info
+    const typesEl = document.getElementById("result-types-html");
+    if (currentGame === "type_easy" || currentGame === "type_hard") {
+      const correctTypes = data.correct_types || [];
+      let html = `<div class="type-result-row"><span class="type-result-label">Correct type${correctTypes.length > 1 ? "s" : ""}:</span> ${correctTypes.map(typeBadge).join(" ")}</div>`;
+
+      if (currentGame === "type_easy" && userGuessType) {
+        const isCorrect = correctTypes.map(t => t.toLowerCase()).includes(userGuessType.toLowerCase());
+        const outline = isCorrect ? "#22c55e" : "#ef4444";
+        html += `<div class="type-result-row"><span class="type-result-label">Your guess:</span> <span class="type-badge" style="background:${TYPE_COLORS[userGuessType] || '#888'};outline:2px solid ${outline};outline-offset:2px">${userGuessType}</span></div>`;
+      } else if (currentGame === "type_hard") {
+        const userTypes = data.user_types || [];
+        const correctLower = correctTypes.map(t => t.toLowerCase());
+        const badgesHtml = userTypes.length
+          ? userTypes.map(t => {
+              const ok = correctLower.includes(t.toLowerCase());
+              return `<span class="type-badge" style="background:${TYPE_COLORS[t] || '#888'};outline:2px solid ${ok ? '#22c55e' : '#ef4444'};outline-offset:2px">${t}</span>`;
+            }).join(" ")
+          : `<em style="color:var(--text-muted);font-size:0.85rem">nothing selected</em>`;
+        html += `<div class="type-result-row"><span class="type-result-label">Your selection:</span> ${badgesHtml}</div>`;
+      }
+
+      typesEl.innerHTML = html;
+    } else {
+      typesEl.innerHTML = "";
+    }
   }
 
   function updateStats(data) {
@@ -262,18 +407,13 @@
     sessionAccuracies.push(data.accuracy);
     const avg = sessionAccuracies.reduce((a, b) => a + b, 0) / sessionAccuracies.length;
     document.getElementById("stat-accuracy").textContent = avg.toFixed(1) + "%";
-    if (data.accuracy >= 80) {
-      streak++;
-    } else {
-      streak = 0;
-    }
+    streak = data.accuracy >= 80 ? streak + 1 : 0;
     document.getElementById("stat-streak").textContent = streak;
   }
 
   function updateChallengeUI(data) {
-    const section = document.getElementById("challenge-section");
-    section.classList.remove("hidden");
-    const locked = document.getElementById("challenge-locked");
+    document.getElementById("challenge-section").classList.remove("hidden");
+    const locked   = document.getElementById("challenge-locked");
     const unlocked = document.getElementById("challenge-unlocked");
     if (data.challenge_unlocked) {
       locked.classList.add("hidden");
@@ -282,8 +422,7 @@
       locked.classList.remove("hidden");
       unlocked.classList.add("hidden");
       document.getElementById("games-needed").textContent = Math.max(0, 20 - data.games_played);
-      const pct = Math.min(100, (data.games_played / 20) * 100);
-      document.getElementById("progress-fill").style.width = pct + "%";
+      document.getElementById("progress-fill").style.width = Math.min(100, (data.games_played / 20) * 100) + "%";
     }
   }
 

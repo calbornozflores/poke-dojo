@@ -385,11 +385,113 @@ a:hover { color: var(--accent-hover); }
 }
 .badge.challenge { background: rgba(108,99,255,0.2); color: var(--accent); }
 
+/* ── Type badges (inline, used in results) ── */
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+  vertical-align: middle;
+}
+
+/* ── Type Easy: 2×2 choice grid ── */
+.type-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+.type-choice-btn {
+  padding: 0.85rem 0.5rem;
+  border-radius: var(--radius);
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  text-transform: capitalize;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  letter-spacing: 0.03em;
+  transition: transform .12s, filter .12s;
+}
+.type-choice-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
+.type-choice-btn:disabled { cursor: default; opacity: 0.75; }
+
+/* ── Type Hard: 6-column toggle grid ── */
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+.type-toggle-btn {
+  padding: 0.45rem 0.25rem;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  text-transform: capitalize;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  letter-spacing: 0.02em;
+  opacity: 0.55;
+  transition: opacity .12s, transform .12s, border-color .12s;
+}
+.type-toggle-btn:hover { opacity: 0.8; }
+.type-toggle-btn.selected {
+  opacity: 1;
+  border-color: #fff;
+  transform: scale(1.06);
+}
+
+/* ── Type result rows ── */
+.type-result-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+  justify-content: center;
+}
+.type-result-label {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+/* ── By Game leaderboard picker ── */
+.game-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+.game-pill {
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.game-pill:hover { border-color: var(--accent); color: var(--text); }
+.game-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .game-layout { grid-template-columns: 1fr; }
   .sidebar { flex-direction: row; flex-wrap: wrap; }
-  .game-selector { flex-direction: row; }
+  .game-selector { flex-direction: row; flex-wrap: wrap; }
   .game-preview { grid-template-columns: 1fr; }
   .input-row { flex-direction: column; }
+  .type-grid { grid-template-columns: repeat(3, 1fr); }
 }
