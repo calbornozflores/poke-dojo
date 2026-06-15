@@ -13,12 +13,13 @@
       <button class="mode-btn" id="btn-game2" data-game="number_guess">
         <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" alt="" class="mode-sprite">Guess Number
       </button>
-      <button class="mode-btn" id="btn-type-easy" data-game="type_easy">
-        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" alt="" class="mode-sprite">Type (Easy)
+      <button class="mode-btn" id="btn-type">
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" alt="" class="mode-sprite">Guess the Type
       </button>
-      <button class="mode-btn" id="btn-type-hard" data-game="type_hard">
-        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png" alt="" class="mode-sprite">Type (Hard)
-      </button>
+      <div id="type-submode" class="type-submode hidden">
+        <button class="submode-pill active" id="submode-easy">Easy</button>
+        <button class="submode-pill" id="submode-hard">Hard</button>
+      </div>
     </div>
 
     <div class="stats-box">
@@ -134,7 +135,14 @@
     rock:'#B6A136', ghost:'#735797', dragon:'#6F35FC', dark:'#705746',
     steel:'#B7B7CE', fairy:'#D685AD',
   };
-
+  const TYPE_IDS = {
+    normal:1, fighting:2, flying:3, poison:4, ground:5, rock:6, bug:7, ghost:8,
+    steel:9, fire:10, water:11, grass:12, electric:13, psychic:14, ice:15,
+    dragon:16, dark:17, fairy:18,
+  };
+  function typeIconUrl(type) {
+    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-ix/scarlet-violet/${TYPE_IDS[type]}.png`;
+  }
   function typeBadge(type) {
     const color = TYPE_COLORS[type] || '#888';
     return `<span class="type-badge" style="background:${color}">${type}</span>`;
@@ -160,13 +168,12 @@
   const resultZone    = document.getElementById("result-zone");
   const answerZone    = document.querySelector(".answer-zone");
   const challengeCheckbox = document.getElementById("challenge-checkbox");
-
-  const MODE_BTNS = {
-    name_guess:   document.getElementById("btn-game1"),
-    number_guess: document.getElementById("btn-game2"),
-    type_easy:    document.getElementById("btn-type-easy"),
-    type_hard:    document.getElementById("btn-type-hard"),
-  };
+  const btnGame1   = document.getElementById("btn-game1");
+  const btnGame2   = document.getElementById("btn-game2");
+  const btnType    = document.getElementById("btn-type");
+  const typeSubmode = document.getElementById("type-submode");
+  const subEasy    = document.getElementById("submode-easy");
+  const subHard    = document.getElementById("submode-hard");
 
   // ── Mode switching ────────────────────────────────────────────────────────
   function switchGame(type) {
@@ -174,9 +181,18 @@
     selectedTypes = [];
     challengeCheckbox.checked = challengeModeByType[type] || false;
 
-    Object.values(MODE_BTNS).forEach(b => b.classList.remove("active"));
-    MODE_BTNS[type].classList.add("active");
+    // Top-level button active states
+    const isType = type === "type_easy" || type === "type_hard";
+    btnGame1.classList.toggle("active", type === "name_guess");
+    btnGame2.classList.toggle("active", type === "number_guess");
+    btnType.classList.toggle("active", isType);
 
+    // Sub-mode pills
+    typeSubmode.classList.toggle("hidden", !isType);
+    subEasy.classList.toggle("active", type === "type_easy");
+    subHard.classList.toggle("active", type === "type_hard");
+
+    // Input areas
     document.getElementById("game1-input-area").classList.toggle("hidden", type !== "name_guess");
     document.getElementById("game2-input-area").classList.toggle("hidden", type !== "number_guess");
     document.getElementById("type-easy-area").classList.toggle("hidden",   type !== "type_easy");
@@ -186,15 +202,20 @@
     document.getElementById("game2-name").classList.toggle("hidden",
       type !== "number_guess" && type !== "type_easy");
 
-    // Submit button hidden for type_easy (clicking a type badge submits instead)
+    // Submit button hidden for type_easy
     submitBtn.classList.toggle("hidden", type === "type_easy");
 
     loadNext();
   }
 
-  Object.values(MODE_BTNS).forEach(btn =>
-    btn.addEventListener("click", () => switchGame(btn.dataset.game))
-  );
+  btnGame1.addEventListener("click", () => switchGame("name_guess"));
+  btnGame2.addEventListener("click", () => switchGame("number_guess"));
+  btnType.addEventListener("click", () => {
+    // If not already in a type mode, enter type_easy by default
+    if (currentGame !== "type_easy" && currentGame !== "type_hard") switchGame("type_easy");
+  });
+  subEasy.addEventListener("click", () => switchGame("type_easy"));
+  subHard.addEventListener("click", () => switchGame("type_hard"));
 
   challengeCheckbox.addEventListener("change", e => {
     challengeModeByType[currentGame] = e.target.checked;
@@ -266,7 +287,11 @@
 
   async function submitTypeEasy(selectedType) {
     if (!currentPokemon) return;
-    document.querySelectorAll(".type-choice-btn").forEach(b => b.disabled = true);
+    // Immediate visual feedback before network response
+    document.querySelectorAll(".type-choice-btn").forEach(b => {
+      b.disabled = true;
+      if (b.dataset.type === selectedType) b.classList.add("selected");
+    });
 
     const res = await fetch("/game/submit", {
       method: "POST",
@@ -325,10 +350,11 @@
 
   function renderTypeChoices(choices) {
     const container = document.getElementById("type-choices");
-    container.innerHTML = choices.map(type => {
-      const color = TYPE_COLORS[type] || '#888';
-      return `<button class="type-choice-btn" style="background:${color}" data-type="${type}">${type}</button>`;
-    }).join("");
+    container.innerHTML = choices.map(type =>
+      `<button class="type-choice-btn" data-type="${type}">
+        <img src="${typeIconUrl(type)}" alt="${type}" class="type-icon-img">
+      </button>`
+    ).join("");
     container.querySelectorAll(".type-choice-btn").forEach(btn =>
       btn.addEventListener("click", () => submitTypeEasy(btn.dataset.type))
     );
@@ -337,10 +363,11 @@
   function renderTypeGrid() {
     const grid = document.getElementById("type-grid");
     selectedTypes = [];
-    grid.innerHTML = Object.keys(TYPE_COLORS).map(type => {
-      const color = TYPE_COLORS[type];
-      return `<button class="type-toggle-btn" style="background:${color}" data-type="${type}">${type}</button>`;
-    }).join("");
+    grid.innerHTML = Object.keys(TYPE_IDS).map(type =>
+      `<button class="type-toggle-btn" data-type="${type}">
+        <img src="${typeIconUrl(type)}" alt="${type}" class="type-icon-img-sm">
+      </button>`
+    ).join("");
     grid.querySelectorAll(".type-toggle-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         const type = btn.dataset.type;
@@ -348,7 +375,7 @@
           selectedTypes = selectedTypes.filter(t => t !== type);
           btn.classList.remove("selected");
         } else {
-          if (selectedTypes.length >= 2) return; // Pokémon have at most 2 types
+          if (selectedTypes.length >= 2) return;
           selectedTypes.push(type);
           btn.classList.add("selected");
         }
@@ -374,7 +401,6 @@
     document.getElementById("result-distance-text").textContent =
       (data.distance !== null && data.distance !== undefined) ? `You were off by ${data.distance}` : "";
 
-    // Type result info
     const typesEl = document.getElementById("result-types-html");
     if (currentGame === "type_easy" || currentGame === "type_hard") {
       const correctTypes = data.correct_types || [];
