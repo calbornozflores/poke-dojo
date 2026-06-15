@@ -265,7 +265,7 @@ def generate_profile_image(user_id: int, game_type: str, db: Session) -> str | N
     RED     = "#f87171"
     GREEN   = "#4ade80"
 
-    fig, ax = plt.subplots(figsize=(8, max(4, n_feat * 0.52 + 1)))
+    fig, ax = plt.subplots(figsize=(7, max(3.2, n_feat * 0.36 + 0.6)))
     fig.patch.set_facecolor(BG)
     ax.set_facecolor(SURFACE)
 
@@ -331,7 +331,7 @@ def generate_profile_image(user_id: int, game_type: str, db: Session) -> str | N
     fig.tight_layout()
 
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=130, facecolor=BG, bbox_inches="tight")
+    fig.savefig(buf, format="png", dpi=110, facecolor=BG, bbox_inches="tight")
     plt.close(fig)
     buf.seek(0)
     return base64.b64encode(buf.read()).decode()
