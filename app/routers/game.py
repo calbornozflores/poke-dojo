@@ -94,14 +94,14 @@ def profile_image(
 ):
     user = db.query(User).filter(User.username == username).first()
     if not user:
-        return {"model_exists": False, "image": None, "total_games": 0}
-    img = xgboost_model.generate_profile_image(user.id, game_type, db)
+        return {"model_exists": False, "chart": None, "total_games": 0}
+    chart = xgboost_model.get_profile_chart_data(user.id, game_type, db)
     total = (
         db.query(GameResult)
         .filter(GameResult.user_id == user.id, GameResult.game_type == game_type)
         .count()
     )
-    return {"model_exists": img is not None, "image": img, "total_games": total}
+    return {"model_exists": chart is not None, "chart": chart, "total_games": total}
 
 
 @router.post("/start", response_model=StartResponse)

@@ -623,18 +623,105 @@ a:hover { color: var(--accent-hover); }
 .profile-result {}
 .profile-games-label { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem; }
 
-.profile-chart-wrap {
-  background: #0d1117;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin-bottom: 1.25rem;
-  max-height: 340px;
+/* ── In-page bar chart ── */
+.profile-viz {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  gap: 20px;
+  overflow-x: auto;
+  padding: 24px 20px 90px;   /* bottom room for diagonal labels */
+  background: #0a0f1a;
+  border: 1px solid #1a2540;
+  border-radius: 16px;
+  margin-bottom: 1.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: #2a3a5c transparent;
 }
-.profile-chart-img { width: 100%; max-height: 340px; object-fit: contain; display: block; }
+.profile-viz::-webkit-scrollbar { height: 4px; }
+.profile-viz::-webkit-scrollbar-thumb { background: #2a3a5c; border-radius: 4px; }
+
+.viz-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: max-content;
+}
+.viz-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  padding: 3px 10px;
+  border-radius: 100px;
+}
+.viz-section.weakness .viz-section-label {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+}
+.viz-section.strength .viz-section-label {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.18);
+}
+
+.viz-columns {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+.viz-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.viz-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 180px;
+  position: relative;
+  padding-bottom: 1px;
+  border-bottom: 1px solid #1e2d45;
+}
+.viz-bar {
+  width: 15px;
+  border-radius: 4px 4px 0 0;
+  height: 0px;
+  transition: height 0.75s cubic-bezier(0.34, 1.4, 0.64, 1);
+  position: relative;
+}
+.viz-bar.wrong {
+  background: linear-gradient(to top, #b91c1c, #f87171);
+  box-shadow: 0 -4px 16px rgba(248, 113, 113, 0.35);
+}
+.viz-bar.correct {
+  background: linear-gradient(to top, #15803d, #4ade80);
+  box-shadow: 0 -4px 16px rgba(74, 222, 128, 0.3);
+}
+.viz-bar:hover { filter: brightness(1.2); }
+.viz-label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-top: 10px;
+  font-size: 0.68rem;
+  color: #6b7fa3;
+  white-space: nowrap;
+  transform: rotate(40deg);
+  transform-origin: left top;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.viz-divider {
+  width: 1px;
+  align-self: stretch;
+  flex-shrink: 0;
+  background: linear-gradient(to bottom, transparent 0%, #1e2d45 15%, #1e2d45 85%, transparent 100%);
+  min-height: 220px;
+}
 
 /* Legend */
 .profile-legend { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.25rem 0; }
@@ -646,6 +733,10 @@ a:hover { color: var(--accent-hover); }
   width: 36px; height: 10px; border-radius: 4px; flex-shrink: 0;
   background: linear-gradient(90deg, #3b82f6, #ef4444);
 }
+.legend-bar { width: 28px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.wrong-bar   { background: #f87171; }
+.correct-bar { background: #4ade80; }
+.legend-hint { font-style: italic; opacity: 0.65; }
 
 /* ── Responsive ── */
 @media (max-width: 768px) {

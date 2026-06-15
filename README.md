@@ -1,43 +1,30 @@
-# Poke-Dojo <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/107.png" height="32" align="absmiddle"> (Hitmonchan)
+# Poke-Dojo <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/107.png" height="32" align="absmiddle">
 
-A local Pokémon training web app with two quiz games, a leaderboard, and an XGBoost-powered **Challenge Mode** that learns which Pokémon trip you up and serves them more often.
+A local Pokémon quiz app with three game modes, a leaderboard, and a machine-learning **Challenge Mode** that learns which Pokémon trip you up — then serves them more often. After 20 games, a personal **My Profile** page shows your strengths and weaknesses.
 
 ---
 
 ## Screenshots
 
-### First Run — Loading Screen
-On first launch the app automatically fetches all 1025 Pokémon from PokéAPI in the background while you watch a spinning Pokéball and rotating Pokémon-themed messages.
+### Welcome Screen
+Enter your trainer name to start — no account needed. Your session is saved in the browser.
 
-| Start (6%) | Mid-fetch (21%) | Ready (100%) |
-|---|---|---|
-| ![Loading start](static/loading-screen.png) | ![Loading progress](static/loading-20pct.png) | ![Loading complete](static/loading-100pct.png) |
+![Home page](docs/screenshots/home.png)
 
-### Home Page
-Enter your trainer name to begin. No account required — your name is saved in the browser.
+### Gameplay
+Three modes in one place: **Name It**, **Guess Number**, and **Guess the Type**. Challenge Mode unlocks per-mode after 20 games and uses machine learning to pick your hardest Pokémon.
 
-![Home page](static/home-page.png)
-
-### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" height="28" align="absmiddle"> Game 1 — Name the Pokémon
-A Pokémon sprite is shown. Type the name and press **Enter**. Accuracy is scored using fuzzy string matching (rapidfuzz), so near-misses are rewarded.
-
-| Guess | Result |
-|---|---|
-| ![Game 1 – Name It](static/game1-real.png) | ![Game 1 – Result](static/game1-result.png) |
-
-### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" height="28" align="absmiddle"> Game 2 — Guess the Pokédex Number
-The sprite and name are shown. Enter the Pokédex number (1–1025) and press **Enter**. The closer you are, the higher your score.
-
-| Guess | Result |
-|---|---|
-| ![Game 2 – Guess Number](static/game2-real.png) | ![Game 2 – Result](static/game2-result.png) |
+![Game page](docs/screenshots/game.png)
 
 ### Leaderboard
-Compare with other trainers across three tabs: overall average, Name It only, and Guess Number only.
+Global ranking and per-mode tabs. Best and worst scores shown per trainer.
 
-| Global Ranking | Name It | Guess Number |
-|---|---|---|
-| ![Global](static/scores-real.png) | ![Name It](static/scores-nameit.png) | ![Guess Number](static/scores-guessnumber.png) |
+![Leaderboard](docs/screenshots/leaderboard.png)
+
+### My Profile
+After 20 games in a mode, machine learning analyses your history to reveal your strengths and weaknesses. The bar chart compares feature influence when you got guesses **right** (green) vs **wrong** (red) — sorted so your biggest weaknesses appear on the left.
+
+![My Profile](docs/screenshots/profile.png)
 
 ---
 
@@ -55,7 +42,7 @@ Compare with other trainers across three tabs: overall average, Name It only, an
 git clone https://github.com/calbornozflores/poke-dojo.git
 cd poke-dojo
 
-# 2. Install dependencies (creates .venv automatically)
+# 2. Install dependencies
 uv sync
 
 # 3. macOS only — XGBoost needs OpenMP
@@ -64,17 +51,17 @@ brew install libomp
 
 ---
 
-## Running the Game
+## Running
 
 ```bash
 uv run uvicorn app.main:app --reload
 ```
 
-Open **http://localhost:8000** in your browser.
+Open **http://localhost:8000**.
 
-**First run:** The app detects an empty database and automatically fetches all 1025 Pokémon from PokéAPI in the background (~3–4 minutes). You'll see the loading screen with a progress bar. Subsequent starts are instant.
+**First run:** the app automatically fetches all 1025 Pokémon from PokéAPI in the background (~3–4 min). Subsequent starts are instant.
 
-**Optional — pre-fetch before starting the server:**
+**Optional — pre-fetch before starting:**
 ```bash
 uv run python data/fetch_data.py
 ```
@@ -83,42 +70,33 @@ uv run python data/fetch_data.py
 
 ## How to Play
 
-### Trainer Name
-Enter any name on the home screen. It's saved in your browser — no account needed.
+### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" height="22" align="absmiddle"> Name It
+A Pokémon sprite appears (name hidden). Type the name and press **Enter**. Accuracy is scored via fuzzy string matching — near-misses are rewarded.
 
-### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" height="24" align="absmiddle"> Game 1 — Name the Pokémon
-1. A Pokémon sprite appears (name hidden).
-2. Type the Pokémon's name in the text box.
-3. Press **Enter** to submit.
-4. See your accuracy score (0–100%).
-5. Press **Enter** again (or click **Next Pokémon**) to continue.
+### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" height="22" align="absmiddle"> Guess Number
+The sprite and name are shown. Enter its Pokédex number (1–1025). The closer you are, the higher the score.
 
-### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" height="24" align="absmiddle"> Game 2 — Guess the Pokédex Number
-1. A Pokémon sprite and its name appear.
-2. Enter what you think its Pokédex number is (1–1025).
-3. Press **Enter** to submit.
-4. See how far off you were and your accuracy score.
-5. Press **Enter** again to continue.
+### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" height="22" align="absmiddle"> Guess the Type
+- **Easy** — pick the primary type from 4 choices.
+- **Hard** — select all types from all 18 options.
 
 ### Scoring
-- **Game 1:** `rapidfuzz.fuzz.ratio(your_guess, correct_name)` → 0–100%
-- **Game 2:** `max(0, 100 × (1 − |guess − actual| / 1025))` → 0–100%
-- A score ≥ 80% counts toward your streak counter.
+| Game | Formula |
+|---|---|
+| Name It | `rapidfuzz.fuzz.ratio(guess, answer)` → 0–100% |
+| Guess Number | `max(0, 100 × (1 − \|guess − actual\| / 1025))` → 0–100% |
+| Guess the Type | Exact match = 100%, miss = 0% |
+
+A score ≥ 80% counts toward your streak.
 
 ### Challenge Mode
-Each game mode has its own Challenge Mode toggle that unlocks independently — **20 Name It games** unlocks challenge for Name It, and **20 Guess Number games** unlocks it for Guess Number. When enabled, an **XGBoost model** trained on your personal game history picks the Pokémon it predicts you'll find hardest. The model retrains every 10 games.
+Unlocks independently per mode after **20 games**. A machine learning model trained on your personal game history picks the Pokémon it predicts you'll find hardest. The model retrains automatically after every submission.
 
----
-
-## Package Management
-
-Always use `uv` — never `pip` directly.
-
-```bash
-uv add <package>          # add a runtime dependency
-uv add --dev <package>    # add a dev dependency
-uv sync                   # install from lockfile
-```
+### My Profile
+Available in the top nav after 20 games in any mode. Shows a bar chart comparing how much each Pokémon feature influenced your guesses when you got them right vs wrong:
+- **Red bar** = avg influence on wrong guesses (<50% accuracy)
+- **Green bar** = avg influence on correct guesses (≥80% accuracy)
+- Features sorted left-to-right: biggest weaknesses first, strengths last
 
 ---
 
@@ -127,25 +105,25 @@ uv sync                   # install from lockfile
 ```
 poke-dojo/
 ├── app/
-│   ├── main.py               # FastAPI app, startup event, page routes
-│   ├── database.py           # SQLAlchemy engine + session
+│   ├── main.py               # FastAPI app, startup, page routes
+│   ├── database.py           # SQLAlchemy engine + safe migrations
 │   ├── models.py             # Pokemon, User, GameResult ORM models
 │   ├── routers/
-│   │   ├── game.py           # /game/start, /game/submit
-│   │   ├── scores.py         # /scores/leaderboard, /scores/user/{name}
-│   │   └── challenge.py      # /challenge/status, /challenge/train
+│   │   ├── game.py           # /game/start, /game/submit, /game/profile
+│   │   ├── scores.py         # /leaderboard
+│   │   └── challenge.py      # /challenge/train
 │   ├── services/
-│   │   ├── data_loader.py    # Background PokeAPI fetch with progress tracking
-│   │   ├── string_match.py   # rapidfuzz accuracy for Game 1
-│   │   ├── pokemon_data.py   # Random Pokémon selection, number accuracy
-│   │   └── xgboost_model.py  # Per-user XGBoost difficulty predictor
-│   └── templates/            # Jinja2 HTML templates
+│   │   ├── data_loader.py    # Background PokeAPI fetch with progress
+│   │   ├── string_match.py   # rapidfuzz accuracy for Name It
+│   │   ├── pokemon_data.py   # Random Pokémon selection
+│   │   └── xgboost_model.py  # Per-user XGBoost difficulty + profile chart data
+│   └── templates/            # Jinja2 HTML (base, index, game, leaderboard, profile)
 ├── data/
-│   ├── fetch_data.py         # Manual pre-fetch script (optional)
+│   ├── fetch_data.py         # Manual pre-fetch script
+│   ├── backfill_height_weight.py  # One-time height/weight migration
 │   └── pokemon.db            # SQLite database (git-ignored)
 └── static/
-    ├── css/style.css
-    └── js/game1.js, game2.js
+    └── css/style.css
 ```
 
 ---
@@ -155,8 +133,9 @@ poke-dojo/
 | Component | Technology |
 |---|---|
 | Backend | FastAPI + Uvicorn |
-| Database | SQLite via SQLAlchemy |
+| Database | SQLite via SQLAlchemy ORM |
 | String matching | rapidfuzz |
-| ML (Challenge Mode) | XGBoost |
+| ML (Challenge + Profile) | XGBoost (native SHAP) |
 | Package manager | uv |
 | Data source | PokéAPI (pokeapi.co) |
+| Frontend | Vanilla JS + CSS (no framework) |

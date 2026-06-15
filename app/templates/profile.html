@@ -51,21 +51,18 @@
   <!-- Chart -->
   <div id="profile-result" class="profile-result hidden">
     <p id="profile-games-label" class="profile-games-label"></p>
-    <div class="profile-chart-wrap">
-      <img id="profile-chart-img" src="" alt="Profile chart" class="profile-chart-img">
-    </div>
+    <div id="profile-viz" class="profile-viz"></div>
     <div class="profile-legend">
       <div class="profile-legend-item">
-        <span class="legend-dot weakness-dot"></span>
-        <span>Weakness — this makes Pokémon <strong>harder</strong> for you</span>
+        <span class="legend-bar wrong-bar"></span>
+        <span><strong>Red</strong> — when you got it <strong>wrong</strong> (&lt;50% accuracy) · <span id="legend-n-wrong"></span></span>
       </div>
       <div class="profile-legend-item">
-        <span class="legend-dot strength-dot"></span>
-        <span>Strength — this makes Pokémon <strong>easier</strong> for you</span>
+        <span class="legend-bar correct-bar"></span>
+        <span><strong>Green</strong> — when you got it <strong>right</strong> (≥80% accuracy) · <span id="legend-n-correct"></span></span>
       </div>
       <div class="profile-legend-item">
-        <span class="legend-color-bar"></span>
-        <span>Dot color: feature value from <strong>low (blue)</strong> to <strong>high (red)</strong></span>
+        <span class="legend-hint">Taller bar = that feature influenced your guesses more in those games</span>
       </div>
     </div>
   </div>
@@ -80,25 +77,21 @@
   let activeGame = "name_guess";
   let progressTimer = null;
 
-  const loadingPanel  = document.getElementById("profile-loading");
-  const lockedPanel   = document.getElementById("profile-locked");
-  const resultPanel   = document.getElementById("profile-result");
-  const progressFill  = document.getElementById("profile-progress-fill");
-  const loadingText   = document.getElementById("profile-loading-text");
-  const chartImg      = document.getElementById("profile-chart-img");
-  const gamesLabel    = document.getElementById("profile-games-label");
-  const gamesInfo     = document.getElementById("profile-games-info");
+  const loadingPanel = document.getElementById("profile-loading");
+  const lockedPanel  = document.getElementById("profile-locked");
+  const resultPanel  = document.getElementById("profile-result");
+  const progressFill = document.getElementById("profile-progress-fill");
+  const loadingText  = document.getElementById("profile-loading-text");
+  const gamesLabel   = document.getElementById("profile-games-label");
+  const gamesInfo    = document.getElementById("profile-games-info");
 
   function showLoading() {
     loadingPanel.classList.remove("hidden");
     lockedPanel.classList.add("hidden");
     resultPanel.classList.add("hidden");
-
-    // Animate progress bar over ~2.5 s while waiting for the server
     progressFill.style.transition = "none";
     progressFill.style.width = "0%";
     loadingText.textContent = "Analysing your game history…";
-
     let pct = 0;
     clearInterval(progressTimer);
     progressTimer = setInterval(() => {
@@ -115,10 +108,89 @@
     setTimeout(cb, 350);
   }
 
+  function renderChart(chart) {
+    const BAR_MAX_H = 180;
+    const viz = document.getElementById("profile-viz");
+    viz.innerHTML = "";
+
+    document.getElementById("legend-n-wrong").textContent   = `n=${chart.n_wrong}`;
+    document.getElementById("legend-n-correct").textContent = `n=${chart.n_correct}`;
+
+    const weaknesses = chart.features.filter(f => f.is_weakness);
+    const strengths  = chart.features.filter(f => !f.is_weakness);
+    const maxVal     = chart.max_val || 1;
+
+    function makeCol(feat) {
+      const col = document.createElement("div");
+      col.className = "viz-col";
+
+      const barsEl = document.createElement("div");
+      barsEl.className = "viz-bars";
+
+      function makeBar(cls, val) {
+        const bar = document.createElement("div");
+        bar.className = `viz-bar ${cls}`;
+        const h = val > 0 ? Math.max(4, Math.round((val / maxVal) * BAR_MAX_H)) : 0;
+        bar.dataset.h = h + "px";
+        bar.style.height = "0px";
+        return bar;
+      }
+
+      barsEl.appendChild(makeBar("wrong",   feat.wrong));
+      barsEl.appendChild(makeBar("correct", feat.correct));
+
+      const label = document.createElement("div");
+      label.className = "viz-label";
+      label.textContent = feat.label;
+
+      col.appendChild(barsEl);
+      col.appendChild(label);
+      return col;
+    }
+
+    function makeSection(features, type) {
+      if (!features.length) return null;
+      const section = document.createElement("div");
+      section.className = `viz-section ${type}`;
+
+      const hdr = document.createElement("div");
+      hdr.className = "viz-section-label";
+      hdr.textContent = type === "weakness" ? "WEAKNESSES" : "STRENGTHS";
+      section.appendChild(hdr);
+
+      const cols = document.createElement("div");
+      cols.className = "viz-columns";
+      features.forEach(f => cols.appendChild(makeCol(f)));
+      section.appendChild(cols);
+      return section;
+    }
+
+    const wk = makeSection(weaknesses, "weakness");
+    const st = makeSection(strengths,  "strength");
+
+    if (wk) viz.appendChild(wk);
+    if (wk && st) {
+      const div = document.createElement("div");
+      div.className = "viz-divider";
+      viz.appendChild(div);
+    }
+    if (st) viz.appendChild(st);
+
+    // Animate bars left-to-right
+    const allCols = viz.querySelectorAll(".viz-col");
+    allCols.forEach((col, i) => {
+      setTimeout(() => {
+        col.querySelectorAll(".viz-bar").forEach(bar => {
+          bar.style.height = bar.dataset.h;
+        });
+      }, 80 + i * 60);
+    });
+  }
+
   async function loadProfile(gameType) {
     showLoading();
     try {
-      const res = await fetch(
+      const res  = await fetch(
         `/game/profile/image?username=${encodeURIComponent(username)}&game_type=${encodeURIComponent(gameType)}`
       );
       const data = await res.json();
@@ -135,7 +207,7 @@
         }
 
         gamesLabel.textContent = `Based on ${data.total_games} game${data.total_games !== 1 ? "s" : ""} in this mode`;
-        chartImg.src = "data:image/png;base64," + data.image;
+        renderChart(data.chart);
         resultPanel.classList.remove("hidden");
       });
     } catch {
@@ -156,7 +228,6 @@
     });
   });
 
-  // Initial load
   loadProfile(activeGame);
 </script>
 {% endblock %}

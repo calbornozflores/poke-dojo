@@ -14,7 +14,6 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 import xgboost as xgb
 from sqlalchemy.orm import Session
 from app.models import GameResult, Pokemon
@@ -31,20 +30,20 @@ TYPE_ENC = {
 }
 
 FEATURE_META = {
-    "type1":      {"label": "Primary type",    "weakness": "Certain primary types trip you up",     "strength": "You know primary types well"},
-    "type2":      {"label": "Secondary type",  "weakness": "Dual-type Pokémon are harder for you",  "strength": "Dual-type Pokémon are easy for you"},
-    "height":     {"label": "Height",          "weakness": "Taller Pokémon are trickier to guess",  "strength": "You handle Pokémon of all sizes"},
-    "weight":     {"label": "Weight",          "weakness": "Heavier Pokémon are harder to guess",   "strength": "Weight doesn't affect your accuracy"},
-    "hp":         {"label": "Base HP",         "weakness": "High-HP Pokémon trip you up",           "strength": "You know your tanks well"},
-    "attack":     {"label": "Attack stat",     "weakness": "Powerhouse Pokémon are tricky",         "strength": "Strong attackers are your forte"},
-    "defense":    {"label": "Defense stat",    "weakness": "Defensive Pokémon give you trouble",    "strength": "Tanky Pokémon are easy for you"},
-    "sp_attack":  {"label": "Sp. Attack",      "weakness": "Special attackers stump you",           "strength": "Special attackers are your comfort zone"},
-    "sp_defense": {"label": "Sp. Defense",     "weakness": "Sp. defensive Pokémon are hard",        "strength": "Sp. defensive Pokémon are a strength"},
-    "speed":      {"label": "Speed",           "weakness": "Fast Pokémon trip you up",              "strength": "Speedy Pokémon are your strong suit"},
-    "generation": {"label": "Generation",      "weakness": "Certain generations are tricky for you","strength": "You have solid generational knowledge"},
-    "stage":      {"label": "Evolution stage", "weakness": "Evolution stage affects your accuracy", "strength": "You know your evo stages well"},
-    "name_length":{"label": "Name length",     "weakness": "Longer names are your weak spot",       "strength": "You handle names of all lengths well"},
-    "pokedex_id": {"label": "Pokédex range",   "weakness": "Certain Pokédex ranges trip you up",    "strength": "You know your Pokédex order well"},
+    "type1":      {"label": "Type 1",       "weakness": "Certain primary types trip you up",     "strength": "You know primary types well"},
+    "type2":      {"label": "Type 2",       "weakness": "Dual-type Pokémon are harder for you",  "strength": "Dual-type Pokémon are easy for you"},
+    "height":     {"label": "Height",       "weakness": "Taller Pokémon are trickier to guess",  "strength": "You handle Pokémon of all sizes"},
+    "weight":     {"label": "Weight",       "weakness": "Heavier Pokémon are harder to guess",   "strength": "Weight doesn't affect your accuracy"},
+    "hp":         {"label": "HP",           "weakness": "High-HP Pokémon trip you up",           "strength": "You know your tanks well"},
+    "attack":     {"label": "Attack",       "weakness": "Powerhouse Pokémon are tricky",         "strength": "Strong attackers are your forte"},
+    "defense":    {"label": "Defense",      "weakness": "Defensive Pokémon give you trouble",    "strength": "Tanky Pokémon are easy for you"},
+    "sp_attack":  {"label": "Sp. Atk",     "weakness": "Special attackers stump you",           "strength": "Special attackers are your comfort zone"},
+    "sp_defense": {"label": "Sp. Def",     "weakness": "Sp. defensive Pokémon are hard",        "strength": "Sp. defensive Pokémon are a strength"},
+    "speed":      {"label": "Speed",        "weakness": "Fast Pokémon trip you up",              "strength": "Speedy Pokémon are your strong suit"},
+    "generation": {"label": "Generation",   "weakness": "Certain generations are tricky for you","strength": "You have solid generational knowledge"},
+    "stage":      {"label": "Evo. stage",   "weakness": "Evolution stage affects your accuracy", "strength": "You know your evo stages well"},
+    "name_length":{"label": "Name length",  "weakness": "Longer names are your weak spot",       "strength": "You handle names of all lengths well"},
+    "pokedex_id": {"label": "Pokédex #",    "weakness": "Certain Pokédex ranges trip you up",    "strength": "You know your Pokédex order well"},
 }
 
 
@@ -198,80 +197,72 @@ def get_profile(user_id: int, game_type: str, db: Session) -> dict | None:
     }
 
 
-def generate_profile_image(user_id: int, game_type: str, db: Session) -> str | None:
-    """Generate a SHAP beeswarm image. Returns base64 PNG or None."""
-    df, feature_names, shap_vals, _ = _shap_data(user_id, game_type, db)
-    if df is None:
+def get_profile_chart_data(user_id: int, game_type: str, db: Session) -> dict | None:
+    """Return structured correct-vs-wrong SHAP data for the in-page bar chart."""
+    path = _model_path(user_id, game_type)
+    if not path.exists():
         return None
 
-    total_games = (
+    model = xgb.XGBRegressor()
+    model.load_model(str(path))
+
+    results = (
         db.query(GameResult)
         .filter(GameResult.user_id == user_id, GameResult.game_type == game_type)
-        .count()
+        .all()
     )
+    if not results:
+        return None
 
-    mean_abs = np.abs(shap_vals).mean(axis=0)
-    order = np.argsort(mean_abs)          # ascending → bottom of chart
-    feat_sorted      = [feature_names[i] for i in order]
-    shap_sorted      = shap_vals[:, order]
-    feat_vals_sorted = df.values[:, order]
-    mean_shap        = shap_vals.mean(axis=0)
-    labels           = [FEATURE_META.get(f, {}).get("label", f) for f in feat_sorted]
-    n_feat           = len(feat_sorted)
+    rows, accs = [], []
+    for r in results:
+        poke = db.query(Pokemon).get(r.pokemon_id)
+        if poke is None:
+            continue
+        rows.append(_build_features(poke))
+        accs.append(r.accuracy)
 
-    BG      = "#0d1117"
-    SURFACE = "#16213e"
-    TEXT    = "#e8eaf6"
-    MUTED   = "#8892b0"
-    RED     = "#f87171"
-    GREEN   = "#4ade80"
+    if not rows:
+        return None
 
-    fig, ax = plt.subplots(figsize=(7, max(3.2, n_feat * 0.36 + 0.6)))
-    fig.patch.set_facecolor(BG)
-    ax.set_facecolor(SURFACE)
-    for spine in ax.spines.values():
-        spine.set_edgecolor("#2a3a5c")
-    ax.tick_params(colors=MUTED, labelsize=9)
+    acc = np.array(accs, dtype=float)
+    df = pd.DataFrame(rows)
+    feature_names = df.columns.tolist()
 
-    for i, fi in enumerate(order):
-        sv = shap_sorted[:, i]
-        fv = feat_vals_sorted[:, i].astype(float)
-        ms = float(mean_shap[fi])
+    dmat = xgb.DMatrix(df)
+    shap_contribs = model.get_booster().predict(dmat, pred_contribs=True)
+    abs_shap = np.abs(shap_contribs[:, :-1])
 
-        fv_min, fv_max = fv.min(), fv.max()
-        fv_norm = (fv - fv_min) / (fv_max - fv_min + 1e-9)
-        jitter  = np.random.default_rng(fi).uniform(-0.3, 0.3, len(sv))
+    correct_mask = acc >= 80
+    wrong_mask   = acc < 50
+    n_correct = int(correct_mask.sum())
+    n_wrong   = int(wrong_mask.sum())
 
-        ax.scatter(sv, np.full(len(sv), i) + jitter,
-                   c=plt.cm.RdBu_r(fv_norm), s=6, alpha=0.55, linewidths=0)
+    if n_correct == 0 and n_wrong == 0:
+        return None
 
-        col = RED if ms > 0 else GREEN
-        ax.plot([ms, ms], [i - 0.38, i + 0.38], color=col, lw=2.5, zorder=5)
+    n_feat = len(feature_names)
+    correct_avg = abs_shap[correct_mask].mean(axis=0) if n_correct > 0 else np.zeros(n_feat)
+    wrong_avg   = abs_shap[wrong_mask].mean(axis=0)   if n_wrong   > 0 else np.zeros(n_feat)
 
-    ax.axvline(0, color="#2a3a5c", lw=1.5, zorder=1)
-    ax.set_yticks(range(n_feat))
-    ax.set_yticklabels(labels, fontsize=9, color=TEXT)
-    ax.set_xlabel("Impact on difficulty  (→ harder,  ← easier)", color=MUTED, fontsize=9)
+    gap   = wrong_avg - correct_avg
+    order = np.argsort(gap)[::-1]  # biggest weakness first
 
-    patch_w = mpatches.Patch(color=RED,   label="Weakness")
-    patch_s = mpatches.Patch(color=GREEN, label="Strength")
-    ax.legend(handles=[patch_w, patch_s], loc="lower right", fontsize=8,
-              framealpha=0.25, facecolor=SURFACE, edgecolor="#2a3a5c", labelcolor=TEXT)
+    features = []
+    for i in order:
+        features.append({
+            "label":       FEATURE_META.get(feature_names[i], {}).get("label", feature_names[i]),
+            "correct":     round(float(correct_avg[i]), 5),
+            "wrong":       round(float(wrong_avg[i]), 5),
+            "is_weakness": float(gap[i]) > 0,
+        })
 
-    sm = plt.cm.ScalarMappable(cmap="RdBu_r", norm=plt.Normalize(0, 1))
-    sm.set_array([])
-    cbar = fig.colorbar(sm, ax=ax, pad=0.01, fraction=0.015)
-    cbar.ax.tick_params(colors=MUTED, labelsize=7)
-    cbar.set_label("Feature value\n(low → high)", color=MUTED, fontsize=7)
-    plt.setp(cbar.ax.yaxis.get_ticklabels(), color=MUTED)
-    cbar.outline.set_edgecolor("#2a3a5c")
-    cbar.ax.set_facecolor(BG)
+    all_vals = [f["correct"] for f in features] + [f["wrong"] for f in features]
+    max_val  = float(max(all_vals)) if all_vals else 1.0
 
-    ax.set_title(f"Feature Impact on Your Difficulty  ·  {total_games} games", color=TEXT, fontsize=10, pad=10)
-    fig.tight_layout()
-
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=110, facecolor=BG, bbox_inches="tight")
-    plt.close(fig)
-    buf.seek(0)
-    return base64.b64encode(buf.read()).decode()
+    return {
+        "n_correct": n_correct,
+        "n_wrong":   n_wrong,
+        "max_val":   max_val,
+        "features":  features,
+    }
