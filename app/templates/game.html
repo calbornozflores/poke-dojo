@@ -41,6 +41,7 @@
         <label class="challenge-toggle">
           <input type="checkbox" id="challenge-checkbox" />
           <span>Challenge Mode</span>
+          <button type="button" class="challenge-info-btn" id="challenge-info-btn" title="What is Challenge Mode?">ℹ️</button>
         </label>
         <p class="challenge-hint">XGBoost picks your hardest Pokémon</p>
       </div>
@@ -219,7 +220,7 @@
     resultZone.classList.add("hidden");
     answerZone.classList.remove("hidden");
 
-    document.getElementById("pokemon-sprite").src = data.sprite_url;
+    document.getElementById("pokemon-sprite").src = data.artwork_url;
     document.getElementById("name-input").value = "";
     document.getElementById("number-input").value = "";
 
@@ -285,6 +286,26 @@
       document.getElementById("progress-fill").style.width = pct + "%";
     }
   }
+
+  // ── Challenge Mode info tooltip ───────────────────────────────────────────
+  let tooltipTimer = null;
+  document.getElementById("challenge-info-btn").addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const existing = document.getElementById("challenge-tooltip");
+    if (existing) { clearTimeout(tooltipTimer); existing.remove(); return; }
+
+    const tip = document.createElement("div");
+    tip.id = "challenge-tooltip";
+    tip.className = "challenge-tooltip";
+    tip.textContent = "We use machine learning (XGBoost) to analyse your game history, identify your weakest Pokémon, and serve them more often — so you train where it counts most.";
+    document.getElementById("challenge-unlocked").appendChild(tip);
+
+    tooltipTimer = setTimeout(() => {
+      tip.classList.add("fade-out");
+      setTimeout(() => tip.remove(), 500);
+    }, 4000);
+  });
 
   // Initial load
   loadNext();

@@ -10,46 +10,69 @@
 
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="global">Global Ranking</button>
-    <button class="tab-btn" data-tab="personal">My History</button>
+    <button class="tab-btn" data-tab="nameit">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Name It
+    </button>
+    <button class="tab-btn" data-tab="guessnumber">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Guess Number
+    </button>
   </div>
 
   <!-- Global leaderboard -->
   <div id="tab-global" class="tab-content">
-    <div id="leaderboard-loading" class="centered-msg">Loading...</div>
-    <table id="leaderboard-table" class="score-table hidden">
+    <div id="global-loading" class="centered-msg">Loading...</div>
+    <table id="global-table" class="score-table hidden">
       <thead>
         <tr>
           <th>#</th>
           <th>Trainer</th>
           <th>Games</th>
           <th>Avg Accuracy</th>
-          <th>Name Game</th>
-          <th>Number Game</th>
           <th>Best</th>
           <th>Worst</th>
         </tr>
       </thead>
-      <tbody id="leaderboard-body"></tbody>
+      <tbody id="global-body"></tbody>
     </table>
-    <p id="leaderboard-empty" class="centered-msg hidden">No scores yet. Go play some games!</p>
+    <p id="global-empty" class="centered-msg hidden">No scores yet. Go play some games!</p>
   </div>
 
-  <!-- Personal history -->
-  <div id="tab-personal" class="tab-content hidden">
-    <div id="history-loading" class="centered-msg">Loading...</div>
-    <table id="history-table" class="score-table hidden">
+  <!-- Name It leaderboard -->
+  <div id="tab-nameit" class="tab-content hidden">
+    <div id="nameit-loading" class="centered-msg">Loading...</div>
+    <table id="nameit-table" class="score-table hidden">
       <thead>
         <tr>
-          <th>Game Type</th>
-          <th>Pokémon #</th>
-          <th>Accuracy</th>
-          <th>Mode</th>
-          <th>When</th>
+          <th>#</th>
+          <th>Trainer</th>
+          <th>Games</th>
+          <th>Avg Accuracy</th>
+          <th>Best</th>
+          <th>Worst</th>
         </tr>
       </thead>
-      <tbody id="history-body"></tbody>
+      <tbody id="nameit-body"></tbody>
     </table>
-    <p id="history-empty" class="centered-msg hidden">No games played yet. Head to Play!</p>
+    <p id="nameit-empty" class="centered-msg hidden">No Name It scores yet.</p>
+  </div>
+
+  <!-- Guess Number leaderboard -->
+  <div id="tab-guessnumber" class="tab-content hidden">
+    <div id="guessnumber-loading" class="centered-msg">Loading...</div>
+    <table id="guessnumber-table" class="score-table hidden">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Trainer</th>
+          <th>Games</th>
+          <th>Avg Accuracy</th>
+          <th>Best</th>
+          <th>Worst</th>
+        </tr>
+      </thead>
+      <tbody id="guessnumber-body"></tbody>
+    </table>
+    <p id="guessnumber-empty" class="centered-msg hidden">No Guess Number scores yet.</p>
   </div>
 </div>
 {% endblock %}
@@ -64,36 +87,44 @@
       tabs.forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       document.querySelectorAll(".tab-content").forEach(t => t.classList.add("hidden"));
-      document.getElementById("tab-" + btn.dataset.tab).classList.remove("hidden");
-      if (btn.dataset.tab === "personal") loadHistory();
+      const key = btn.dataset.tab;
+      document.getElementById("tab-" + key).classList.remove("hidden");
+      if (key === "nameit" && !nameitLoaded) loadTab("name_guess", "nameit");
+      if (key === "guessnumber" && !guessnumberLoaded) loadTab("number_guess", "guessnumber");
     });
   });
 
-  document.getElementById("refresh-btn").addEventListener("click", loadAll);
+  document.getElementById("refresh-btn").addEventListener("click", () => {
+    globalLoaded = nameitLoaded = guessnumberLoaded = false;
+    resetTab("global");
+    resetTab("nameit");
+    resetTab("guessnumber");
+    loadTab(null, "global");
+  });
 
   function fmtAcc(val) {
     return val !== null && val !== undefined ? val.toFixed(1) + "%" : "—";
   }
 
-  async function loadLeaderboard() {
-    const res = await fetch("/scores/leaderboard");
-    const data = await res.json();
-    const tbody = document.getElementById("leaderboard-body");
-    const table = document.getElementById("leaderboard-table");
-    const empty = document.getElementById("leaderboard-empty");
-    const loading = document.getElementById("leaderboard-loading");
+  function resetTab(key) {
+    document.getElementById(key + "-loading").classList.remove("hidden");
+    document.getElementById(key + "-table").classList.add("hidden");
+    document.getElementById(key + "-empty").classList.add("hidden");
+  }
+
+  function renderTable(key, scores) {
+    const loading = document.getElementById(key + "-loading");
+    const table = document.getElementById(key + "-table");
+    const empty = document.getElementById(key + "-empty");
+    const tbody = document.getElementById(key + "-body");
     loading.classList.add("hidden");
-
-    if (!data.scores.length) { empty.classList.remove("hidden"); return; }
-
-    tbody.innerHTML = data.scores.map((s, i) => `
+    if (!scores.length) { empty.classList.remove("hidden"); return; }
+    tbody.innerHTML = scores.map((s, i) => `
       <tr class="${username && s.username === username ? 'highlight-row' : ''}">
         <td>${i + 1}</td>
         <td><strong>${s.username}</strong></td>
         <td>${s.total_games}</td>
         <td class="acc-cell">${fmtAcc(s.avg_accuracy)}</td>
-        <td>${fmtAcc(s.avg_name_accuracy)}</td>
-        <td>${fmtAcc(s.avg_number_accuracy)}</td>
         <td class="best">${fmtAcc(s.best_accuracy)}</td>
         <td class="worst">${fmtAcc(s.worst_accuracy)}</td>
       </tr>
@@ -101,40 +132,18 @@
     table.classList.remove("hidden");
   }
 
-  async function loadHistory() {
-    if (!username) { document.getElementById("history-empty").classList.remove("hidden"); return; }
-    const res = await fetch(`/scores/user/${encodeURIComponent(username)}`);
+  let globalLoaded = false, nameitLoaded = false, guessnumberLoaded = false;
+
+  async function loadTab(game_type, key) {
+    const url = game_type ? `/scores/leaderboard?game_type=${game_type}` : "/scores/leaderboard";
+    const res = await fetch(url);
     const data = await res.json();
-    const tbody = document.getElementById("history-body");
-    const table = document.getElementById("history-table");
-    const empty = document.getElementById("history-empty");
-    const loading = document.getElementById("history-loading");
-    loading.classList.add("hidden");
-
-    if (!data.scores.length) { empty.classList.remove("hidden"); return; }
-
-    tbody.innerHTML = data.scores.map(s => {
-      const dt = new Date(s.timestamp).toLocaleString();
-      const typeLabel = s.game_type === "name_guess" ? "🏷️ Name" : "🔢 Number";
-      const mode = s.was_challenge ? "<span class='badge challenge'>Challenge</span>" : "Normal";
-      return `<tr>
-        <td>${typeLabel}</td>
-        <td>#${s.pokemon_id}</td>
-        <td class="acc-cell">${s.accuracy.toFixed(1)}%</td>
-        <td>${mode}</td>
-        <td class="date-cell">${dt}</td>
-      </tr>`;
-    }).join("");
-    table.classList.remove("hidden");
+    renderTable(key, data.scores);
+    if (key === "global") globalLoaded = true;
+    if (key === "nameit") nameitLoaded = true;
+    if (key === "guessnumber") guessnumberLoaded = true;
   }
 
-  function loadAll() {
-    document.getElementById("leaderboard-loading").classList.remove("hidden");
-    document.getElementById("leaderboard-table").classList.add("hidden");
-    document.getElementById("leaderboard-empty").classList.add("hidden");
-    loadLeaderboard();
-  }
-
-  loadAll();
+  loadTab(null, "global");
 </script>
 {% endblock %}

@@ -133,7 +133,8 @@ a:hover { color: var(--accent-hover); }
   padding: 1.25rem;
   text-align: center;
 }
-.game-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+.game-icon { font-size: 2rem; margin-bottom: 0.5rem; display: flex; justify-content: center; }
+.game-card-sprite { width: 64px; height: 64px; image-rendering: pixelated; }
 .game-card h3 { font-size: 1rem; margin-bottom: 0.4rem; }
 .game-card p { color: var(--text-muted); font-size: 0.85rem; }
 
@@ -216,6 +217,31 @@ a:hover { color: var(--accent-hover); }
 }
 .challenge-toggle input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
 .challenge-hint { font-size: 0.8rem; color: var(--text-muted); }
+.challenge-info-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  padding: 0;
+  line-height: 1;
+  margin-left: auto;
+  transition: color .15s;
+}
+.challenge-info-btn:hover { color: var(--accent); }
+.challenge-tooltip {
+  background: var(--surface2);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.78rem;
+  color: var(--text);
+  line-height: 1.5;
+  margin-top: 0.5rem;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
+.challenge-tooltip.fade-out { opacity: 0; }
 
 /* ── Game area ── */
 .game-area { display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -233,11 +259,10 @@ a:hover { color: var(--accent-hover); }
 }
 .sprite-wrapper { display: flex; justify-content: center; margin-bottom: 1rem; }
 .pokemon-sprite {
-  width: 180px;
-  height: 180px;
+  width: 220px;
+  height: 220px;
   object-fit: contain;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 4px 12px rgba(108,99,255,0.3));
+  filter: drop-shadow(0 4px 24px rgba(108,99,255,0.35));
 }
 .pokemon-name-display {
   font-size: 1.5rem;

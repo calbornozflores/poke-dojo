@@ -41,6 +41,7 @@ class StartRequest(BaseModel):
 class StartResponse(BaseModel):
     pokemon_id: int
     sprite_url: str
+    artwork_url: str
     name: str | None  # None for game1, provided for game2
     challenge_unlocked: bool
     games_played: int
@@ -99,6 +100,7 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
     return StartResponse(
         pokemon_id=pokemon.id,
         sprite_url=pokemon.sprite_url,
+        artwork_url=f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{pokemon.id}.png",
         name=pokemon.name if req.game_type == "number_guess" else None,
         challenge_unlocked=challenge_unlocked,
         games_played=games_played,
