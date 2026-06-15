@@ -251,7 +251,7 @@ def generate_profile_image(user_id: int, game_type: str, db: Session) -> str | N
     ax.axvline(0, color="#2a3a5c", lw=1.5, zorder=1)
     ax.set_yticks(range(n_feat))
     ax.set_yticklabels(labels, fontsize=9, color=TEXT)
-    ax.set_xlabel("SHAP value  (→ harder,  ← easier)", color=MUTED, fontsize=9)
+    ax.set_xlabel("Impact on difficulty  (→ harder,  ← easier)", color=MUTED, fontsize=9)
 
     patch_w = mpatches.Patch(color=RED,   label="Weakness")
     patch_s = mpatches.Patch(color=GREEN, label="Strength")
@@ -267,7 +267,7 @@ def generate_profile_image(user_id: int, game_type: str, db: Session) -> str | N
     cbar.outline.set_edgecolor("#2a3a5c")
     cbar.ax.set_facecolor(BG)
 
-    ax.set_title(f"SHAP Feature Impact  ·  {total_games} games", color=TEXT, fontsize=10, pad=10)
+    ax.set_title(f"Feature Impact on Your Difficulty  ·  {total_games} games", color=TEXT, fontsize=10, pad=10)
     fig.tight_layout()
 
     buf = io.BytesIO()

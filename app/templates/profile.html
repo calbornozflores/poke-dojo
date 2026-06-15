@@ -5,7 +5,7 @@
 <div class="profile-page">
   <div class="profile-page-header">
     <h1>My Profile</h1>
-    <p class="profile-page-subtitle">Your strengths and weaknesses, explained by SHAP values from your personal XGBoost model.</p>
+    <p class="profile-page-subtitle">Your strengths and weaknesses, discovered by machine learning based on your game history.</p>
   </div>
 
   <!-- Game type selector -->
@@ -31,7 +31,7 @@
   <!-- Loading state -->
   <div id="profile-loading" class="profile-loading-panel">
     <div class="profile-spinner"></div>
-    <p id="profile-loading-text">Calculating your SHAP values…</p>
+    <p id="profile-loading-text">Analysing your game history…</p>
     <div class="profile-progress-track">
       <div class="profile-progress-fill" id="profile-progress-fill"></div>
     </div>
@@ -52,16 +52,16 @@
   <div id="profile-result" class="profile-result hidden">
     <p id="profile-games-label" class="profile-games-label"></p>
     <div class="profile-chart-wrap">
-      <img id="profile-chart-img" src="" alt="SHAP profile chart" class="profile-chart-img">
+      <img id="profile-chart-img" src="" alt="Profile chart" class="profile-chart-img">
     </div>
     <div class="profile-legend">
       <div class="profile-legend-item">
         <span class="legend-dot weakness-dot"></span>
-        <span>Weakness — this feature pushes your error rate <strong>up</strong></span>
+        <span>Weakness — this makes Pokémon <strong>harder</strong> for you</span>
       </div>
       <div class="profile-legend-item">
         <span class="legend-dot strength-dot"></span>
-        <span>Strength — this feature pulls your error rate <strong>down</strong></span>
+        <span>Strength — this makes Pokémon <strong>easier</strong> for you</span>
       </div>
       <div class="profile-legend-item">
         <span class="legend-color-bar"></span>
@@ -97,7 +97,7 @@
     // Animate progress bar over ~2.5 s while waiting for the server
     progressFill.style.transition = "none";
     progressFill.style.width = "0%";
-    loadingText.textContent = "Calculating your SHAP values…";
+    loadingText.textContent = "Analysing your game history…";
 
     let pct = 0;
     clearInterval(progressTimer);
