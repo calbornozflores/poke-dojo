@@ -185,7 +185,7 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
     games_played = _game_count(user.id, req.game_type, db)
     challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
 
-    if challenge_unlocked and games_played % 10 == 0:
+    if challenge_unlocked:
         xgboost_model.train(user.id, db)
 
     return SubmitResponse(
