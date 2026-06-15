@@ -83,7 +83,7 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
         recent_ids = [
             r.pokemon_id
             for r in db.query(GameResult)
-            .filter(GameResult.user_id == user.id)
+            .filter(GameResult.user_id == user.id, GameResult.game_type == req.game_type)
             .order_by(GameResult.timestamp.desc())
             .limit(10)
             .all()
