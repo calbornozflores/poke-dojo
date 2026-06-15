@@ -6,10 +6,34 @@ from Name It does not bleed into Guess Number rankings, etc.
 Model artifacts: data/challenge_model_{user_id}_{game_type}.json
 """
 from pathlib import Path
+import numpy as np
 import pandas as pd
 import xgboost as xgb
 from sqlalchemy.orm import Session
 from app.models import GameResult, Pokemon
+
+FEATURE_META = {
+    "avg_accuracy": {
+        "label": "Familiar Pokémon",
+        "weakness": "Past exposure isn't helping your recall",
+        "strength": "You reliably nail Pokémon you've seen before",
+    },
+    "prior_attempts": {
+        "label": "Repeated practice",
+        "weakness": "Repetition isn't improving your accuracy yet",
+        "strength": "Practice is clearly paying off",
+    },
+    "hp":        {"label": "Base HP",       "weakness": "High-HP Pokémon trip you up",          "strength": "You know your tanks well"},
+    "attack":    {"label": "Attack stat",   "weakness": "Powerhouse Pokémon are tricky",         "strength": "Strong attackers are your forte"},
+    "defense":   {"label": "Defense stat",  "weakness": "Defensive Pokémon give you trouble",    "strength": "Tanky Pokémon are easy for you"},
+    "sp_attack": {"label": "Sp. Attack",    "weakness": "Special attackers stump you",           "strength": "Special attackers are your comfort zone"},
+    "sp_defense":{"label": "Sp. Defense",   "weakness": "Sp. defensive Pokémon are hard",        "strength": "Sp. defensive Pokémon are a strength"},
+    "speed":     {"label": "Speed",         "weakness": "Fast Pokémon trip you up",              "strength": "Speedy Pokémon are your strong suit"},
+    "generation":{"label": "Generation",    "weakness": "Certain generations are tricky for you","strength": "You have solid generational knowledge"},
+    "stage":     {"label": "Evolution stage","weakness": "Evolution stage affects your accuracy", "strength": "You know your evo stages well"},
+    "name_length":{"label": "Name length",  "weakness": "Longer names are your weak spot",       "strength": "You handle names of all lengths well"},
+    "pokedex_id":{"label": "Pokédex range", "weakness": "Certain Pokédex ranges trip you up",    "strength": "You know your Pokédex order well"},
+}
 
 MODEL_DIR = Path(__file__).parent.parent.parent / "data"
 STAGE_MAP = {"basic": 0, "stage_1": 1, "stage_2": 2}
@@ -125,3 +149,64 @@ def predict_hardest(user_id: int, game_type: str, db: Session, n: int = 50) -> l
     scores = model.predict(X)
     ranked = sorted(zip(pokemon_ids, scores), key=lambda x: x[1], reverse=True)
     return [pid for pid, _ in ranked[:n]]
+
+
+def get_profile(user_id: int, game_type: str, db: Session) -> dict | None:
+    """
+    Return SHAP-based strengths and weaknesses for the user in this game type.
+    Returns None if no trained model exists yet.
+    """
+    path = _model_path(user_id, game_type)
+    if not path.exists():
+        return None
+
+    model = xgb.XGBRegressor()
+    model.load_model(str(path))
+
+    results = (
+        db.query(GameResult)
+        .filter(GameResult.user_id == user_id, GameResult.game_type == game_type)
+        .all()
+    )
+    user_history = _build_history(results)
+
+    all_pokemon = db.query(Pokemon).all()
+    rows = [_build_features(poke, user_history) for poke in all_pokemon]
+    df = pd.DataFrame(rows)
+    feature_names = df.columns.tolist()
+
+    # XGBoost native SHAP — no extra library needed
+    dmat = xgb.DMatrix(df)
+    shap_contribs = model.get_booster().predict(dmat, pred_contribs=True)
+    shap_values = shap_contribs[:, :-1]  # drop bias column
+
+    mean_shap = shap_values.mean(axis=0)
+
+    items = []
+    for i, feat in enumerate(feature_names):
+        ms = float(mean_shap[i])
+        meta = FEATURE_META.get(feat, {"label": feat, "weakness": f"{feat} is a weak spot", "strength": f"{feat} is a strength"})
+        items.append({
+            "feature": feat,
+            "label": meta["label"],
+            "description": meta["weakness"] if ms > 0 else meta["strength"],
+            "mean_shap": round(ms, 3),
+            "abs_shap": abs(ms),
+            "is_weakness": ms > 0,
+        })
+
+    items.sort(key=lambda x: x["abs_shap"], reverse=True)
+
+    max_abs = items[0]["abs_shap"] if items else 1.0
+    for item in items:
+        item["magnitude"] = round(item["abs_shap"] / max_abs * 100, 1)
+        del item["abs_shap"]
+
+    weaknesses = [i for i in items if i["is_weakness"]][:4]
+    strengths  = [i for i in items if not i["is_weakness"]][:4]
+
+    return {
+        "weaknesses": weaknesses,
+        "strengths": strengths,
+        "total_games": len(results),
+    }

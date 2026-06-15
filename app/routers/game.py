@@ -1,5 +1,5 @@
 import random
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -71,6 +71,19 @@ class SubmitResponse(BaseModel):
     challenge_unlocked: bool
     correct_types: list[str] = []
     user_types: list[str] = []
+
+
+@router.get("/profile")
+def game_profile(
+    username: str = Query(...),
+    game_type: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        return {"model_exists": False, "profile": None}
+    profile = xgboost_model.get_profile(user.id, game_type, db)
+    return {"model_exists": profile is not None, "profile": profile}
 
 
 @router.post("/start", response_model=StartResponse)
