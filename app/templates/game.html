@@ -57,34 +57,6 @@
 
   <!-- Main game area -->
   <section class="game-area">
-
-    <!-- Play / My Profile tab row -->
-    <div class="game-tab-bar">
-      <button class="game-tab active" id="tab-play">Play</button>
-      <button class="game-tab" id="tab-profile">My Profile</button>
-    </div>
-
-    <!-- Profile screen -->
-    <div id="profile-screen" class="hidden">
-      <div class="profile-header">
-        <h2 id="profile-title">Your Profile</h2>
-        <p id="profile-subtitle" class="profile-subtitle"></p>
-      </div>
-      <div id="profile-no-model" class="profile-no-model hidden">
-        <p>Play <strong id="profile-games-needed">20</strong> more games in this mode to unlock your profile.</p>
-      </div>
-      <div id="profile-content" class="hidden">
-        <div class="profile-section" id="profile-weaknesses-section">
-          <h3 class="profile-section-title weakness-title">Weaknesses</h3>
-          <div id="profile-weaknesses"></div>
-        </div>
-        <div class="profile-section" id="profile-strengths-section">
-          <h3 class="profile-section-title strength-title">Strengths</h3>
-          <div id="profile-strengths"></div>
-        </div>
-      </div>
-    </div>
-
     <div id="loading-screen" class="centered">
       <p>Loading Pokémon...</p>
     </div>
@@ -187,7 +159,6 @@
   let sessionAccuracies = [];
   let streak = 0;
   let selectedTypes = [];
-  let profileActive = false;
 
   // ── DOM refs ──────────────────────────────────────────────────────────────
   const loadingScreen = document.getElementById("loading-screen");
@@ -270,7 +241,6 @@
 
   // ── API calls ─────────────────────────────────────────────────────────────
   async function loadNext() {
-    if (profileActive) { loadProfile(); return; }
     showLoading();
     try {
       const res = await fetch("/game/start", {
@@ -502,96 +472,6 @@
       setTimeout(() => tip.remove(), 500);
     }, 4000);
   });
-
-  // ── Profile tab ──────────────────────────────────────────────────────────
-  const tabPlay        = document.getElementById("tab-play");
-  const tabProfile     = document.getElementById("tab-profile");
-  const profileScreen  = document.getElementById("profile-screen");
-  let profileActive    = false;
-
-  const GAME_LABELS = {
-    name_guess:    "Name It",
-    number_guess:  "Guess Number",
-    type_easy:     "Guess the Type — Easy",
-    type_hard:     "Guess the Type — Hard",
-  };
-
-  tabPlay.addEventListener("click", () => {
-    profileActive = false;
-    tabPlay.classList.add("active");
-    tabProfile.classList.remove("active");
-    profileScreen.classList.add("hidden");
-    // restore game state visibility
-    loadingScreen.classList.add("hidden");
-    noDataScreen.classList.add("hidden");
-    gameScreen.classList.remove("hidden");
-  });
-
-  tabProfile.addEventListener("click", () => {
-    profileActive = true;
-    tabProfile.classList.add("active");
-    tabPlay.classList.remove("active");
-    loadingScreen.classList.add("hidden");
-    noDataScreen.classList.add("hidden");
-    gameScreen.classList.add("hidden");
-    profileScreen.classList.remove("hidden");
-    loadProfile();
-  });
-
-  async function loadProfile() {
-    const gamesNeededEl = document.getElementById("profile-games-needed");
-    const noModelEl     = document.getElementById("profile-no-model");
-    const contentEl     = document.getElementById("profile-content");
-    const subtitleEl    = document.getElementById("profile-subtitle");
-    const titleEl       = document.getElementById("profile-title");
-
-    titleEl.textContent = `Your ${GAME_LABELS[currentGame] || currentGame} Profile`;
-    subtitleEl.textContent = "Loading…";
-    noModelEl.classList.add("hidden");
-    contentEl.classList.add("hidden");
-
-    try {
-      const res = await fetch(`/game/profile?username=${encodeURIComponent(username)}&game_type=${currentGame}`);
-      const data = await res.json();
-
-      if (!data.model_exists) {
-        subtitleEl.textContent = "";
-        const gamesPlayed = currentPokemon?.games_played ?? 0;
-        gamesNeededEl.textContent = Math.max(0, 20 - gamesPlayed);
-        noModelEl.classList.remove("hidden");
-        return;
-      }
-
-      const p = data.profile;
-      subtitleEl.textContent = `Based on ${p.total_games} game${p.total_games !== 1 ? "s" : ""}`;
-
-      function renderItems(containerId, items, isWeakness) {
-        const el = document.getElementById(containerId);
-        if (!items.length) { el.innerHTML = `<p class="profile-empty">Not enough data yet.</p>`; return; }
-        el.innerHTML = items.map(item => `
-          <div class="profile-item">
-            <div class="profile-item-header">
-              <span class="profile-item-label">${item.label}</span>
-            </div>
-            <p class="profile-item-desc">${item.description}</p>
-            <div class="profile-bar-track">
-              <div class="profile-bar ${isWeakness ? 'weakness-bar' : 'strength-bar'}"
-                   style="width:${item.magnitude}%"></div>
-            </div>
-          </div>
-        `).join("");
-      }
-
-      renderItems("profile-weaknesses", p.weaknesses, true);
-      renderItems("profile-strengths",  p.strengths,  false);
-
-      document.getElementById("profile-weaknesses-section").classList.toggle("hidden", !p.weaknesses.length);
-      document.getElementById("profile-strengths-section").classList.toggle("hidden",  !p.strengths.length);
-      contentEl.classList.remove("hidden");
-    } catch {
-      subtitleEl.textContent = "Failed to load profile.";
-    }
-  }
 
   // Initial load
   loadNext();

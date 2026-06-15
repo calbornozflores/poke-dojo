@@ -86,6 +86,24 @@ def game_profile(
     return {"model_exists": profile is not None, "profile": profile}
 
 
+@router.get("/profile/image")
+def profile_image(
+    username: str = Query(...),
+    game_type: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        return {"model_exists": False, "image": None, "total_games": 0}
+    img = xgboost_model.generate_profile_image(user.id, game_type, db)
+    total = (
+        db.query(GameResult)
+        .filter(GameResult.user_id == user.id, GameResult.game_type == game_type)
+        .count()
+    )
+    return {"model_exists": img is not None, "image": img, "total_games": total}
+
+
 @router.post("/start", response_model=StartResponse)
 def start_game(req: StartRequest, db: Session = Depends(get_db)):
     user = _upsert_user(req.username, db)

@@ -5,9 +5,16 @@ Trains only on the user's results for the active game type so that accuracy
 from Name It does not bleed into Guess Number rankings, etc.
 Model artifacts: data/challenge_model_{user_id}_{game_type}.json
 """
+from __future__ import annotations
 from pathlib import Path
+import base64
+import io
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import xgboost as xgb
 from sqlalchemy.orm import Session
 from app.models import GameResult, Pokemon
@@ -210,3 +217,121 @@ def get_profile(user_id: int, game_type: str, db: Session) -> dict | None:
         "strengths": strengths,
         "total_games": len(results),
     }
+
+
+def generate_profile_image(user_id: int, game_type: str, db: Session) -> str | None:
+    """
+    Generate a SHAP beeswarm-style summary image for the user/game_type.
+    Returns base64-encoded PNG or None if no model exists.
+    """
+    path = _model_path(user_id, game_type)
+    if not path.exists():
+        return None
+
+    model = xgb.XGBRegressor()
+    model.load_model(str(path))
+
+    results = (
+        db.query(GameResult)
+        .filter(GameResult.user_id == user_id, GameResult.game_type == game_type)
+        .all()
+    )
+    user_history = _build_history(results)
+
+    all_pokemon = db.query(Pokemon).all()
+    rows = [_build_features(poke, user_history) for poke in all_pokemon]
+    df = pd.DataFrame(rows)
+    feature_names = df.columns.tolist()
+
+    dmat = xgb.DMatrix(df)
+    shap_contribs = model.get_booster().predict(dmat, pred_contribs=True)
+    shap_vals = shap_contribs[:, :-1]   # (n_pokemon, n_features)
+
+    # Sort features by mean |SHAP| descending
+    mean_abs = np.abs(shap_vals).mean(axis=0)
+    order = np.argsort(mean_abs)          # ascending → bottom of chart
+    feat_sorted  = [feature_names[i] for i in order]
+    shap_sorted  = shap_vals[:, order]
+    feat_vals_sorted = df.values[:, order]
+
+    labels = [FEATURE_META.get(f, {}).get("label", f) for f in feat_sorted]
+    n_feat = len(feat_sorted)
+
+    # ── Figure ────────────────────────────────────────────────────────────────
+    BG      = "#0d1117"
+    SURFACE = "#16213e"
+    TEXT    = "#e8eaf6"
+    MUTED   = "#8892b0"
+    RED     = "#f87171"
+    GREEN   = "#4ade80"
+
+    fig, ax = plt.subplots(figsize=(8, max(4, n_feat * 0.52 + 1)))
+    fig.patch.set_facecolor(BG)
+    ax.set_facecolor(SURFACE)
+
+    for spine in ax.spines.values():
+        spine.set_edgecolor("#2a3a5c")
+
+    ax.tick_params(colors=MUTED, labelsize=9)
+    ax.xaxis.label.set_color(MUTED)
+
+    mean_shap = shap_vals.mean(axis=0)
+
+    for i, fi in enumerate(order):
+        sv   = shap_sorted[:, i]             # SHAP values for this feature
+        fv   = feat_vals_sorted[:, i]        # raw feature values
+        ms   = float(mean_shap[fi])
+
+        # Normalise feature values to [0,1] for colormap
+        fv_min, fv_max = fv.min(), fv.max()
+        fv_norm = (fv - fv_min) / (fv_max - fv_min + 1e-9)
+
+        # Jitter dots vertically
+        jitter = np.random.default_rng(fi).uniform(-0.3, 0.3, len(sv))
+
+        # Color: red = high feature value, blue = low feature value
+        colors = plt.cm.RdBu_r(fv_norm)
+
+        ax.scatter(sv, np.full(len(sv), i) + jitter,
+                   c=colors, s=6, alpha=0.55, linewidths=0)
+
+        # Mean SHAP vertical tick
+        col = RED if ms > 0 else GREEN
+        ax.plot([ms, ms], [i - 0.38, i + 0.38], color=col, lw=2.5, zorder=5)
+
+    ax.axvline(0, color="#2a3a5c", lw=1.5, zorder=1)
+    ax.set_yticks(range(n_feat))
+    ax.set_yticklabels(labels, fontsize=9, color=TEXT)
+    ax.set_xlabel("SHAP value  (→ harder,  ← easier)", color=MUTED, fontsize=9)
+
+    # Legend
+    patch_w = mpatches.Patch(color=RED,   label="Weakness (pushes difficulty up)")
+    patch_s = mpatches.Patch(color=GREEN, label="Strength (pulls difficulty down)")
+    legend = ax.legend(handles=[patch_w, patch_s], loc="lower right",
+                       fontsize=8, framealpha=0.25,
+                       facecolor=SURFACE, edgecolor="#2a3a5c",
+                       labelcolor=TEXT)
+
+    # Colorbar proxy
+    sm = plt.cm.ScalarMappable(cmap="RdBu_r", norm=plt.Normalize(0, 1))
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax, pad=0.01, fraction=0.015)
+    cbar.ax.tick_params(colors=MUTED, labelsize=7)
+    cbar.set_label("Feature value\n(low → high)", color=MUTED, fontsize=7)
+    cbar.ax.yaxis.set_tick_params(color=MUTED)
+    plt.setp(cbar.ax.yaxis.get_ticklabels(), color=MUTED)
+    cbar.outline.set_edgecolor("#2a3a5c")
+    cbar.ax.set_facecolor(BG)
+
+    ax.set_title(
+        f"SHAP Feature Impact  ·  {len(results)} games",
+        color=TEXT, fontsize=10, pad=10,
+    )
+
+    fig.tight_layout()
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=130, facecolor=BG, bbox_inches="tight")
+    plt.close(fig)
+    buf.seek(0)
+    return base64.b64encode(buf.read()).decode()

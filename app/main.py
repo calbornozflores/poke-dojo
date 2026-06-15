@@ -69,6 +69,11 @@ async def leaderboard(request: Request):
     return templates.TemplateResponse(request=request, name="scores.html")
 
 
+@app.get("/profile")
+async def profile(request: Request):
+    return templates.TemplateResponse(request=request, name="profile.html")
+
+
 # ── API ───────────────────────────────────────────────────────────────────────
 
 @app.get("/api/status")

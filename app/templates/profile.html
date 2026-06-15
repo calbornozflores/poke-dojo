@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}My Profile — Poke-Dojo{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+  <div class="profile-page-header">
+    <h1>My Profile</h1>
+    <p class="profile-page-subtitle">Your strengths and weaknesses, explained by SHAP values from your personal XGBoost model.</p>
+  </div>
+
+  <!-- Game type selector -->
+  <div class="profile-game-tabs">
+    <button class="profile-game-tab active" data-game="name_guess">Name It</button>
+    <button class="profile-game-tab" data-game="number_guess">Guess Number</button>
+    <button class="profile-game-tab" data-game="type_easy">Type Easy</button>
+    <button class="profile-game-tab" data-game="type_hard">Type Hard</button>
+  </div>
+
+  <!-- Loading state -->
+  <div id="profile-loading" class="profile-loading-panel">
+    <div class="profile-spinner"></div>
+    <p id="profile-loading-text">Calculating your SHAP values…</p>
+    <div class="profile-progress-track">
+      <div class="profile-progress-fill" id="profile-progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- No model yet -->
+  <div id="profile-locked" class="profile-locked hidden">
+    <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/54.png"
+         alt="Psyduck" class="profile-locked-sprite">
+    <h2>Model not trained yet</h2>
+    <p>Play at least <strong>20 games</strong> in this mode to unlock your personal profile.<br>
+       The model trains automatically after game 20.</p>
+    <p id="profile-games-info" class="profile-games-info"></p>
+    <a href="/play" class="btn btn-primary">Go Play</a>
+  </div>
+
+  <!-- Chart -->
+  <div id="profile-result" class="profile-result hidden">
+    <p id="profile-games-label" class="profile-games-label"></p>
+    <div class="profile-chart-wrap">
+      <img id="profile-chart-img" src="" alt="SHAP profile chart" class="profile-chart-img">
+    </div>
+    <div class="profile-legend">
+      <div class="profile-legend-item">
+        <span class="legend-dot weakness-dot"></span>
+        <span>Weakness — this feature pushes your error rate <strong>up</strong></span>
+      </div>
+      <div class="profile-legend-item">
+        <span class="legend-dot strength-dot"></span>
+        <span>Strength — this feature pulls your error rate <strong>down</strong></span>
+      </div>
+      <div class="profile-legend-item">
+        <span class="legend-color-bar"></span>
+        <span>Dot color: feature value from <strong>low (blue)</strong> to <strong>high (red)</strong></span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const username = localStorage.getItem("poke_username");
+  if (!username) window.location.href = "/";
+
+  let activeGame = "name_guess";
+  let progressTimer = null;
+
+  const loadingPanel  = document.getElementById("profile-loading");
+  const lockedPanel   = document.getElementById("profile-locked");
+  const resultPanel   = document.getElementById("profile-result");
+  const progressFill  = document.getElementById("profile-progress-fill");
+  const loadingText   = document.getElementById("profile-loading-text");
+  const chartImg      = document.getElementById("profile-chart-img");
+  const gamesLabel    = document.getElementById("profile-games-label");
+  const gamesInfo     = document.getElementById("profile-games-info");
+
+  function showLoading() {
+    loadingPanel.classList.remove("hidden");
+    lockedPanel.classList.add("hidden");
+    resultPanel.classList.add("hidden");
+
+    // Animate progress bar over ~2.5 s while waiting for the server
+    progressFill.style.transition = "none";
+    progressFill.style.width = "0%";
+    loadingText.textContent = "Calculating your SHAP values…";
+
+    let pct = 0;
+    clearInterval(progressTimer);
+    progressTimer = setInterval(() => {
+      pct = Math.min(pct + (100 - pct) * 0.06, 92);
+      progressFill.style.transition = "width 0.4s ease";
+      progressFill.style.width = pct + "%";
+    }, 200);
+  }
+
+  function finishProgress(cb) {
+    clearInterval(progressTimer);
+    progressFill.style.transition = "width 0.3s ease";
+    progressFill.style.width = "100%";
+    setTimeout(cb, 350);
+  }
+
+  async function loadProfile(gameType) {
+    showLoading();
+    try {
+      const res = await fetch(
+        `/game/profile/image?username=${encodeURIComponent(username)}&game_type=${encodeURIComponent(gameType)}`
+      );
+      const data = await res.json();
+
+      finishProgress(() => {
+        loadingPanel.classList.add("hidden");
+
+        if (!data.model_exists) {
+          gamesInfo.textContent = data.total_games
+            ? `You've played ${data.total_games} game${data.total_games !== 1 ? "s" : ""} in this mode — ${Math.max(0, 20 - data.total_games)} more to go.`
+            : "You haven't played this game mode yet.";
+          lockedPanel.classList.remove("hidden");
+          return;
+        }
+
+        gamesLabel.textContent = `Based on ${data.total_games} game${data.total_games !== 1 ? "s" : ""} in this mode`;
+        chartImg.src = "data:image/png;base64," + data.image;
+        resultPanel.classList.remove("hidden");
+      });
+    } catch {
+      finishProgress(() => {
+        loadingPanel.classList.add("hidden");
+        lockedPanel.classList.remove("hidden");
+        gamesInfo.textContent = "Failed to load profile. Try again later.";
+      });
+    }
+  }
+
+  document.querySelectorAll(".profile-game-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".profile-game-tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeGame = btn.dataset.game;
+      loadProfile(activeGame);
+    });
+  });
+
+  // Initial load
+  loadProfile(activeGame);
+</script>
+{% endblock %}
