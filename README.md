@@ -33,9 +33,11 @@ The sprite and name are shown. Enter the Pokédex number (1–1025) and press **
 | ![Game 2 – Guess Number](static/game2-real.png) | ![Game 2 – Result](static/game2-result.png) |
 
 ### Leaderboard
-Track your accuracy across both game types, your personal history, and compare with other trainers.
+Compare with other trainers across three tabs: overall average, Name It only, and Guess Number only.
 
-![Leaderboard](static/scores-real.png)
+| Global Ranking | Name It | Guess Number |
+|---|---|---|
+| ![Global](static/scores-real.png) | ![Name It](static/scores-nameit.png) | ![Guess Number](static/scores-guessnumber.png) |
 
 ---
 
