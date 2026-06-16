@@ -1510,11 +1510,11 @@ a:hover { color: var(--accent-hover); }
   border-radius: 2px;
 }
 
-/* Silhouette animation: white silhouette for 70%, rapid reveal in last 30% */
+/* Silhouette animation: starts fading at 35%, mostly revealed by 60% */
 @keyframes silhouetteReveal {
   0%   { filter: brightness(0) invert(1); }
-  50%  { filter: brightness(0.05) invert(0.95); }
-  75%  { filter: brightness(0.6) invert(0.4); }
+  35%  { filter: brightness(0.05) invert(0.95); }
+  60%  { filter: brightness(0.6) invert(0.4); }
   100% { filter: none; }
 }
 .arena-pokemon-stage {
