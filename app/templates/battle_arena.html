@@ -270,6 +270,10 @@ document.getElementById("start-match-btn").addEventListener("click", async () =>
   loadRound();
 });
 
+function officialArtwork(pokemonId) {
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
+}
+
 // ── Load round ────────────────────────────────────────────────────────────
 async function loadRound() {
   currentRound++;
@@ -284,9 +288,11 @@ async function loadRound() {
     MODE === "vs" ? `Round ${currentRound} / ${totalRounds}` : `Round ${currentRound}`;
   updateScoreboard();
 
-  // Sprite: start as silhouette
+  // Sprite: official artwork as white silhouette
   const spriteEl = document.getElementById("arena-sprite");
-  spriteEl.src = roundData.sprite_url;
+  spriteEl.style.animation = "none";
+  spriteEl.style.filter = "";
+  spriteEl.src = officialArtwork(roundData.pokemon_id);
   spriteEl.className = "arena-sprite silhouette";
 
   // Options
@@ -316,6 +322,7 @@ async function loadRound() {
     infoEl.textContent = `Timer: ${soloTimerDuration}s  •  Press your key to answer`;
   }
 
+  showScreen("round-screen");
   startReveal();
 }
 
@@ -450,10 +457,10 @@ async function submitRound(p1key, p1ms, p2key, p2ms, soloGameOver = false) {
     p2Score += result.player2_score;
   }
 
-  // Fully reveal sprite
+  // Fully reveal sprite (stop animation, clear silhouette filter)
   const spriteEl = document.getElementById("arena-sprite");
   spriteEl.style.animation = "none";
-  spriteEl.style.filter = "none";
+  spriteEl.style.filter = "";
   spriteEl.classList.remove("silhouette");
 
   if (soloGameOver) {
@@ -466,7 +473,7 @@ async function submitRound(p1key, p1ms, p2key, p2ms, soloGameOver = false) {
 
 // ── Round result screen ───────────────────────────────────────────────────
 function showRoundResult(result) {
-  document.getElementById("rr-sprite").src = roundData.sprite_url;
+  document.getElementById("rr-sprite").src = officialArtwork(roundData.pokemon_id);
   document.getElementById("rr-name").textContent = result.pokemon_name;
 
   const barsEl = document.getElementById("round-result-bars");
@@ -584,7 +591,7 @@ function showMatchEnd(summary) {
     const row = document.createElement("div");
     row.className = "recap-row";
     row.innerHTML = `
-      <img src="${r.sprite_url}" class="recap-sprite" alt="${r.pokemon_name}">
+      <img src="${officialArtwork(r.pokemon_id)}" class="recap-sprite" alt="${r.pokemon_name}">
       <span class="recap-name">${r.pokemon_name}</span>
       <span class="recap-p1 ${r.player1_correct ? "rcor" : "rwrong"}">${summary.player1}: ${r.player1_score}pts</span>
       <span class="recap-p2 ${r.player2_correct ? "rcor" : "rwrong"}">${summary.player2 || ""}: ${r.player2_score}pts</span>`;

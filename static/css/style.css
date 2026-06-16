@@ -1482,12 +1482,13 @@ a:hover { color: var(--accent-hover); }
   margin-bottom: 1.5rem;
 }
 .arena-sprite {
-  width: 180px;
-  height: 180px;
+  width: 220px;
+  height: 220px;
   object-fit: contain;
-  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 24px rgba(108,99,255,0.35));
+  transition: filter 0.35s ease;
 }
-.arena-sprite.silhouette { filter: brightness(0) invert(1); }
+.arena-sprite.silhouette { filter: brightness(0) invert(1) drop-shadow(0 0 18px rgba(255,255,255,0.25)); }
 
 /* ── Options ── */
 .arena-options {
