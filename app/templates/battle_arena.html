@@ -147,7 +147,7 @@
   <div id="single-gameover-screen" class="arena-screen hidden">
     <div class="analytics-card">
       <div class="analytics-header">
-        <div class="match-winner-trophy" id="analytics-emoji">💀</div>
+        <div class="match-winner-trophy" id="analytics-emoji"></div>
         <div class="match-winner-name" id="analytics-run-title">Run Over</div>
         <div class="analytics-stats-row">
           <div class="analytics-stat">
@@ -769,7 +769,7 @@ async function endSingleRun(reason) {
   } else if (soloRound >= 10) {
     emojiEl.innerHTML = `<img src="${officialArtwork(289)}" class="analytics-slaking" alt="Slaking">`;
   } else {
-    emojiEl.innerHTML = "💀";
+    emojiEl.innerHTML = `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/92.png" class="analytics-slaking" alt="Gastly">`;
   }
   document.getElementById("analytics-run-title").textContent =
     shadowCatches >= 3 ? "Caught by Your Shadow" : reason;

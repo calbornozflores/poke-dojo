@@ -89,6 +89,11 @@ Endless mode with custom keys (A/S/D shown). Timer tightens every 10 rounds — 
 
 ![Solo Round](screenshots/19_battle_arena_solo_round.png)
 
+### Battle Arena — Solo Game Over
+Three wrong answers (or timeouts, or being beaten by Your Shadow) ends the run. Analytics show response-time chart and your slowest Pokémon categories.
+
+![Solo Game Over](screenshots/20b_solo_gameover.png)
+
 ### Battle Arena — Match End
 Trophy, winner, final scores, and a round-by-round recap. Rematch starts a fresh match with the same settings.
 

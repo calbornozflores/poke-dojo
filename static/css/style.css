@@ -1322,7 +1322,9 @@ a:hover { color: var(--accent-hover); }
   transition: background 0.15s, border-color 0.15s;
 }
 .battle-btn:hover { background: rgba(99, 102, 241, 0.18); border-color: #6366f1; }
-.battle-btn-icon { font-size: 1.1rem; margin-right: 0.4rem; }
+.battle-btn-icon { font-size: 1.1rem; margin-right: 0.4rem; display: inline-flex; align-items: center; gap: 2px; }
+.battle-btn-sprite { width: 28px; height: 28px; image-rendering: pixelated; vertical-align: middle; }
+.battle-btn-sprite-flip { transform: scaleX(-1); }
 .battle-btn-sub { font-size: 0.65rem; color: var(--text-muted); margin-left: 1.6rem; }
 
 /* ── Arena page layout ── */

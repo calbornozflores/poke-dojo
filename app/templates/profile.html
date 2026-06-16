@@ -80,10 +80,6 @@
 
     <p class="breakdown-hint">
       Sorted hardest-first. Only categories with ≥ 5 games shown. &nbsp;
-      <strong>YOU</strong>:
-        <span style="color:#4ade80">■</span> ≥70% &nbsp;
-        <span style="color:#fbbf24">■</span> 50–69% &nbsp;
-        <span style="color:#f87171">■</span> &lt;50% &nbsp;·&nbsp;
       <strong style="color:#a78bfa">AI</strong>:
         <span style="color:#fb923c">■</span> model predicts hard &nbsp;
         <span style="color:#60a5fa">■</span> model predicts easy
@@ -207,11 +203,6 @@
 
       const barGroup = document.createElement("div");
       barGroup.className = "breakdown-bar-group";
-
-      const accColor = accuracyColor(item.avg);
-      const accLine  = makeLine("YOU", item.avg + "%", item.avg, accColor, false);
-      barGroup.appendChild(accLine.el);
-      fills.push({ fill: accLine.fill, delay: 80 + i * 55 });
 
       if (hasShap && item.shap != null) {
         const hard      = item.shap > 0;
