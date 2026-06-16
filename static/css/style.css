@@ -1558,8 +1558,7 @@ a:hover { color: var(--accent-hover); }
   transition: border-color 0.1s, background 0.1s;
 }
 .arena-option-btn:hover { border-color: #6366f1; background: rgba(99,102,241,0.1); }
-.arena-option-btn.answered-p1 { border-color: #818cf8; background: rgba(129,140,248,0.15); }
-.arena-option-btn.answered-p2 { border-color: #f472b6; background: rgba(244,114,182,0.15); }
+.sb-locked { font-size: 0.75rem; font-weight: 700; color: #4ade80; margin-left: 0.2rem; }
 .opt-keys { display: flex; gap: 0.3rem; }
 .opt-keys kbd {
   display: inline-block;

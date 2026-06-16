@@ -531,8 +531,10 @@ function autoSubmitVS() {
 }
 
 function highlightOption(pos, player) {
-  const btn = document.querySelector(`.arena-option-btn[data-pos="${pos}"]`);
-  if (btn) btn.classList.add(`answered-${player}`);
+  // Don't mark the specific option — opponent could copy it.
+  // Instead show a locked-in badge next to the player's score.
+  const badge = document.getElementById(`sb-locked-${player}`);
+  if (badge) badge.classList.remove("hidden");
 }
 
 // ── Solo keyboard ─────────────────────────────────────────────────────────
@@ -706,9 +708,9 @@ function updateScoreboard() {
   const el = document.getElementById("arena-scoreboard");
   if (MODE === "vs") {
     el.innerHTML = `
-      <span class="sb-p1">${p1Name}: ${p1Score}</span>
+      <span class="sb-p1">${p1Name}: ${p1Score} <span id="sb-locked-p1" class="sb-locked hidden">✓</span></span>
       <span class="sb-sep">·</span>
-      <span class="sb-p2">${p2Name}: ${p2Score}</span>`;
+      <span class="sb-p2">${p2Name}: ${p2Score} <span id="sb-locked-p2" class="sb-locked hidden">✓</span></span>`;
   } else {
     el.innerHTML = `<span class="sb-solo">Score: ${soloScore}</span>`;
   }
