@@ -1,6 +1,6 @@
 # Poke-Dojo <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/107.png" height="32" align="absmiddle">
 
-A local Pokémon quiz app with three game modes, a leaderboard, and a machine-learning **Challenge Mode** that learns which Pokémon trip you up — then serves them more often. After 20 games, a personal **My Profile** page shows your strengths and weaknesses.
+A local Pokémon quiz app with five game modes, a timed scoring system, a leaderboard, a personal profile, and a **Trainer Journey** page to track your EVO score over time. After 20 games, **Professor Oak Analysis** activates automatically — using machine learning to serve the Pokémon most likely to stump you.
 
 ---
 
@@ -9,22 +9,60 @@ A local Pokémon quiz app with three game modes, a leaderboard, and a machine-le
 ### Welcome Screen
 Enter your trainer name to start — no account needed. Your session is saved in the browser.
 
-![Home page](docs/screenshots/home.png)
+![Home](screenshots/01_home.png)
 
-### Gameplay
-Three modes in one place: **Name It**, **Guess Number**, and **Guess the Type**. Challenge Mode unlocks per-mode after 20 games and uses machine learning to pick your hardest Pokémon.
+### Game Intro Screen
+Each mode begins with a brief intro explaining the rules, scoring formula, and controls.
 
-![Game page](docs/screenshots/game.png)
+![Intro Screen](screenshots/02_play_intro.png)
+
+### Name It — Medium
+A Pokémon appears with full artwork. Type its name as fast as you can — speed matters for your score.
+
+![Name It Medium](screenshots/03_play_nameit.png)
+
+### Name It — Hard (Silhouette)
+Only the black silhouette is shown. Identify the Pokémon from its outline alone.
+
+![Name It Hard intro](screenshots/04_play_nameit_hard_intro.png)
+![Name It Hard game](screenshots/05_play_nameit_hard.png)
+
+### Result Screen
+After each answer: accuracy ring, **final score in pts** (accuracy × time bonus), and your current **EVO score**.
+
+![Result](screenshots/06_play_result.png)
+
+### Guess the Number
+The Pokémon's name and artwork are shown. Enter its Pokédex number — the closer the better.
+
+![Guess Number intro](screenshots/07_play_guessnumber_intro.png)
+![Guess Number game](screenshots/08_play_guessnumber.png)
+
+### Guess the Type — Easy
+Pick the primary type from four choices. Click immediately to save time.
+
+![Type Easy intro](screenshots/09_play_typeeasy_intro.png)
+![Type Easy game](screenshots/10_play_typeeasy.png)
+
+### Guess the Type — Hard
+Toggle all types this Pokémon has (up to 2) from all 18 options, then submit.
+
+![Type Hard](screenshots/11_play_typehard.png)
 
 ### Leaderboard
-Global ranking and per-mode tabs. Best and worst scores shown per trainer.
+Global ranking and per-mode tabs showing scores in pts (not raw accuracy).
 
-![Leaderboard](docs/screenshots/leaderboard.png)
+![Leaderboard](screenshots/12_leaderboard.png)
 
 ### My Profile
-After 20 games in a mode, machine learning analyses your history to reveal your strengths and weaknesses. The bar chart compares feature influence when you got guesses **right** (green) vs **wrong** (red) — sorted so your biggest weaknesses appear on the left.
+Categorical accuracy breakdown by generation, evolution stage, and type — sorted hardest-first. After 20 games, AI (SHAP) bars predict which categories will stay hard.
 
-![My Profile](docs/screenshots/profile.png)
+![My Profile](screenshots/13_profile.png)
+
+### Trainer Journey
+Your EVO score — a smoothed measure of long-term skill growth — plotted over every game. Caterpie at the bottom (0), Arceus at the top (100).
+
+![Trainer Journey](screenshots/14_trainer_journey.png)
 
 ---
 
@@ -71,34 +109,53 @@ uv run python data/fetch_data.py
 ## How to Play
 
 ### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" height="22" align="absmiddle"> Name It
-A Pokémon sprite appears (name hidden). Type the name and press **Enter**. Accuracy is scored via fuzzy string matching — near-misses are rewarded.
+- **Medium** — full artwork shown, name hidden. Type the name and press Enter.
+- **Hard** — only the silhouette is shown. Identify from the outline alone.
 
-### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" height="22" align="absmiddle"> Guess Number
-The sprite and name are shown. Enter its Pokédex number (1–1025). The closer you are, the higher the score.
+### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" height="22" align="absmiddle"> Guess the Number
+Artwork and name shown. Enter the Pokédex number (1–1025). The closer, the better.
 
 ### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" height="22" align="absmiddle"> Guess the Type
-- **Easy** — pick the primary type from 4 choices.
-- **Hard** — select all types from all 18 options.
+- **Easy** — pick the primary type from 4 choices (click to submit instantly).
+- **Hard** — toggle all types from 18 options, then submit.
 
 ### Scoring
-| Game | Formula |
-|---|---|
-| Name It | `rapidfuzz.fuzz.ratio(guess, answer)` → 0–100% |
-| Guess Number | `max(0, 100 × (1 − \|guess − actual\| / 1025))` → 0–100% |
-| Guess the Type | Exact match = 100%, miss = 0% |
+Every round has a **60-second countdown timer**.
 
-A score ≥ 80% counts toward your streak.
+```
+FinalScore = (Accuracy / 100) × max(0, 100 − (TimeUsed / 60) × 100)
+```
 
-### Challenge Mode
-Unlocks independently per mode after **20 games**. A machine learning model trained on your personal game history picks the Pokémon it predicts you'll find hardest. The model retrains automatically after every submission.
+| Time used | Time bonus | Perfect name score |
+|---|---|---|
+| 0 s | 100 | 100 pts |
+| 15 s | 75 | 75 pts |
+| 30 s | 50 | 50 pts |
+| 60 s | 0 | 0 pts |
+
+A score ≥ 80 accuracy counts toward your streak.
+
+### Professor Oak Analysis
+Unlocks automatically per mode after **20 games**. No checkbox — it's always on once unlocked. The XGBoost model trained on your history picks the Pokémon it predicts you'll find hardest:
+- **80%** of rounds: hardest-predicted Pokémon from your weak spots
+- **20%** of rounds: completely random, for variety
+
+### EVO Score
+An exponential moving average of your final scores, tracked across all games:
+
+```
+EVOₜ = min(100, 0.12 × adjusted + 0.88 × EVOₜ₋₁)
+```
+
+Where `adjusted = min(100, FinalScore × 1.15)` when Professor Oak is active (challenge bonus), else `adjusted = FinalScore`. Starts at your first game score, approaches 100 as you improve.
 
 ### My Profile
-Available in the top nav after 20 games in any mode. Shows a bar chart comparing how much each Pokémon feature influenced your guesses when you got them right vs wrong:
-- **Red bar** — avg influence on guesses you got wrong (<50%). A tall red bar means Pokémon where that trait stands out tend to trip you up.
-- **Green bar** — avg influence on guesses you got right (≥80%). A tall green bar means Pokémon where that trait stands out tend to be ones you recognise easily.
-- **Red > Green → weakness.** **Green > Red → strength.**
-- Features are sorted left-to-right: biggest weaknesses first, strengths last.
-- **Note:** the Weaknesses and Strengths sections each use their own independent scale — bars within a section are comparable, but heights across the two sections are not directly comparable. A tall bar in Strengths does not mean it's as influential as a tall bar in Weaknesses.
+Accuracy breakdown by generation ("Gen I • Kanto"), evolution stage, and type — sorted hardest-first. Categories with fewer than 5 games are hidden. After 20 games, dual AI (SHAP) bars appear:
+- **Orange bar** — Professor Oak predicts this category will stay hard for you
+- **Blue bar** — Professor Oak predicts this category will be easy
+
+### Trainer Journey
+A smooth SVG chart of your EVO score history. Filter by game mode with the tabs at the top.
 
 ---
 
@@ -109,21 +166,22 @@ poke-dojo/
 ├── app/
 │   ├── main.py               # FastAPI app, startup, page routes
 │   ├── database.py           # SQLAlchemy engine + safe migrations
-│   ├── models.py             # Pokemon, User, GameResult ORM models
+│   ├── models.py             # Pokemon, User, GameResult, EvoScoreHistory
 │   ├── routers/
-│   │   ├── game.py           # /game/start, /game/submit, /game/profile
-│   │   ├── scores.py         # /leaderboard
-│   │   └── challenge.py      # /challenge/train
+│   │   ├── game.py           # /game/start, /game/submit, /game/profile/breakdown
+│   │   ├── scores.py         # /scores/leaderboard
+│   │   ├── journey.py        # /journey/history
+│   │   └── challenge.py      # /challenge/train (legacy)
 │   ├── services/
 │   │   ├── data_loader.py    # Background PokeAPI fetch with progress
 │   │   ├── string_match.py   # rapidfuzz accuracy for Name It
 │   │   ├── pokemon_data.py   # Random Pokémon selection
-│   │   └── xgboost_model.py  # Per-user XGBoost difficulty + profile chart data
-│   └── templates/            # Jinja2 HTML (base, index, game, leaderboard, profile)
+│   │   └── xgboost_model.py  # Per-user XGBoost + SHAP category analysis
+│   └── templates/            # Jinja2 HTML (base, index, game, scores, profile, trainer_journey)
 ├── data/
 │   ├── fetch_data.py         # Manual pre-fetch script
-│   ├── backfill_height_weight.py  # One-time height/weight migration
 │   └── pokemon.db            # SQLite database (git-ignored)
+├── screenshots/              # README screenshots
 └── static/
     └── css/style.css
 ```
@@ -137,7 +195,7 @@ poke-dojo/
 | Backend | FastAPI + Uvicorn |
 | Database | SQLite via SQLAlchemy ORM |
 | String matching | rapidfuzz |
-| ML (Challenge + Profile) | XGBoost (native SHAP) |
+| ML (Professor Oak + Profile) | XGBoost (native SHAP) |
 | Package manager | uv |
 | Data source | PokéAPI (pokeapi.co) |
 | Frontend | Vanilla JS + CSS (no framework) |
