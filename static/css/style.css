@@ -465,18 +465,7 @@ a:hover { color: var(--accent-hover); }
 }
 .type-icon-img { width: 100%; height: auto; display: block; border-radius: 6px; }
 
-/* ── Type Hard: compact stacked layout ── */
-.type-hard-layout .pokemon-card {
-  padding: 0.6rem 1rem;
-  margin-bottom: 0.75rem;
-}
-.type-hard-layout .pokemon-sprite {
-  width: 120px;
-  height: 120px;
-}
-.type-hard-layout .answer-zone {
-  padding: 1rem;
-}
+/* ── Type Hard: 6-column grid so all 18 types fit without scrolling ── */
 .type-hard-layout .type-grid {
   grid-template-columns: repeat(6, 1fr);
   gap: 0.4rem;
