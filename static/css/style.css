@@ -1503,8 +1503,12 @@ a:hover { color: var(--accent-hover); }
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 220px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
   margin-bottom: 1.5rem;
+  align-self: center;
 }
 .arena-sprite {
   width: 220px;
