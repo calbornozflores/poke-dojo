@@ -1323,7 +1323,7 @@ a:hover { color: var(--accent-hover); }
 }
 .battle-btn:hover { background: rgba(99, 102, 241, 0.18); border-color: #6366f1; }
 .battle-btn-icon { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; }
-.battle-btn-sprite { width: 24px; height: 24px; image-rendering: pixelated; }
+.battle-btn-sprite { width: 30px; height: 30px; image-rendering: pixelated; }
 .battle-btn-sprite-flip { transform: scaleX(-1); }
 .battle-btn-text { display: flex; flex-direction: column; line-height: 1.3; }
 .battle-btn-sub { font-size: 0.65rem; color: var(--text-muted); }
@@ -1355,7 +1355,7 @@ a:hover { color: var(--accent-hover); }
   justify-content: center;
   gap: 0.4rem;
 }
-.arena-title-sprite { width: 32px; height: 32px; image-rendering: pixelated; flex-shrink: 0; }
+.arena-title-sprite { width: 42px; height: 42px; image-rendering: pixelated; flex-shrink: 0; }
 .arena-title-sprite-flip { transform: scaleX(-1); }
 .arena-subtitle {
   color: var(--text-muted);
