@@ -26,15 +26,27 @@ def _get_or_create_user(username: str, db: Session) -> User:
 
 
 def _pick_options(correct: Pokemon, db: Session) -> list[dict]:
-    """Return 3 shuffled name options: correct + 2 wrong from same generation."""
+    """Return 3 shuffled name options: correct + 2 wrong, preferring same first letter."""
+    first_letter = correct.name[0].upper()
+
+    # Prefer: wrong options starting with the same letter
     wrong_pool = (
         db.query(Pokemon)
-        .filter(Pokemon.generation == correct.generation, Pokemon.id != correct.id)
+        .filter(Pokemon.name.ilike(first_letter + "%"), Pokemon.id != correct.id)
         .order_by(func.random())
         .limit(2)
         .all()
     )
-    # Fallback: pick from any gen if same-gen pool is too small
+    # Fallback: same generation
+    if len(wrong_pool) < 2:
+        wrong_pool = (
+            db.query(Pokemon)
+            .filter(Pokemon.generation == correct.generation, Pokemon.id != correct.id)
+            .order_by(func.random())
+            .limit(2)
+            .all()
+        )
+    # Final fallback: any Pokémon
     if len(wrong_pool) < 2:
         wrong_pool = (
             db.query(Pokemon)

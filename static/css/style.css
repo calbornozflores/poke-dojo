@@ -398,9 +398,10 @@ a:hover { color: var(--accent-hover); }
 .best { color: var(--green); }
 .worst { color: var(--red); }
 .centered-msg { text-align: center; padding: 3rem; color: var(--text-muted); }
-.rank-gold td   { color: #f59e0b; font-weight: 700; }
+.rank-gold td   { color: var(--green); font-weight: 700; }
 .rank-silver td { color: #94a3b8; font-weight: 600; }
 .rank-bronze td { color: #a16207; font-weight: 600; }
+.rank-last td   { color: var(--red); font-weight: 600; }
 .date-cell { color: var(--text-muted); font-size: 0.82rem; }
 .badge {
   display: inline-block;

@@ -85,21 +85,25 @@
 
     if (!sorted.length) { empty.classList.remove("hidden"); return; }
 
-    function rankClass(i) {
-      return i === 0 ? "rank-gold" : i === 1 ? "rank-silver" : i === 2 ? "rank-bronze" : "";
+    function rankClass(i, n) {
+      if (i === 0) return "rank-gold";
+      if (i === 1) return "rank-silver";
+      if (i === 2) return "rank-bronze";
+      if (i === n - 1) return "rank-last";
+      return "";
     }
     function highlightClass(e) {
       return username && e.username === username ? "highlight-row" : "";
     }
 
     tbody.innerHTML = sorted.map((e, i) => isSolo ? `
-      <tr class="${rankClass(i)} ${highlightClass(e)}">
+      <tr class="${rankClass(i, sorted.length)} ${highlightClass(e)}">
         <td>${i + 1}</td>
         <td><strong>${e.username}</strong></td>
         <td class="best">${e.best_run_score} pts</td>
         <td>${e.longest_streak}</td>
       </tr>` : `
-      <tr class="${rankClass(i)} ${highlightClass(e)}">
+      <tr class="${rankClass(i, sorted.length)} ${highlightClass(e)}">
         <td>${i + 1}</td>
         <td><strong>${e.username}</strong></td>
         <td class="best">${e.best_vs_score} pts</td>
