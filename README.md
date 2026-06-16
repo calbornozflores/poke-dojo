@@ -110,8 +110,31 @@ Solo Challenge and VS Mode rankings in a shared leaderboard. Accessible from the
 
 ### Requirements
 - Python 3.12+
-- [uv](https://docs.astral.sh/uv/) (fast Python package manager)
-- macOS: `brew install libomp` (required by XGBoost)
+- [uv](https://astral.sh/uv/) — fast Python package manager
+
+**Install uv:**
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+### OS-specific prerequisite
+
+**macOS** — XGBoost requires OpenMP, which Apple Clang does not include:
+```bash
+brew install libomp
+```
+
+**Linux (Debian / Ubuntu)** — most desktop installs already have this; only needed on minimal/server images:
+```bash
+sudo apt install libgomp1
+# Fedora / RHEL: sudo dnf install libgomp
+```
+
+**Windows** — no extra step needed. XGBoost ships pre-built wheels that bundle the runtime.
 
 ### Setup
 
@@ -122,9 +145,6 @@ cd poke-dojo
 
 # 2. Install dependencies
 uv sync
-
-# 3. macOS only — XGBoost needs OpenMP
-brew install libomp
 ```
 
 ---
