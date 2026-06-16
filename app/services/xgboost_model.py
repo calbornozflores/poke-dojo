@@ -257,12 +257,15 @@ def get_profile_chart_data(user_id: int, game_type: str, db: Session) -> dict | 
             "is_weakness": float(gap[i]) > 0,
         })
 
-    all_vals = [f["correct"] for f in features] + [f["wrong"] for f in features]
-    max_val  = float(max(all_vals)) if all_vals else 1.0
+    weakness_vals = [v for f in features if     f["is_weakness"] for v in (f["correct"], f["wrong"])]
+    strength_vals = [v for f in features if not f["is_weakness"] for v in (f["correct"], f["wrong"])]
+    max_weakness  = float(max(weakness_vals)) if weakness_vals else 1.0
+    max_strength  = float(max(strength_vals)) if strength_vals else 1.0
 
     return {
-        "n_correct": n_correct,
-        "n_wrong":   n_wrong,
-        "max_val":   max_val,
-        "features":  features,
+        "n_correct":    n_correct,
+        "n_wrong":      n_wrong,
+        "max_weakness": max_weakness,
+        "max_strength": max_strength,
+        "features":     features,
     }

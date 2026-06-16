@@ -116,11 +116,12 @@
     document.getElementById("legend-n-wrong").textContent   = `n=${chart.n_wrong}`;
     document.getElementById("legend-n-correct").textContent = `n=${chart.n_correct}`;
 
-    const weaknesses = chart.features.filter(f => f.is_weakness);
-    const strengths  = chart.features.filter(f => !f.is_weakness);
-    const maxVal     = chart.max_val || 1;
+    const weaknesses  = chart.features.filter(f => f.is_weakness);
+    const strengths   = chart.features.filter(f => !f.is_weakness);
+    const maxWeakness = chart.max_weakness || 1;
+    const maxStrength = chart.max_strength || 1;
 
-    function makeCol(feat) {
+    function makeCol(feat, maxVal) {
       const col = document.createElement("div");
       col.className = "viz-col";
 
@@ -148,7 +149,7 @@
       return col;
     }
 
-    function makeSection(features, type) {
+    function makeSection(features, type, maxVal) {
       if (!features.length) return null;
       const section = document.createElement("div");
       section.className = `viz-section ${type}`;
@@ -160,13 +161,13 @@
 
       const cols = document.createElement("div");
       cols.className = "viz-columns";
-      features.forEach(f => cols.appendChild(makeCol(f)));
+      features.forEach(f => cols.appendChild(makeCol(f, maxVal)));
       section.appendChild(cols);
       return section;
     }
 
-    const wk = makeSection(weaknesses, "weakness");
-    const st = makeSection(strengths,  "strength");
+    const wk = makeSection(weaknesses, "weakness", maxWeakness);
+    const st = makeSection(strengths,  "strength", maxStrength);
 
     if (wk) viz.appendChild(wk);
     if (wk && st) {
