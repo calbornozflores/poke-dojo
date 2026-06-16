@@ -1467,11 +1467,11 @@ a:hover { color: var(--accent-hover); }
   border-radius: 2px;
 }
 
-/* Silhouette animation: mostly dark for 70%, then rapid reveal */
+/* Silhouette animation: white silhouette for 70%, rapid reveal in last 30% */
 @keyframes silhouetteReveal {
-  0%   { filter: brightness(0); }
-  70%  { filter: brightness(0.05); }
-  85%  { filter: brightness(0.3); }
+  0%   { filter: brightness(0) invert(1); }
+  70%  { filter: brightness(0.05) invert(0.95); }
+  85%  { filter: brightness(0.6) invert(0.4); }
   100% { filter: none; }
 }
 .arena-pokemon-stage {
@@ -1487,7 +1487,7 @@ a:hover { color: var(--accent-hover); }
   object-fit: contain;
   image-rendering: pixelated;
 }
-.arena-sprite.silhouette { filter: brightness(0); }
+.arena-sprite.silhouette { filter: brightness(0) invert(1); }
 
 /* ── Options ── */
 .arena-options {
@@ -1544,6 +1544,12 @@ a:hover { color: var(--accent-hover); }
 .round-result-sprite { width: 80px; height: 80px; object-fit: contain; image-rendering: pixelated; }
 .round-result-name { font-size: 1.4rem; font-weight: 800; color: var(--text); text-transform: capitalize; }
 .round-result-bars { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
+.next-round-countdown {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
 .rr-bar-row {
   display: grid;
   grid-template-columns: 100px 1fr 70px 60px;

@@ -101,6 +101,7 @@
         <div class="round-result-name" id="rr-name"></div>
       </div>
       <div class="round-result-bars" id="round-result-bars"></div>
+      <div id="next-round-countdown" class="next-round-countdown hidden"></div>
       <button id="next-round-btn" class="btn btn-primary btn-lg">Next Round</button>
     </div>
   </div>
@@ -482,18 +483,45 @@ function showRoundResult(result) {
     </div>`;
   }
 
-  // Show/hide next round button based on mode and round count
   const nextBtn = document.getElementById("next-round-btn");
+  const countdownEl = document.getElementById("next-round-countdown");
+
   if (MODE === "vs") {
     const isLast = currentRound >= totalRounds;
+    const nextAction = isLast ? endMatch : loadRound;
     nextBtn.textContent = isLast ? "See Final Results" : "Next Round";
-    nextBtn.onclick = isLast ? endMatch : loadRound;
+    nextBtn.onclick = () => { clearVSCountdown(); nextAction(); };
+
+    // 5-second auto-advance countdown
+    let secs = 5;
+    countdownEl.textContent = `Next round in ${secs}s…`;
+    countdownEl.classList.remove("hidden");
+    let cdTimer = setInterval(() => {
+      secs--;
+      if (secs <= 0) {
+        clearInterval(cdTimer);
+        countdownEl.classList.add("hidden");
+        nextAction();
+      } else {
+        countdownEl.textContent = `Next round in ${secs}s…`;
+      }
+    }, 1000);
+    window._vsCdTimer = cdTimer;
+
   } else {
+    // Solo: any key or Enter advances
     nextBtn.textContent = "Next Round";
     nextBtn.onclick = loadRound;
+    countdownEl.textContent = "Press any key or Enter to continue…";
+    countdownEl.classList.remove("hidden");
   }
 
   showScreen("round-result-screen");
+}
+
+function clearVSCountdown() {
+  clearInterval(window._vsCdTimer);
+  document.getElementById("next-round-countdown").classList.add("hidden");
 }
 
 function makeResultBar(name, score, correct, ms, color) {
@@ -596,6 +624,16 @@ function updateSoloTimer() {
   const reduction = Math.floor(soloRound / 10);
   soloTimerDuration = Math.max(5, 10 - reduction);
 }
+
+// ── Solo: any key advances from round-result screen ───────────────────────
+document.addEventListener("keydown", e => {
+  if (MODE !== "single") return;
+  // Only fire on the round-result screen, not when assigning keys or answering
+  if (document.getElementById("round-result-screen").classList.contains("hidden")) return;
+  // Ignore modifier-only presses
+  if (["Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
+  document.getElementById("next-round-btn").click();
+});
 
 // ── Screen switcher ───────────────────────────────────────────────────────
 function showScreen(id) {
