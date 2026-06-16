@@ -1,6 +1,6 @@
 # Poke-Dojo <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/107.png" height="32" align="absmiddle">
 
-A local Pokémon quiz app with five game modes, a timed scoring system, a leaderboard, a personal profile, and a **Trainer Journey** page to track your EVO score over time. After 20 games, **Professor Oak Analysis** activates automatically — using machine learning to serve the Pokémon most likely to stump you.
+A local Pokémon quiz app with five Dojo game modes, a timed scoring system, a leaderboard, a personal profile, and a **Trainer Journey** page to track your EVO score over time. After 20 games, **Professor Oak Analysis** activates automatically — using machine learning to serve the Pokémon most likely to stump you. Plus a **Battle Arena** with VS Mode (2 players, same keyboard) and Solo Challenge (endless, custom keys, tightening timer).
 
 ---
 
@@ -63,6 +63,31 @@ Categorical accuracy breakdown by generation, evolution stage, and type — sort
 Your EVO score — a smoothed measure of long-term skill growth — plotted over every game. Caterpie at the bottom (0), Arceus at the top (100).
 
 ![Trainer Journey](screenshots/14_trainer_journey.png)
+
+### Battle Arena — VS Mode Setup
+Two trainers enter their names and choose a round count. P1 uses Q/W/E, P2 uses I/O/P.
+
+![VS Mode Setup](screenshots/15_battle_arena_vs_setup.png)
+
+### Battle Arena — VS Round
+Official artwork shown as a white silhouette. A progress bar counts down the reveal. Both players race to press their key first.
+
+![VS Round](screenshots/17_battle_arena_vs_round.png)
+
+### Battle Arena — Round Result
+After both players answer: animated score bars, ✓/✗ per player, and a 5-second countdown to the next round.
+
+![VS Round Result](screenshots/18_battle_arena_vs_result.png)
+
+### Battle Arena — Solo Challenge Setup
+Assign any three keys to the three options (Enter, Escape and Space are reserved). One wrong answer ends the run.
+
+![Solo Setup](screenshots/16_battle_arena_solo_setup.png)
+
+### Battle Arena — Solo Round
+Endless mode with custom keys (A/S/D shown). Timer tightens every 10 rounds — from 10s down to 5s at round 50.
+
+![Solo Round](screenshots/19_battle_arena_solo_round.png)
 
 ---
 
@@ -157,6 +182,21 @@ Accuracy breakdown by generation ("Gen I • Kanto"), evolution stage, and type 
 ### Trainer Journey
 A smooth SVG chart of your EVO score history. Filter by game mode with the tabs at the top.
 
+### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/249.png" height="22" align="absmiddle"> Battle Arena
+
+#### VS Mode
+Two players share the same keyboard. Official artwork is shown as a white silhouette that gradually reveals over 10 seconds. First to press the correct name key wins the round.
+
+| Player | Keys |
+|---|---|
+| Player 1 | Q / W / E → Options 1 / 2 / 3 |
+| Player 2 | I / O / P → Options 1 / 2 / 3 |
+
+Score per round = `max(0, floor(time_remaining / 10 × 100))`. After each round a 5-second countdown auto-advances to the next.
+
+#### Solo Challenge
+Assign any 3 keys to the options (Enter, Escape and Space are reserved). Endless rounds — one wrong answer or a timeout ends your run. Timer starts at 10s and tightens by 1s every 10 rounds (floor 5s at round 50).
+
 ---
 
 ## Project Structure
@@ -166,18 +206,21 @@ poke-dojo/
 ├── app/
 │   ├── main.py               # FastAPI app, startup, page routes
 │   ├── database.py           # SQLAlchemy engine + safe migrations
-│   ├── models.py             # Pokemon, User, GameResult, EvoScoreHistory
+│   ├── models.py             # Pokemon, User, GameResult, EvoScoreHistory,
+│   │                         #   CompetitiveMatch, CompetitiveResult
 │   ├── routers/
 │   │   ├── game.py           # /game/start, /game/submit, /game/profile/breakdown
 │   │   ├── scores.py         # /scores/leaderboard
 │   │   ├── journey.py        # /journey/history
+│   │   ├── battle_arena.py   # /battle/match/*, /battle/round/*, /battle/leaderboard
 │   │   └── challenge.py      # /challenge/train (legacy)
 │   ├── services/
 │   │   ├── data_loader.py    # Background PokeAPI fetch with progress
 │   │   ├── string_match.py   # rapidfuzz accuracy for Name It
 │   │   ├── pokemon_data.py   # Random Pokémon selection
 │   │   └── xgboost_model.py  # Per-user XGBoost + SHAP category analysis
-│   └── templates/            # Jinja2 HTML (base, index, game, scores, profile, trainer_journey)
+│   └── templates/            # Jinja2 HTML (base, index, game, scores, profile,
+│                             #   trainer_journey, battle_arena, arena_leaderboard)
 ├── data/
 │   ├── fetch_data.py         # Manual pre-fetch script
 │   └── pokemon.db            # SQLite database (git-ignored)

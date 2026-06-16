@@ -1523,7 +1523,7 @@ a:hover { color: var(--accent-hover); }
   font-size: 0.7rem;
   font-family: monospace;
 }
-.opt-name { font-size: 0.85rem; font-weight: 600; text-align: center; }
+.opt-name { font-size: 1.15rem; font-weight: 700; text-align: center; text-transform: capitalize; }
 .arena-round-info { text-align: center; font-size: 0.72rem; color: var(--text-muted); margin-bottom: 1rem; }
 
 /* ── Round result ── */
