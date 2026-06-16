@@ -775,12 +775,12 @@ a:hover { color: var(--accent-hover); }
 .breakdown-bars {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.65rem;
 }
 
 .breakdown-row {
   display: grid;
-  grid-template-columns: 140px 1fr 54px 40px;
+  grid-template-columns: 140px 1fr 40px;
   align-items: center;
   gap: 0.75rem;
 }
@@ -801,24 +801,61 @@ a:hover { color: var(--accent-hover); }
   flex-shrink: 0;
 }
 
+/* Dual-bar column */
+.breakdown-bar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.breakdown-bar-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bar-line-tag {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+  width: 22px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.shap-tag { color: #a78bfa; }
+
 .breakdown-track {
+  flex: 1;
   height: 8px;
   background: rgba(255,255,255,0.06);
   border-radius: 999px;
   overflow: hidden;
 }
 
+.shap-track { height: 6px; }
+
 .breakdown-fill {
   height: 100%;
   border-radius: 999px;
-  transition: width 0.7s cubic-bezier(0.34, 1.1, 0.64, 1);
+  transition: width 0.75s cubic-bezier(0.34, 1.1, 0.64, 1);
 }
 
-.breakdown-pct {
-  font-size: 0.82rem;
+.bar-line-val {
+  font-size: 0.78rem;
   font-weight: 700;
+  width: 54px;
   text-align: right;
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.shap-verdict {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  width: 54px;
 }
 
 .breakdown-n {
@@ -836,9 +873,9 @@ a:hover { color: var(--accent-hover); }
 .breakdown-hint {
   font-size: 0.75rem;
   color: var(--text-muted);
-  font-style: italic;
   text-align: center;
   margin-top: 0.25rem;
+  line-height: 1.7;
 }
 
 /* ── Responsive ── */

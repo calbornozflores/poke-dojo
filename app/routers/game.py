@@ -178,6 +178,23 @@ def profile_breakdown(
         if len(accs) >= MIN_N and t in _TYPE_IDS
     ], key=lambda x: x["avg"])
 
+    # Attach SHAP per-category if model is trained (20+ games)
+    shap = xgboost_model.get_category_shap(user.id, game_type, db)
+    if shap:
+        _rev_stage = {"Basic": "basic", "Stage 1": "stage_1", "Stage 2": "stage_2"}
+        for item in by_generation:
+            s = shap["generation"].get(int(item["label"].split()[-1]))
+            if s is not None:
+                item["shap"] = s
+        for item in by_stage:
+            s = shap["stage"].get(_rev_stage.get(item["label"], ""))
+            if s is not None:
+                item["shap"] = s
+        for item in by_type:
+            s = shap["type"].get(item["label"].lower())
+            if s is not None:
+                item["shap"] = s
+
     return {
         "has_data":    True,
         "total_games": total,

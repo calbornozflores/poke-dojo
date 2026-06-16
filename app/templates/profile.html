@@ -69,10 +69,15 @@
     </div>
 
     <p class="breakdown-hint">
-      Only categories with ≥ 3 games are shown.
-      <span style="color:#4ade80">■</span> ≥ 70% &nbsp;
-      <span style="color:#fbbf24">■</span> 50–69% &nbsp;
-      <span style="color:#f87171">■</span> &lt; 50%
+      Only categories with ≥ 3 games shown. &nbsp;
+      <strong>YOU</strong>:
+        <span style="color:#4ade80">■</span> ≥70% &nbsp;
+        <span style="color:#fbbf24">■</span> 50–69% &nbsp;
+        <span style="color:#f87171">■</span> &lt;50% &nbsp;·&nbsp;
+      <strong style="color:#a78bfa">AI</strong>:
+        <span style="color:#fb923c">■</span> model predicts hard &nbsp;
+        <span style="color:#60a5fa">■</span> model predicts easy
+        <em>(unlocks after 20 games)</em>
     </p>
   </div>
 </div>
@@ -100,7 +105,6 @@
     resultPanel.classList.add("hidden");
     progressFill.style.transition = "none";
     progressFill.style.width = "0%";
-    loadingText.textContent = "Loading your stats…";
     let pct = 0;
     clearInterval(progressTimer);
     progressTimer = setInterval(() => {
@@ -123,59 +127,103 @@
     return "#f87171";
   }
 
+  // Build one bar line: tag label | track | value label
+  function makeLine(tag, valueText, fillPct, color, isShap) {
+    const line = document.createElement("div");
+    line.className = "breakdown-bar-line" + (isShap ? " shap-line" : "");
+
+    const tagEl = document.createElement("span");
+    tagEl.className = "bar-line-tag" + (isShap ? " shap-tag" : "");
+    tagEl.textContent = tag;
+
+    const track = document.createElement("div");
+    track.className = "breakdown-track" + (isShap ? " shap-track" : "");
+
+    const fill = document.createElement("div");
+    fill.className = "breakdown-fill";
+    if (isShap) {
+      fill.style.background = `linear-gradient(to right, ${color}66, ${color})`;
+    } else {
+      fill.style.background = color;
+      fill.style.boxShadow  = `0 0 8px ${color}44`;
+    }
+    fill.dataset.w     = fillPct + "%";
+    fill.style.width   = "0%";
+    track.appendChild(fill);
+
+    const val = document.createElement("span");
+    val.className  = "bar-line-val" + (isShap ? " shap-verdict" : "");
+    val.style.color = color;
+    val.textContent = valueText;
+
+    line.appendChild(tagEl);
+    line.appendChild(track);
+    line.appendChild(val);
+    return { el: line, fill };
+  }
+
   function makeRows(items, containerId, hasIcon) {
     const el = document.getElementById(containerId);
     el.innerHTML = "";
 
     if (!items || !items.length) {
-      el.innerHTML = '<p class="breakdown-empty">Not enough data yet — keep playing!</p>';
+      el.innerHTML = '<p class="breakdown-empty">Not enough data — keep playing!</p>';
       return;
     }
+
+    const hasShap    = items.some(it => it.shap != null);
+    const maxAbsShap = hasShap
+      ? (Math.max(...items.filter(it => it.shap != null).map(it => Math.abs(it.shap))) || 1)
+      : 1;
+
+    const fills = [];
 
     items.forEach((item, i) => {
       const row = document.createElement("div");
       row.className = "breakdown-row";
 
+      // Label (with optional type icon)
       const labelEl = document.createElement("div");
       labelEl.className = "breakdown-label";
-      if (hasIcon) {
-        const img = document.createElement("img");
-        img.src = item.icon;
-        img.alt = item.label;
-        img.className = "breakdown-type-icon";
+      if (hasIcon && item.icon) {
+        const img = Object.assign(document.createElement("img"), {
+          src: item.icon, alt: item.label, className: "breakdown-type-icon"
+        });
         labelEl.appendChild(img);
       }
-      const txt = document.createElement("span");
-      txt.textContent = item.label;
-      labelEl.appendChild(txt);
+      labelEl.appendChild(Object.assign(document.createElement("span"), { textContent: item.label }));
 
-      const track = document.createElement("div");
-      track.className = "breakdown-track";
-      const fill = document.createElement("div");
-      fill.className = "breakdown-fill";
-      const color = accuracyColor(item.avg);
-      fill.style.background = color;
-      fill.style.boxShadow = `0 0 8px ${color}55`;
-      fill.dataset.w = item.avg + "%";
-      fill.style.width = "0%";
-      track.appendChild(fill);
+      // Bar group
+      const barGroup = document.createElement("div");
+      barGroup.className = "breakdown-bar-group";
 
-      const pct = document.createElement("div");
-      pct.className = "breakdown-pct";
-      pct.style.color = color;
-      pct.textContent = item.avg + "%";
+      const accColor = accuracyColor(item.avg);
+      const accLine  = makeLine("YOU", item.avg + "%", item.avg, accColor, false);
+      barGroup.appendChild(accLine.el);
+      fills.push({ fill: accLine.fill, delay: 80 + i * 60 });
 
-      const n = document.createElement("div");
-      n.className = "breakdown-n";
-      n.textContent = "n=" + item.n;
+      if (hasShap && item.shap != null) {
+        const hard       = item.shap > 0;
+        const shapColor  = hard ? "#fb923c" : "#60a5fa";
+        const shapPct    = (Math.abs(item.shap) / maxAbsShap * 100).toFixed(1);
+        const shapLine   = makeLine("AI", hard ? "HARD ↑" : "EASY ↓", shapPct, shapColor, true);
+        barGroup.appendChild(shapLine.el);
+        fills.push({ fill: shapLine.fill, delay: 80 + i * 60 + 80 });
+      }
+
+      const nEl = Object.assign(document.createElement("div"), {
+        className: "breakdown-n", textContent: "n=" + item.n
+      });
 
       row.appendChild(labelEl);
-      row.appendChild(track);
-      row.appendChild(pct);
-      row.appendChild(n);
+      row.appendChild(barGroup);
+      row.appendChild(nEl);
       el.appendChild(row);
+    });
 
-      setTimeout(() => { fill.style.width = fill.dataset.w; }, 80 + i * 50);
+    // Animate all fills after DOM is built
+    fills.forEach(({ fill, delay }) => {
+      setTimeout(() => { fill.style.width = fill.dataset.w; }, delay);
     });
   }
 

@@ -6,14 +6,10 @@ from Name It does not bleed into Guess Number rankings, etc.
 Model artifacts: data/challenge_model_{user_id}_{game_type}.json
 """
 from __future__ import annotations
+from collections import defaultdict
 from pathlib import Path
-import base64
-import io
 import numpy as np
 import pandas as pd
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import xgboost as xgb
 from sqlalchemy.orm import Session
 from app.models import GameResult, Pokemon
@@ -268,4 +264,59 @@ def get_profile_chart_data(user_id: int, game_type: str, db: Session) -> dict | 
         "max_weakness": max_weakness,
         "max_strength": max_strength,
         "features":     features,
+    }
+
+
+def get_category_shap(user_id: int, game_type: str, db: Session) -> dict | None:
+    """
+    Per-category mean SHAP contribution for generation, stage, and type.
+    Positive value → feature increases predicted error rate (harder for this user).
+    Negative value → feature decreases predicted error rate (easier).
+    Returns None if model not trained yet.
+    """
+    path = _model_path(user_id, game_type)
+    if not path.exists():
+        return None
+
+    model = xgb.XGBRegressor()
+    model.load_model(str(path))
+
+    played = (
+        db.query(GameResult, Pokemon)
+        .join(Pokemon, GameResult.pokemon_id == Pokemon.id)
+        .filter(GameResult.user_id == user_id, GameResult.game_type == game_type)
+        .all()
+    )
+    if not played:
+        return None
+
+    rows     = [_build_features(poke) for _, poke in played]
+    pokemons = [poke for _, poke in played]
+
+    df = pd.DataFrame(rows)
+    fn = df.columns.tolist()
+    sv = model.get_booster().predict(xgb.DMatrix(df), pred_contribs=True)[:, :-1]
+
+    gi  = fn.index("generation")
+    si  = fn.index("stage")
+    t1i = fn.index("type1")
+    t2i = fn.index("type2")
+
+    gen_s  = defaultdict(list)
+    stg_s  = defaultdict(list)
+    typ_s  = defaultdict(list)
+
+    for i, poke in enumerate(pokemons):
+        gen_s[poke.generation].append(float(sv[i, gi]))
+        stg_s[poke.stage].append(float(sv[i, si]))
+        typ_s[poke.type1].append(float(sv[i, t1i]))
+        if poke.type2:
+            typ_s[poke.type2].append(float(sv[i, t2i]))
+
+    def _avg(lst): return round(sum(lst) / len(lst), 4)
+
+    return {
+        "generation": {k: _avg(v) for k, v in gen_s.items()},
+        "stage":      {k: _avg(v) for k, v in stg_s.items()},
+        "type":       {k: _avg(v) for k, v in typ_s.items()},
     }
