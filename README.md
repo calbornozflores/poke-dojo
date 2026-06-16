@@ -94,9 +94,11 @@ Unlocks independently per mode after **20 games**. A machine learning model trai
 
 ### My Profile
 Available in the top nav after 20 games in any mode. Shows a bar chart comparing how much each Pokémon feature influenced your guesses when you got them right vs wrong:
-- **Red bar** = avg influence on wrong guesses (<50% accuracy)
-- **Green bar** = avg influence on correct guesses (≥80% accuracy)
-- Features sorted left-to-right: biggest weaknesses first, strengths last
+- **Red bar** — avg influence on guesses you got wrong (<50%). A tall red bar means Pokémon where that trait stands out tend to trip you up.
+- **Green bar** — avg influence on guesses you got right (≥80%). A tall green bar means Pokémon where that trait stands out tend to be ones you recognise easily.
+- **Red > Green → weakness.** **Green > Red → strength.**
+- Features are sorted left-to-right: biggest weaknesses first, strengths last.
+- **Note:** the Weaknesses and Strengths sections each use their own independent scale — bars within a section are comparable, but heights across the two sections are not directly comparable. A tall bar in Strengths does not mean it's as influential as a tall bar in Weaknesses.
 
 ---
 

@@ -55,14 +55,24 @@
     <div class="profile-legend">
       <div class="profile-legend-item">
         <span class="legend-bar wrong-bar"></span>
-        <span><strong>Red</strong> — when you got it <strong>wrong</strong> (&lt;50% accuracy) · <span id="legend-n-wrong"></span></span>
+        <span>
+          <strong>Red</strong> — how much this feature influenced the model's prediction on guesses you got <strong>wrong</strong> (&lt;50% accuracy) · <span id="legend-n-wrong"></span>.
+          A tall red bar means Pokémon where this trait stands out tend to <strong>trip you up</strong>.
+        </span>
       </div>
       <div class="profile-legend-item">
         <span class="legend-bar correct-bar"></span>
-        <span><strong>Green</strong> — when you got it <strong>right</strong> (≥80% accuracy) · <span id="legend-n-correct"></span></span>
+        <span>
+          <strong>Green</strong> — how much this feature influenced the model's prediction on guesses you got <strong>right</strong> (≥80% accuracy) · <span id="legend-n-correct"></span>.
+          A tall green bar means Pokémon where this trait stands out tend to be ones you <strong>recognise easily</strong>.
+        </span>
+      </div>
+      <div class="profile-legend-item legend-rule">
+        <strong>Red &gt; Green → weakness</strong> — this feature predicts your mistakes. &nbsp;
+        <strong>Green &gt; Red → strength</strong> — this feature predicts your successes.
       </div>
       <div class="profile-legend-item">
-        <span class="legend-hint">Taller bar = that feature influenced your guesses more in those games</span>
+        <span class="legend-hint">Each section (Weaknesses / Strengths) uses its own scale — bars within a section are comparable, but heights across sections are not.</span>
       </div>
     </div>
   </div>

@@ -736,6 +736,7 @@ a:hover { color: var(--accent-hover); }
 .legend-bar { width: 28px; height: 10px; border-radius: 3px; flex-shrink: 0; }
 .wrong-bar   { background: #f87171; }
 .correct-bar { background: #4ade80; }
+.legend-rule { color: var(--text); font-size: 0.82rem; }
 .legend-hint { font-style: italic; opacity: 0.65; }
 
 /* ── Responsive ── */
