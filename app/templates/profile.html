@@ -5,7 +5,7 @@
 <div class="profile-page">
   <div class="profile-page-header">
     <h1>My Profile</h1>
-    <p class="profile-page-subtitle">Your strengths and weaknesses, discovered by machine learning based on your game history.</p>
+    <p class="profile-page-subtitle">Your performance breakdown by generation, evolution stage, and type.</p>
   </div>
 
   <!-- Game type selector -->
@@ -31,50 +31,49 @@
   <!-- Loading state -->
   <div id="profile-loading" class="profile-loading-panel">
     <div class="profile-spinner"></div>
-    <p id="profile-loading-text">Analysing your game history…</p>
+    <p id="profile-loading-text">Loading your stats…</p>
     <div class="profile-progress-track">
       <div class="profile-progress-fill" id="profile-progress-fill"></div>
     </div>
   </div>
 
-  <!-- No model yet -->
+  <!-- Not enough data yet -->
   <div id="profile-locked" class="profile-locked hidden">
     <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/54.png"
          alt="Psyduck" class="profile-locked-sprite">
-    <h2>Model not trained yet</h2>
-    <p>Play at least <strong>20 games</strong> in this mode to unlock your personal profile.<br>
-       The model trains automatically after game 20.</p>
+    <h2>Not enough data yet</h2>
+    <p>Play at least <strong>5 games</strong> in this mode to unlock your profile stats.</p>
     <p id="profile-games-info" class="profile-games-info"></p>
     <a href="/play" class="btn btn-primary">Go Play</a>
   </div>
 
-  <!-- Chart -->
+  <!-- Breakdown result -->
   <div id="profile-result" class="profile-result hidden">
     <p id="profile-games-label" class="profile-games-label"></p>
-    <div id="profile-viz" class="profile-viz"></div>
-    <div class="profile-legend">
-      <div class="profile-legend-item">
-        <span class="legend-bar wrong-bar"></span>
-        <span>
-          <strong>Red</strong> — how much this feature influenced the model's prediction on guesses you got <strong>wrong</strong> (&lt;50% accuracy) · <span id="legend-n-wrong"></span>.
-          A tall red bar means Pokémon where this trait stands out tend to <strong>trip you up</strong>.
-        </span>
+
+    <div class="breakdown-sections">
+      <div class="breakdown-section">
+        <div class="breakdown-section-title">By Generation</div>
+        <div class="breakdown-bars" id="breakdown-gen"></div>
       </div>
-      <div class="profile-legend-item">
-        <span class="legend-bar correct-bar"></span>
-        <span>
-          <strong>Green</strong> — how much this feature influenced the model's prediction on guesses you got <strong>right</strong> (≥80% accuracy) · <span id="legend-n-correct"></span>.
-          A tall green bar means Pokémon where this trait stands out tend to be ones you <strong>recognise easily</strong>.
-        </span>
+
+      <div class="breakdown-section">
+        <div class="breakdown-section-title">By Evolution Stage</div>
+        <div class="breakdown-bars" id="breakdown-stage"></div>
       </div>
-      <div class="profile-legend-item legend-rule">
-        <strong>Red &gt; Green → weakness</strong> — this feature predicts your mistakes. &nbsp;
-        <strong>Green &gt; Red → strength</strong> — this feature predicts your successes.
-      </div>
-      <div class="profile-legend-item">
-        <span class="legend-hint">Each section (Weaknesses / Strengths) uses its own scale — bars within a section are comparable, but heights across sections are not.</span>
+
+      <div class="breakdown-section">
+        <div class="breakdown-section-title">By Type</div>
+        <div class="breakdown-bars" id="breakdown-type"></div>
       </div>
     </div>
+
+    <p class="breakdown-hint">
+      Only categories with ≥ 3 games are shown.
+      <span style="color:#4ade80">■</span> ≥ 70% &nbsp;
+      <span style="color:#fbbf24">■</span> 50–69% &nbsp;
+      <span style="color:#f87171">■</span> &lt; 50%
+    </p>
   </div>
 </div>
 {% endblock %}
@@ -101,7 +100,7 @@
     resultPanel.classList.add("hidden");
     progressFill.style.transition = "none";
     progressFill.style.width = "0%";
-    loadingText.textContent = "Analysing your game history…";
+    loadingText.textContent = "Loading your stats…";
     let pct = 0;
     clearInterval(progressTimer);
     progressTimer = setInterval(() => {
@@ -118,107 +117,96 @@
     setTimeout(cb, 350);
   }
 
-  function renderChart(chart) {
-    const BAR_MAX_H = 180;
-    const viz = document.getElementById("profile-viz");
-    viz.innerHTML = "";
+  function accuracyColor(pct) {
+    if (pct >= 70) return "#4ade80";
+    if (pct >= 50) return "#fbbf24";
+    return "#f87171";
+  }
 
-    document.getElementById("legend-n-wrong").textContent   = `n=${chart.n_wrong}`;
-    document.getElementById("legend-n-correct").textContent = `n=${chart.n_correct}`;
+  function makeRows(items, containerId, hasIcon) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = "";
 
-    const weaknesses  = chart.features.filter(f => f.is_weakness);
-    const strengths   = chart.features.filter(f => !f.is_weakness);
-    const maxWeakness = chart.max_weakness || 1;
-    const maxStrength = chart.max_strength || 1;
+    if (!items || !items.length) {
+      el.innerHTML = '<p class="breakdown-empty">Not enough data yet — keep playing!</p>';
+      return;
+    }
 
-    function makeCol(feat, maxVal) {
-      const col = document.createElement("div");
-      col.className = "viz-col";
+    items.forEach((item, i) => {
+      const row = document.createElement("div");
+      row.className = "breakdown-row";
 
-      const barsEl = document.createElement("div");
-      barsEl.className = "viz-bars";
-
-      function makeBar(cls, val) {
-        const bar = document.createElement("div");
-        bar.className = `viz-bar ${cls}`;
-        const h = val > 0 ? Math.max(4, Math.round((val / maxVal) * BAR_MAX_H)) : 0;
-        bar.dataset.h = h + "px";
-        bar.style.height = "0px";
-        return bar;
+      const labelEl = document.createElement("div");
+      labelEl.className = "breakdown-label";
+      if (hasIcon) {
+        const img = document.createElement("img");
+        img.src = item.icon;
+        img.alt = item.label;
+        img.className = "breakdown-type-icon";
+        labelEl.appendChild(img);
       }
+      const txt = document.createElement("span");
+      txt.textContent = item.label;
+      labelEl.appendChild(txt);
 
-      barsEl.appendChild(makeBar("wrong",   feat.wrong));
-      barsEl.appendChild(makeBar("correct", feat.correct));
+      const track = document.createElement("div");
+      track.className = "breakdown-track";
+      const fill = document.createElement("div");
+      fill.className = "breakdown-fill";
+      const color = accuracyColor(item.avg);
+      fill.style.background = color;
+      fill.style.boxShadow = `0 0 8px ${color}55`;
+      fill.dataset.w = item.avg + "%";
+      fill.style.width = "0%";
+      track.appendChild(fill);
 
-      const label = document.createElement("div");
-      label.className = "viz-label";
-      label.textContent = feat.label;
+      const pct = document.createElement("div");
+      pct.className = "breakdown-pct";
+      pct.style.color = color;
+      pct.textContent = item.avg + "%";
 
-      col.appendChild(barsEl);
-      col.appendChild(label);
-      return col;
-    }
+      const n = document.createElement("div");
+      n.className = "breakdown-n";
+      n.textContent = "n=" + item.n;
 
-    function makeSection(features, type, maxVal) {
-      if (!features.length) return null;
-      const section = document.createElement("div");
-      section.className = `viz-section ${type}`;
+      row.appendChild(labelEl);
+      row.appendChild(track);
+      row.appendChild(pct);
+      row.appendChild(n);
+      el.appendChild(row);
 
-      const hdr = document.createElement("div");
-      hdr.className = "viz-section-label";
-      hdr.textContent = type === "weakness" ? "WEAKNESSES" : "STRENGTHS";
-      section.appendChild(hdr);
-
-      const cols = document.createElement("div");
-      cols.className = "viz-columns";
-      features.forEach(f => cols.appendChild(makeCol(f, maxVal)));
-      section.appendChild(cols);
-      return section;
-    }
-
-    const wk = makeSection(weaknesses, "weakness", maxWeakness);
-    const st = makeSection(strengths,  "strength", maxStrength);
-
-    if (wk) viz.appendChild(wk);
-    if (wk && st) {
-      const div = document.createElement("div");
-      div.className = "viz-divider";
-      viz.appendChild(div);
-    }
-    if (st) viz.appendChild(st);
-
-    // Animate bars left-to-right
-    const allCols = viz.querySelectorAll(".viz-col");
-    allCols.forEach((col, i) => {
-      setTimeout(() => {
-        col.querySelectorAll(".viz-bar").forEach(bar => {
-          bar.style.height = bar.dataset.h;
-        });
-      }, 80 + i * 60);
+      setTimeout(() => { fill.style.width = fill.dataset.w; }, 80 + i * 50);
     });
+  }
+
+  function renderBreakdown(bd) {
+    makeRows(bd.by_generation, "breakdown-gen",   false);
+    makeRows(bd.by_stage,      "breakdown-stage", false);
+    makeRows(bd.by_type,       "breakdown-type",  true);
   }
 
   async function loadProfile(gameType) {
     showLoading();
     try {
       const res  = await fetch(
-        `/game/profile/image?username=${encodeURIComponent(username)}&game_type=${encodeURIComponent(gameType)}`
+        `/game/profile/breakdown?username=${encodeURIComponent(username)}&game_type=${encodeURIComponent(gameType)}`
       );
       const data = await res.json();
 
       finishProgress(() => {
         loadingPanel.classList.add("hidden");
 
-        if (!data.model_exists) {
-          gamesInfo.textContent = data.total_games
-            ? `You've played ${data.total_games} game${data.total_games !== 1 ? "s" : ""} in this mode — ${Math.max(0, 20 - data.total_games)} more to go.`
+        if (!data.has_data) {
+          const n = data.total_games || 0;
+          gamesInfo.textContent = n
+            ? `You've played ${n} game${n !== 1 ? "s" : ""} in this mode — ${Math.max(0, 5 - n)} more to go.`
             : "You haven't played this game mode yet.";
           lockedPanel.classList.remove("hidden");
           return;
         }
 
         gamesLabel.textContent = `Based on ${data.total_games} game${data.total_games !== 1 ? "s" : ""} in this mode`;
-        renderChart(data.chart);
+        renderBreakdown(data.breakdown);
         resultPanel.classList.remove("hidden");
       });
     } catch {

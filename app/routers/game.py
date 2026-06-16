@@ -1,4 +1,5 @@
 import random
+from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -102,6 +103,90 @@ def profile_image(
         .count()
     )
     return {"model_exists": chart is not None, "chart": chart, "total_games": total}
+
+
+@router.get("/profile/breakdown")
+def profile_breakdown(
+    username: str = Query(...),
+    game_type: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        return {"has_data": False, "total_games": 0, "breakdown": None}
+
+    total = (
+        db.query(GameResult)
+        .filter(GameResult.user_id == user.id, GameResult.game_type == game_type)
+        .count()
+    )
+
+    if total < 5:
+        return {"has_data": False, "total_games": total, "breakdown": None}
+
+    rows = (
+        db.query(GameResult, Pokemon)
+        .join(Pokemon, GameResult.pokemon_id == Pokemon.id)
+        .filter(GameResult.user_id == user.id, GameResult.game_type == game_type)
+        .all()
+    )
+
+    gen_acc   = defaultdict(list)
+    stage_acc = defaultdict(list)
+    type_acc  = defaultdict(list)
+
+    for result, poke in rows:
+        gen_acc[poke.generation].append(result.accuracy)
+        stage_acc[poke.stage].append(result.accuracy)
+        type_acc[poke.type1].append(result.accuracy)
+        if poke.type2:
+            type_acc[poke.type2].append(result.accuracy)
+
+    MIN_N = 3
+    _TYPE_IDS = {
+        "normal": 1, "fighting": 2, "flying": 3, "poison": 4, "ground": 5,
+        "rock": 6, "bug": 7, "ghost": 8, "steel": 9, "fire": 10, "water": 11,
+        "grass": 12, "electric": 13, "psychic": 14, "ice": 15, "dragon": 16,
+        "dark": 17, "fairy": 18,
+    }
+    _CDN = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-ix/scarlet-violet"
+    _STAGE_ORDER  = {"basic": 0, "stage_1": 1, "stage_2": 2}
+    _STAGE_LABELS = {"basic": "Basic", "stage_1": "Stage 1", "stage_2": "Stage 2"}
+
+    def _avg(lst): return round(sum(lst) / len(lst), 1)
+
+    by_generation = [
+        {"label": f"Gen {gen}", "avg": _avg(accs), "n": len(accs)}
+        for gen, accs in sorted(gen_acc.items())
+        if len(accs) >= MIN_N
+    ]
+
+    by_stage = [
+        {"label": _STAGE_LABELS.get(stage, stage), "avg": _avg(accs), "n": len(accs)}
+        for stage, accs in sorted(stage_acc.items(), key=lambda x: _STAGE_ORDER.get(x[0], 99))
+        if len(accs) >= MIN_N
+    ]
+
+    by_type = sorted([
+        {
+            "label": t.capitalize(),
+            "icon":  f"{_CDN}/{_TYPE_IDS[t]}.png",
+            "avg":   _avg(accs),
+            "n":     len(accs),
+        }
+        for t, accs in type_acc.items()
+        if len(accs) >= MIN_N and t in _TYPE_IDS
+    ], key=lambda x: x["avg"])
+
+    return {
+        "has_data":    True,
+        "total_games": total,
+        "breakdown": {
+            "by_generation": by_generation,
+            "by_stage":      by_stage,
+            "by_type":       by_type,
+        },
+    }
 
 
 @router.post("/start", response_model=StartResponse)
