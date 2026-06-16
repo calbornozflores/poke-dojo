@@ -65,3 +65,38 @@ class EvoScoreHistory(Base):
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped["User"] = relationship(back_populates="evo_history")
+
+
+class CompetitiveMatch(Base):
+    __tablename__ = "competitive_matches"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    mode: Mapped[str] = mapped_column(String, nullable=False)       # "vs" | "single"
+    player1: Mapped[str] = mapped_column(String, nullable=False)
+    player2: Mapped[str | None] = mapped_column(String, nullable=True)
+    rounds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    winner: Mapped[str | None] = mapped_column(String, nullable=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    competitive_results: Mapped[list["CompetitiveResult"]] = relationship(back_populates="match")
+
+
+class CompetitiveResult(Base):
+    __tablename__ = "competitive_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    match_id: Mapped[int] = mapped_column(Integer, ForeignKey("competitive_matches.id"), nullable=False)
+    round_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    pokemon_id: Mapped[int] = mapped_column(Integer, ForeignKey("pokemon.id"), nullable=False)
+    correct_option_position: Mapped[int] = mapped_column(Integer, nullable=False)  # 1/2/3
+    player1_key_pressed: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    player1_response_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    player1_was_correct: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    player1_score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    player2_key_pressed: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    player2_response_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    player2_was_correct: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    player2_score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    match: Mapped["CompetitiveMatch"] = relationship(back_populates="competitive_results")

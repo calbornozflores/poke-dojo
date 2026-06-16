@@ -1279,3 +1279,343 @@ a:hover { color: var(--accent-hover); }
   .journey-chart-wrapper { flex-direction: column; }
   .journey-y-axis { flex-direction: row; height: auto; width: 100%; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   BATTLE ARENA
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Sidebar buttons */
+.battle-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  text-decoration: none;
+  color: var(--text);
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(99, 102, 241, 0.08);
+  transition: background 0.15s, border-color 0.15s;
+}
+.battle-btn:hover { background: rgba(99, 102, 241, 0.18); border-color: #6366f1; }
+.battle-btn-icon { font-size: 1.1rem; margin-right: 0.4rem; }
+.battle-btn-sub { font-size: 0.65rem; color: var(--text-muted); margin-left: 1.6rem; }
+
+/* ── Arena page layout ── */
+.arena-page {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  min-height: 80vh;
+}
+.arena-screen { width: 100%; }
+
+/* ── Setup screen ── */
+.arena-setup-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  box-shadow: var(--shadow);
+}
+.arena-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 0.4rem;
+  text-align: center;
+}
+.arena-subtitle {
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0 0 2rem;
+  font-size: 0.88rem;
+}
+.arena-players-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.arena-player-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.arena-player-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+.arena-name-input {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 0.55rem 0.8rem;
+  font-size: 0.9rem;
+  width: 100%;
+}
+.arena-name-input:focus { outline: none; border-color: #6366f1; }
+.arena-key-hint { font-size: 0.72rem; color: var(--text-muted); }
+.arena-key-hint kbd {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-family: monospace;
+}
+.arena-vs-divider {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+.arena-rounds-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.arena-rounds-btns { display: flex; gap: 0.4rem; }
+.rounds-pill {
+  padding: 0.3rem 0.7rem;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.82rem;
+  transition: all 0.15s;
+}
+.rounds-pill.active, .rounds-pill:hover {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+}
+.arena-setup-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+}
+.arena-error { color: #f87171; font-size: 0.82rem; margin-top: 0.5rem; text-align: center; }
+
+/* ── Key assignment ── */
+.arena-key-assign { margin: 1.5rem 0; }
+.arena-key-assign-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+.arena-key-assign-row { display: flex; gap: 1rem; justify-content: center; }
+.key-assign-slot {
+  flex: 1;
+  max-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: var(--card-bg);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.key-assign-slot.assigning { border-color: #f59e0b; }
+.key-assign-opt { font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+.key-assign-key { font-size: 1.4rem; font-weight: 800; color: var(--text); font-family: monospace; min-height: 2rem; }
+.key-assign-hint { font-size: 0.62rem; color: var(--text-muted); }
+.key-assign-error { color: #f87171; font-size: 0.78rem; text-align: center; margin-top: 0.5rem; }
+
+/* ── Round screen ── */
+.arena-round-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+.arena-round-num {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+.arena-scoreboard { font-size: 1rem; font-weight: 700; color: var(--text); }
+.sb-p1 { color: #818cf8; }
+.sb-p2 { color: #f472b6; }
+.sb-sep { color: var(--text-muted); margin: 0 0.4rem; }
+.sb-solo { color: #f59e0b; }
+.arena-reveal-bar-wrap {
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.arena-reveal-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(to right, #6366f1, #a78bfa);
+  border-radius: 2px;
+}
+
+/* Silhouette animation: mostly dark for 70%, then rapid reveal */
+@keyframes silhouetteReveal {
+  0%   { filter: brightness(0); }
+  70%  { filter: brightness(0.05); }
+  85%  { filter: brightness(0.3); }
+  100% { filter: none; }
+}
+.arena-pokemon-stage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 220px;
+  margin-bottom: 1.5rem;
+}
+.arena-sprite {
+  width: 180px;
+  height: 180px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.arena-sprite.silhouette { filter: brightness(0); }
+
+/* ── Options ── */
+.arena-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.arena-option-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.9rem 0.5rem;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.1s, background 0.1s;
+}
+.arena-option-btn:hover { border-color: #6366f1; background: rgba(99,102,241,0.1); }
+.arena-option-btn.answered-p1 { border-color: #818cf8; background: rgba(129,140,248,0.15); }
+.arena-option-btn.answered-p2 { border-color: #f472b6; background: rgba(244,114,182,0.15); }
+.opt-keys { display: flex; gap: 0.3rem; }
+.opt-keys kbd {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-family: monospace;
+}
+.opt-name { font-size: 0.85rem; font-weight: 600; text-align: center; }
+.arena-round-info { text-align: center; font-size: 0.72rem; color: var(--text-muted); margin-bottom: 1rem; }
+
+/* ── Round result ── */
+.round-result-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.round-result-pokemon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.round-result-sprite { width: 80px; height: 80px; object-fit: contain; image-rendering: pixelated; }
+.round-result-name { font-size: 1.4rem; font-weight: 800; color: var(--text); text-transform: capitalize; }
+.round-result-bars { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
+.rr-bar-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 70px 60px;
+  align-items: center;
+  gap: 0.6rem;
+}
+.rr-bar-name { font-size: 0.82rem; font-weight: 700; color: var(--text); text-align: right; }
+.rr-bar-track { height: 14px; background: var(--bg); border-radius: 7px; overflow: hidden; }
+.rr-bar-fill { height: 100%; border-radius: 7px; transition: width 0.4s ease; }
+.rr-bar-score { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+.rr-bar-meta { font-size: 0.72rem; color: var(--text-muted); }
+.rr-solo-result {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.rr-solo-result.correct { background: rgba(74,222,128,0.15); color: #4ade80; }
+.rr-solo-result.wrong   { background: rgba(248,113,113,0.15); color: #f87171; }
+
+/* ── Match end ── */
+.match-end-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.match-winner-trophy { font-size: 4rem; margin-bottom: 0.5rem; }
+.match-winner-name { font-size: 1.8rem; font-weight: 900; color: var(--text); margin-bottom: 1.5rem; }
+.match-final-scores { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1.5rem; }
+.mfs-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background: var(--bg);
+  border-radius: 8px;
+  font-weight: 700;
+}
+.match-round-recap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.recap-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.recap-sprite { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
+.recap-name { font-weight: 600; text-transform: capitalize; color: var(--text); }
+.rcor  { color: #4ade80; }
+.rwrong { color: #f87171; }
+.match-end-actions { display: flex; justify-content: center; gap: 1rem; }
+
+/* Single game over stats */
+.sg-stats {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin: 1rem 0 1.5rem;
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+.sg-stats strong { color: var(--text); font-size: 1.2rem; }

@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Battle Arena Leaderboard — Poke-Dojo{% endblock %}
+
+{% block content %}
+<div class="scores-page">
+  <div class="scores-header">
+    <h1>Battle Arena</h1>
+    <p class="scores-subtitle">Competitive records — VS matches and Solo Challenge runs.</p>
+  </div>
+
+  <div class="scores-tabs">
+    <button class="scores-tab active" data-tab="solo">Solo Challenge</button>
+    <button class="scores-tab" data-tab="vs">VS Mode</button>
+  </div>
+
+  <div id="arena-loading" class="profile-loading-panel">
+    <div class="profile-spinner"></div>
+    <p>Loading arena records…</p>
+  </div>
+
+  <div id="arena-empty" class="profile-locked hidden">
+    <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/54.png"
+         alt="Psyduck" class="profile-locked-sprite">
+    <h2>No battles yet</h2>
+    <p>Play in the Battle Arena to appear here!</p>
+    <a href="/battle-arena?mode=vs" class="btn btn-primary">Go Fight</a>
+  </div>
+
+  <div id="arena-table-wrap" class="hidden">
+    <!-- Solo tab -->
+    <div id="tab-solo">
+      <table class="scores-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Trainer</th>
+            <th>Best Run Score</th>
+            <th>Longest Streak</th>
+          </tr>
+        </thead>
+        <tbody id="solo-tbody"></tbody>
+      </table>
+    </div>
+    <!-- VS tab -->
+    <div id="tab-vs" class="hidden">
+      <table class="scores-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Trainer</th>
+            <th>Best VS Score</th>
+            <th>Win Rate</th>
+            <th>Matches</th>
+          </tr>
+        </thead>
+        <tbody id="vs-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let allData = [];
+  let activeTab = "solo";
+
+  async function loadLeaderboard() {
+    try {
+      const res = await fetch("/battle/leaderboard");
+      allData = await res.json();
+      document.getElementById("arena-loading").classList.add("hidden");
+      if (!allData.length) {
+        document.getElementById("arena-empty").classList.remove("hidden");
+        return;
+      }
+      document.getElementById("arena-table-wrap").classList.remove("hidden");
+      renderTab("solo");
+      renderTab("vs");
+    } catch {
+      document.getElementById("arena-loading").classList.add("hidden");
+      document.getElementById("arena-empty").classList.remove("hidden");
+    }
+  }
+
+  function renderTab(tab) {
+    if (tab === "solo") {
+      const sorted = [...allData].sort((a, b) => b.best_run_score - a.best_run_score);
+      const tbody = document.getElementById("solo-tbody");
+      tbody.innerHTML = sorted.map((e, i) => `
+        <tr class="${i === 0 ? 'rank-gold' : i === 1 ? 'rank-silver' : i === 2 ? 'rank-bronze' : ''}">
+          <td>${i + 1}</td>
+          <td>${e.username}</td>
+          <td>${e.best_run_score} pts</td>
+          <td>${e.longest_streak}</td>
+        </tr>`).join("");
+    } else {
+      const sorted = [...allData].sort((a, b) => b.best_vs_score - a.best_vs_score);
+      const tbody = document.getElementById("vs-tbody");
+      tbody.innerHTML = sorted.map((e, i) => `
+        <tr class="${i === 0 ? 'rank-gold' : i === 1 ? 'rank-silver' : i === 2 ? 'rank-bronze' : ''}">
+          <td>${i + 1}</td>
+          <td>${e.username}</td>
+          <td>${e.best_vs_score} pts</td>
+          <td>${e.vs_win_rate !== null ? e.vs_win_rate + "%" : "—"}</td>
+          <td>${e.vs_matches}</td>
+        </tr>`).join("");
+    }
+  }
+
+  document.querySelectorAll(".scores-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".scores-tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeTab = btn.dataset.tab;
+      document.getElementById("tab-solo").classList.toggle("hidden", activeTab !== "solo");
+      document.getElementById("tab-vs").classList.toggle("hidden", activeTab !== "vs");
+    });
+  });
+
+  loadLeaderboard();
+</script>
+{% endblock %}

@@ -1,0 +1,606 @@
+{% extends "base.html" %}
+{% block title %}Battle Arena — Poke-Dojo{% endblock %}
+
+{% block content %}
+<div class="arena-page">
+
+  <!-- ── PRE-MATCH SETUP ───────────────────────────────────────────────── -->
+  <div id="setup-screen" class="arena-screen">
+    <div class="arena-setup-card">
+      <div id="setup-vs" class="hidden">
+        <h1 class="arena-title">⚔ VS Mode</h1>
+        <p class="arena-subtitle">2 players share the same keyboard. First to identify the Pokémon wins the round.</p>
+        <div class="arena-players-row">
+          <div class="arena-player-block">
+            <div class="arena-player-label">Player 1</div>
+            <input id="p1-name" class="arena-name-input" placeholder="Enter trainer name…" maxlength="20" />
+            <div class="arena-key-hint">Keys: <kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd></div>
+          </div>
+          <div class="arena-vs-divider">VS</div>
+          <div class="arena-player-block">
+            <div class="arena-player-label">Player 2</div>
+            <input id="p2-name" class="arena-name-input" placeholder="Enter trainer name…" maxlength="20" />
+            <div class="arena-key-hint">Keys: <kbd>I</kbd> <kbd>O</kbd> <kbd>P</kbd></div>
+          </div>
+        </div>
+        <div class="arena-rounds-row">
+          <label>Rounds:</label>
+          <div class="arena-rounds-btns">
+            <button class="rounds-pill active" data-rounds="3">3</button>
+            <button class="rounds-pill" data-rounds="5">5</button>
+            <button class="rounds-pill" data-rounds="7">7</button>
+            <button class="rounds-pill" data-rounds="10">10</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="setup-single" class="hidden">
+        <h1 class="arena-title">★ Solo Challenge</h1>
+        <p class="arena-subtitle">Endless rounds — identify Pokémon as fast as possible. One wrong answer ends your run.</p>
+        <div class="arena-player-block" style="margin:0 auto;max-width:300px">
+          <div class="arena-player-label">Your Name</div>
+          <input id="solo-name" class="arena-name-input" placeholder="Enter trainer name…" maxlength="20" />
+        </div>
+        <div class="arena-key-assign">
+          <div class="arena-key-assign-label">Assign your keys for options 1, 2, 3:</div>
+          <div class="arena-key-assign-row">
+            <div class="key-assign-slot" data-slot="0">
+              <div class="key-assign-opt">Option 1</div>
+              <div class="key-assign-key" id="key-slot-0">—</div>
+              <div class="key-assign-hint">Press a key</div>
+            </div>
+            <div class="key-assign-slot" data-slot="1">
+              <div class="key-assign-opt">Option 2</div>
+              <div class="key-assign-key" id="key-slot-1">—</div>
+              <div class="key-assign-hint">Press a key</div>
+            </div>
+            <div class="key-assign-slot" data-slot="2">
+              <div class="key-assign-opt">Option 3</div>
+              <div class="key-assign-key" id="key-slot-2">—</div>
+              <div class="key-assign-hint">Press a key</div>
+            </div>
+          </div>
+          <p id="key-assign-error" class="key-assign-error hidden"></p>
+        </div>
+      </div>
+
+      <div class="arena-setup-actions">
+        <a href="/play" class="btn btn-secondary">← Back to Dojo</a>
+        <button id="start-match-btn" class="btn btn-primary btn-lg">Start Match</button>
+      </div>
+      <p id="setup-error" class="arena-error hidden"></p>
+    </div>
+  </div>
+
+  <!-- ── GAME ROUND ─────────────────────────────────────────────────────── -->
+  <div id="round-screen" class="arena-screen hidden">
+    <div class="arena-round-header">
+      <div class="arena-round-num" id="arena-round-num">Round 1</div>
+      <div class="arena-scoreboard" id="arena-scoreboard"></div>
+      <div class="arena-reveal-bar-wrap">
+        <div class="arena-reveal-bar" id="arena-reveal-bar"></div>
+      </div>
+    </div>
+
+    <div class="arena-pokemon-stage">
+      <img id="arena-sprite" src="" alt="Pokémon silhouette" class="arena-sprite silhouette" />
+    </div>
+
+    <div class="arena-options" id="arena-options">
+      <!-- 3 option buttons rendered by JS -->
+    </div>
+
+    <div class="arena-round-info" id="arena-round-info"></div>
+  </div>
+
+  <!-- ── ROUND RESULT ───────────────────────────────────────────────────── -->
+  <div id="round-result-screen" class="arena-screen hidden">
+    <div class="round-result-card">
+      <div class="round-result-pokemon">
+        <img id="rr-sprite" src="" alt="" class="round-result-sprite" />
+        <div class="round-result-name" id="rr-name"></div>
+      </div>
+      <div class="round-result-bars" id="round-result-bars"></div>
+      <button id="next-round-btn" class="btn btn-primary btn-lg">Next Round</button>
+    </div>
+  </div>
+
+  <!-- ── MATCH END ──────────────────────────────────────────────────────── -->
+  <div id="match-end-screen" class="arena-screen hidden">
+    <div class="match-end-card">
+      <div class="match-winner-trophy" id="match-winner-trophy">🏆</div>
+      <div class="match-winner-name" id="match-winner-name"></div>
+      <div class="match-final-scores" id="match-final-scores"></div>
+      <div class="match-round-recap" id="match-round-recap"></div>
+      <div class="match-end-actions">
+        <a href="/play" class="btn btn-secondary">← Back to Dojo</a>
+        <button id="rematch-btn" class="btn btn-primary">Rematch</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SINGLE PLAYER GAME OVER ───────────────────────────────────────── -->
+  <div id="single-gameover-screen" class="arena-screen hidden">
+    <div class="match-end-card">
+      <div class="match-winner-trophy">💀</div>
+      <div class="match-winner-name" id="sg-title">Run Over</div>
+      <div class="sg-stats" id="sg-stats"></div>
+      <div class="match-round-recap" id="sg-recap"></div>
+      <div class="match-end-actions">
+        <a href="/play" class="btn btn-secondary">← Back to Dojo</a>
+        <button id="sg-retry-btn" class="btn btn-primary">Try Again</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+const params    = new URLSearchParams(location.search);
+let MODE        = params.get("mode") || "vs";   // "vs" | "single"
+let matchId     = null;
+let currentRound = 0;
+let totalRounds  = 5;
+let roundData    = null;
+let roundStartMs = 0;
+let revealTimer  = null;
+let roundOver    = false;
+
+let p1Name = "", p2Name = "", soloName = "";
+let p1Score = 0, p2Score = 0;
+let soloScore = 0;
+let soloRound = 0;
+let soloTimerDuration = 10; // starts 10s, decreases each 10 rounds
+
+// VS key bindings: Q/W/E → 1/2/3 (player1), I/O/P → 1/2/3 (player2)
+const VS_P1_KEYS = { q: 1, w: 2, e: 3 };
+const VS_P2_KEYS = { i: 1, o: 2, p: 3 };
+
+// Solo: custom key bindings (filled during setup)
+let SOLO_KEYS = {};  // key → option index (1/2/3)
+let soloKeySlots = [null, null, null]; // key names for slots 0,1,2
+let assigningSlot = null;
+
+// FORBIDDEN keys for solo binding
+const FORBIDDEN = new Set(["enter", "escape", " "]);
+
+// ── Init ──────────────────────────────────────────────────────────────────
+const username = localStorage.getItem("poke_username") || "";
+
+document.getElementById("setup-vs").classList.toggle("hidden", MODE !== "vs");
+document.getElementById("setup-single").classList.toggle("hidden", MODE !== "single");
+
+// Pre-fill player names from localStorage
+if (MODE === "vs") {
+  document.getElementById("p1-name").value = username;
+} else {
+  document.getElementById("solo-name").value = username;
+}
+
+// Round pills
+document.querySelectorAll(".rounds-pill").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".rounds-pill").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    totalRounds = parseInt(btn.dataset.rounds, 10);
+  });
+});
+
+// ── Solo key assignment ───────────────────────────────────────────────────
+function activateSlot(slot) {
+  assigningSlot = slot;
+  document.querySelectorAll(".key-assign-slot").forEach((el, i) => {
+    el.classList.toggle("assigning", i === slot);
+  });
+}
+
+document.querySelectorAll(".key-assign-slot").forEach((el, i) => {
+  el.addEventListener("click", () => activateSlot(i));
+});
+
+if (MODE === "single") activateSlot(0);
+
+document.addEventListener("keydown", e => {
+  if (assigningSlot === null) return;
+  if (MODE !== "single") return;
+  const key = e.key.toLowerCase();
+  if (FORBIDDEN.has(key)) {
+    showKeyError("Enter, Escape, and Space are reserved.");
+    return;
+  }
+  // Ensure no duplicate across slots
+  if (soloKeySlots.some((k, i) => k === key && i !== assigningSlot)) {
+    showKeyError(`Key "${e.key}" is already assigned.`);
+    return;
+  }
+  soloKeySlots[assigningSlot] = key;
+  document.getElementById(`key-slot-${assigningSlot}`).textContent = e.key.toUpperCase();
+  document.querySelectorAll(".key-assign-slot")[assigningSlot].classList.remove("assigning");
+  document.getElementById("key-assign-error").classList.add("hidden");
+
+  // Advance to next empty slot
+  const next = soloKeySlots.findIndex((k, i) => k === null && i > assigningSlot);
+  if (next !== -1) activateSlot(next);
+  else assigningSlot = null;
+});
+
+function showKeyError(msg) {
+  const el = document.getElementById("key-assign-error");
+  el.textContent = msg;
+  el.classList.remove("hidden");
+}
+
+// ── Start match ───────────────────────────────────────────────────────────
+document.getElementById("start-match-btn").addEventListener("click", async () => {
+  const errEl = document.getElementById("setup-error");
+  errEl.classList.add("hidden");
+
+  if (MODE === "vs") {
+    p1Name = document.getElementById("p1-name").value.trim();
+    p2Name = document.getElementById("p2-name").value.trim();
+    if (!p1Name || !p2Name) { errEl.textContent = "Both player names required."; errEl.classList.remove("hidden"); return; }
+    if (p1Name === p2Name)  { errEl.textContent = "Player names must be different."; errEl.classList.remove("hidden"); return; }
+  } else {
+    soloName = document.getElementById("solo-name").value.trim();
+    if (!soloName) { errEl.textContent = "Enter your trainer name."; errEl.classList.remove("hidden"); return; }
+    if (soloKeySlots.some(k => k === null)) { errEl.textContent = "Assign all 3 keys first."; errEl.classList.remove("hidden"); return; }
+    SOLO_KEYS = {};
+    soloKeySlots.forEach((key, i) => { SOLO_KEYS[key] = i + 1; });
+  }
+
+  const body = MODE === "vs"
+    ? { mode: "vs", player1: p1Name, player2: p2Name, rounds: totalRounds }
+    : { mode: "single", player1: soloName, rounds: 9999 };
+
+  const res = await fetch("/battle/match/start", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  if (!res.ok) { errEl.textContent = "Failed to start match."; errEl.classList.remove("hidden"); return; }
+  const data = await res.json();
+  matchId = data.match_id;
+  p1Score = p2Score = soloScore = 0;
+  currentRound = soloRound = 0;
+  soloTimerDuration = 10;
+
+  showScreen("round-screen");
+  loadRound();
+});
+
+// ── Load round ────────────────────────────────────────────────────────────
+async function loadRound() {
+  currentRound++;
+  if (MODE === "single") { soloRound = currentRound; updateSoloTimer(); }
+
+  const res = await fetch(`/battle/round/next?match_id=${matchId}&round_number=${currentRound}`);
+  if (!res.ok) { endMatch(); return; }
+  roundData = await res.json();
+  roundOver = false;
+
+  document.getElementById("arena-round-num").textContent =
+    MODE === "vs" ? `Round ${currentRound} / ${totalRounds}` : `Round ${currentRound}`;
+  updateScoreboard();
+
+  // Sprite: start as silhouette
+  const spriteEl = document.getElementById("arena-sprite");
+  spriteEl.src = roundData.sprite_url;
+  spriteEl.className = "arena-sprite silhouette";
+
+  // Options
+  const optionsEl = document.getElementById("arena-options");
+  optionsEl.innerHTML = "";
+  const keyLabels = MODE === "vs"
+    ? [["Q","I"], ["W","O"], ["E","P"]]
+    : soloKeySlots.map(k => [k.toUpperCase()]);
+  roundData.options.forEach((name, i) => {
+    const btn = document.createElement("button");
+    btn.className = "arena-option-btn";
+    btn.dataset.pos = i + 1;
+    const kl = keyLabels[i];
+    const keybadges = kl.map(k => `<kbd>${k}</kbd>`).join(" ");
+    btn.innerHTML = `<span class="opt-keys">${keybadges}</span><span class="opt-name">${name}</span>`;
+    btn.addEventListener("click", () => {
+      if (roundOver) return;
+      if (MODE === "single") handleSoloAnswer(i + 1, Date.now() - roundStartMs);
+    });
+    optionsEl.appendChild(btn);
+  });
+
+  const infoEl = document.getElementById("arena-round-info");
+  if (MODE === "vs") {
+    infoEl.textContent = "P1: Q/W/E  •  P2: I/O/P";
+  } else {
+    infoEl.textContent = `Timer: ${soloTimerDuration}s  •  Press your key to answer`;
+  }
+
+  startReveal();
+}
+
+// ── Silhouette reveal ─────────────────────────────────────────────────────
+function startReveal() {
+  const dur = MODE === "single" ? soloTimerDuration : roundData.reveal_duration;
+  roundStartMs = Date.now();
+  const barEl = document.getElementById("arena-reveal-bar");
+  barEl.style.transition = "none";
+  barEl.style.width = "0%";
+
+  // Reflow to reset animation
+  barEl.offsetWidth;
+  barEl.style.transition = `width ${dur}s linear`;
+  barEl.style.width = "100%";
+
+  // Sprite: non-linear reveal (mostly dark first 70%, fast reveal last 30%)
+  const spriteEl = document.getElementById("arena-sprite");
+  spriteEl.style.animation = `none`;
+  spriteEl.offsetWidth;
+  spriteEl.style.animationName = "silhouetteReveal";
+  spriteEl.style.animationDuration = `${dur}s`;
+  spriteEl.style.animationTimingFunction = "linear";
+  spriteEl.style.animationFillMode = "forwards";
+
+  clearTimeout(revealTimer);
+  revealTimer = setTimeout(() => {
+    if (roundOver) return;
+    // Timer expired
+    if (MODE === "vs") {
+      autoSubmitVS();
+    } else {
+      handleSoloTimeout();
+    }
+  }, dur * 1000);
+}
+
+// ── VS keyboard ───────────────────────────────────────────────────────────
+document.addEventListener("keydown", e => {
+  if (MODE !== "vs" || !roundData || roundOver) return;
+  const key = e.key.toLowerCase();
+  const p1opt = VS_P1_KEYS[key];
+  const p2opt = VS_P2_KEYS[key];
+  if (p1opt) handleVSAnswer(1, p1opt);
+  else if (p2opt) handleVSAnswer(2, p2opt);
+});
+
+let p1Answer = null, p2Answer = null;
+let p1Ms = null, p2Ms = null;
+
+function handleVSAnswer(player, optionPos) {
+  const ms = Date.now() - roundStartMs;
+  if (player === 1 && p1Answer === null) {
+    p1Answer = optionPos; p1Ms = ms;
+    highlightOption(optionPos, "p1");
+  }
+  if (player === 2 && p2Answer === null) {
+    p2Answer = optionPos; p2Ms = ms;
+    highlightOption(optionPos, "p2");
+  }
+  // Once both answered (or auto-submit), resolve
+  if (p1Answer !== null && p2Answer !== null) {
+    clearTimeout(revealTimer);
+    submitRound(p1Answer, p1Ms, p2Answer, p2Ms);
+  }
+}
+
+function autoSubmitVS() {
+  submitRound(p1Answer, p1Ms, p2Answer, p2Ms);
+}
+
+function highlightOption(pos, player) {
+  const btn = document.querySelector(`.arena-option-btn[data-pos="${pos}"]`);
+  if (btn) btn.classList.add(`answered-${player}`);
+}
+
+// ── Solo keyboard ─────────────────────────────────────────────────────────
+document.addEventListener("keydown", e => {
+  if (MODE !== "single" || !roundData || roundOver) return;
+  const key = e.key.toLowerCase();
+  const opt = SOLO_KEYS[key];
+  if (opt) handleSoloAnswer(opt, Date.now() - roundStartMs);
+});
+
+function handleSoloTimeout() {
+  roundOver = true;
+  clearTimeout(revealTimer);
+  // Time expired = wrong answer → game over
+  endSingleRun("Time ran out!");
+}
+
+function handleSoloAnswer(optionPos, ms) {
+  if (roundOver) return;
+  roundOver = true;
+  clearTimeout(revealTimer);
+  const correct = optionPos === roundData.correct_position;
+  if (!correct) {
+    submitRound(optionPos, ms, null, null, true /* gameOver */);
+    return;
+  }
+  const timeRem = Math.max(0, soloTimerDuration * 1000 - ms) / 1000;
+  const score = Math.max(0, Math.floor(timeRem / soloTimerDuration * 100));
+  soloScore += score;
+  submitRound(optionPos, ms, null, null, false);
+}
+
+// ── Submit round to server ────────────────────────────────────────────────
+async function submitRound(p1key, p1ms, p2key, p2ms, soloGameOver = false) {
+  roundOver = true;
+  p1Answer = p2Answer = null; p1Ms = p2Ms = null;
+
+  const body = {
+    match_id: matchId,
+    round_number: currentRound,
+    pokemon_id: roundData.pokemon_id,
+    correct_option_position: roundData.correct_position,
+    player1_key_pressed: p1key,
+    player1_response_ms: p1ms,
+    player2_key_pressed: p2key,
+    player2_response_ms: p2ms,
+  };
+
+  const res = await fetch("/battle/round/submit", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  if (!res.ok) return;
+  const result = await res.json();
+
+  // Update running scores
+  if (MODE === "vs") {
+    p1Score += result.player1_score;
+    p2Score += result.player2_score;
+  }
+
+  // Fully reveal sprite
+  const spriteEl = document.getElementById("arena-sprite");
+  spriteEl.style.animation = "none";
+  spriteEl.style.filter = "none";
+  spriteEl.classList.remove("silhouette");
+
+  if (soloGameOver) {
+    endSingleRun("Wrong answer!", result);
+    return;
+  }
+
+  showRoundResult(result);
+}
+
+// ── Round result screen ───────────────────────────────────────────────────
+function showRoundResult(result) {
+  document.getElementById("rr-sprite").src = roundData.sprite_url;
+  document.getElementById("rr-name").textContent = result.pokemon_name;
+
+  const barsEl = document.getElementById("round-result-bars");
+  barsEl.innerHTML = "";
+
+  if (MODE === "vs") {
+    barsEl.appendChild(makeResultBar(p1Name, result.player1_score, result.player1_was_correct, result.player1_response_ms, "#818cf8"));
+    barsEl.appendChild(makeResultBar(p2Name, result.player2_score, result.player2_was_correct, result.player2_response_ms, "#f472b6"));
+  } else {
+    const ms = result.player1_response_ms;
+    const timeStr = ms ? `${(ms/1000).toFixed(2)}s` : "—";
+    barsEl.innerHTML = `<div class="rr-solo-result ${result.player1_was_correct ? 'correct' : 'wrong'}">
+      ${result.player1_was_correct ? "✓ Correct" : "✗ Wrong"} · ${result.player1_score} pts · ${timeStr}
+    </div>`;
+  }
+
+  // Show/hide next round button based on mode and round count
+  const nextBtn = document.getElementById("next-round-btn");
+  if (MODE === "vs") {
+    const isLast = currentRound >= totalRounds;
+    nextBtn.textContent = isLast ? "See Final Results" : "Next Round";
+    nextBtn.onclick = isLast ? endMatch : loadRound;
+  } else {
+    nextBtn.textContent = "Next Round";
+    nextBtn.onclick = loadRound;
+  }
+
+  showScreen("round-result-screen");
+}
+
+function makeResultBar(name, score, correct, ms, color) {
+  const wrap = document.createElement("div");
+  wrap.className = "rr-bar-row";
+  const maxScore = 100;
+  const pct = Math.min(100, (score / maxScore) * 100);
+  const timeStr = ms ? `${(ms / 1000).toFixed(2)}s` : "—";
+  wrap.innerHTML = `
+    <div class="rr-bar-name">${name}</div>
+    <div class="rr-bar-track">
+      <div class="rr-bar-fill" style="width:0%;background:${color}" data-w="${pct}%"></div>
+    </div>
+    <div class="rr-bar-score">${score} pts</div>
+    <div class="rr-bar-meta">${correct ? "✓" : "✗"} ${timeStr}</div>`;
+  setTimeout(() => {
+    wrap.querySelector(".rr-bar-fill").style.width = pct + "%";
+  }, 80);
+  return wrap;
+}
+
+// ── Score board ───────────────────────────────────────────────────────────
+function updateScoreboard() {
+  const el = document.getElementById("arena-scoreboard");
+  if (MODE === "vs") {
+    el.innerHTML = `
+      <span class="sb-p1">${p1Name}: ${p1Score}</span>
+      <span class="sb-sep">·</span>
+      <span class="sb-p2">${p2Name}: ${p2Score}</span>`;
+  } else {
+    el.innerHTML = `<span class="sb-solo">Score: ${soloScore}</span>`;
+  }
+}
+
+// ── End match (VS) ────────────────────────────────────────────────────────
+async function endMatch() {
+  const res = await fetch("/battle/match/finish", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ match_id: matchId }),
+  });
+  const summary = res.ok ? await res.json() : null;
+  showMatchEnd(summary);
+}
+
+function showMatchEnd(summary) {
+  if (!summary) { location.href = "/play"; return; }
+
+  const isDraw = summary.winner === "draw";
+  document.getElementById("match-winner-trophy").textContent = isDraw ? "🤝" : "🏆";
+  document.getElementById("match-winner-name").textContent =
+    isDraw ? "It's a Draw!" : `${summary.winner} Wins!`;
+
+  document.getElementById("match-final-scores").innerHTML = `
+    <div class="mfs-row"><span>${summary.player1}</span><span>${summary.player1_total} pts</span></div>
+    <div class="mfs-row"><span>${summary.player2 || ""}</span><span>${summary.player2_total ?? ""} pts</span></div>`;
+
+  const recapEl = document.getElementById("match-round-recap");
+  recapEl.innerHTML = "";
+  summary.rounds.forEach(r => {
+    const row = document.createElement("div");
+    row.className = "recap-row";
+    row.innerHTML = `
+      <img src="${r.sprite_url}" class="recap-sprite" alt="${r.pokemon_name}">
+      <span class="recap-name">${r.pokemon_name}</span>
+      <span class="recap-p1 ${r.player1_correct ? "rcor" : "rwrong"}">${summary.player1}: ${r.player1_score}pts</span>
+      <span class="recap-p2 ${r.player2_correct ? "rcor" : "rwrong"}">${summary.player2 || ""}: ${r.player2_score}pts</span>`;
+    recapEl.appendChild(row);
+  });
+
+  showScreen("match-end-screen");
+}
+
+document.getElementById("rematch-btn").addEventListener("click", () => {
+  location.href = `/battle-arena?mode=${MODE}`;
+});
+
+// ── End single player run ─────────────────────────────────────────────────
+function endSingleRun(reason, lastResult) {
+  document.getElementById("sg-title").textContent = reason;
+  document.getElementById("sg-stats").innerHTML = `
+    <div>Rounds survived: <strong>${soloRound}</strong></div>
+    <div>Total score: <strong>${soloScore} pts</strong></div>`;
+
+  // Finish match on server (records the run)
+  fetch("/battle/match/finish", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ match_id: matchId }),
+  });
+
+  showScreen("single-gameover-screen");
+}
+
+document.getElementById("sg-retry-btn").addEventListener("click", () => {
+  location.href = `/battle-arena?mode=single`;
+});
+
+// ── Solo timer progression ────────────────────────────────────────────────
+// Called at the start of each solo round to reduce timer every 10 rounds
+function updateSoloTimer() {
+  const reduction = Math.floor(soloRound / 10);
+  soloTimerDuration = Math.max(5, 10 - reduction);
+}
+
+// ── Screen switcher ───────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll(".arena-screen").forEach(s => s.classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+}
+</script>
+{% endblock %}
