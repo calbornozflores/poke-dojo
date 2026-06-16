@@ -73,7 +73,8 @@ async def main():
         print("01 Home")
         page = await new_page(browser)
         await page.goto(BASE)
-        await page.wait_for_load_state("networkidle")
+        await page.wait_for_selector("#returning-section:not(.hidden)", timeout=5000)
+        await page.wait_for_timeout(300)
         await take(page, "01_home.png")
         await page.close()
 
@@ -82,6 +83,11 @@ async def main():
         page = await new_page(browser)
         await page.goto(f"{BASE}/play")
         await page.wait_for_selector("#btn-game1", timeout=5000)
+        # Wait for Metapod/Mewtwo sidebar sprites to load
+        await page.wait_for_function(
+            "() => Array.from(document.querySelectorAll('.battle-btn-sprite')).every(i => i.complete && i.naturalWidth > 0)",
+            timeout=8000
+        )
         await dojo_start_game(page, "#btn-game1")
         await take(page, "02_play_intro.png")
         await page.close()
@@ -234,8 +240,12 @@ async def main():
         page = await new_page(browser)
         await page.goto(f"{BASE}/battle-arena?mode=vs")
         await page.wait_for_selector("#setup-vs:not(.hidden)", timeout=8000)
+        await page.wait_for_function(
+            "() => Array.from(document.querySelectorAll('.arena-title-sprite')).every(i => i.complete && i.naturalWidth > 0)",
+            timeout=8000
+        )
         await page.fill("#p2-name", "Gary")
-        await page.wait_for_timeout(400)
+        await page.wait_for_timeout(300)
         await take(page, "15_battle_arena_vs_setup.png")
         await page.close()
 
@@ -244,11 +254,15 @@ async def main():
         page = await new_page(browser)
         await page.goto(f"{BASE}/battle-arena?mode=single")
         await page.wait_for_selector("#setup-single:not(.hidden)", timeout=8000)
+        await page.wait_for_function(
+            "() => Array.from(document.querySelectorAll('.arena-title-sprite')).every(i => i.complete && i.naturalWidth > 0)",
+            timeout=8000
+        )
         # Assign keys A/S/D (slot 0 is auto-activated)
         await page.keyboard.press("a")
         await page.keyboard.press("s")
         await page.keyboard.press("d")
-        await page.wait_for_timeout(400)
+        await page.wait_for_timeout(300)
         await take(page, "16_battle_arena_solo_setup.png")
         await page.close()
 
