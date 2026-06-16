@@ -33,7 +33,11 @@
 
   <!-- Name It leaderboard -->
   <div id="tab-nameit" class="tab-content hidden">
-    <div id="nameit-loading" class="centered-msg">Loading...</div>
+    <div class="type-sub-switch">
+      <button class="type-sub-btn active" data-ni="name_guess">Medium</button>
+      <button class="type-sub-btn" data-ni="name_hard">Hard</button>
+    </div>
+    <div id="nameit-loading" class="centered-msg hidden">Loading...</div>
     <table id="nameit-table" class="score-table hidden">
       <thead><tr><th>#</th><th>Trainer</th><th>Games</th><th>Avg Score</th><th>Best</th><th>Worst</th></tr></thead>
       <tbody id="nameit-body"></tbody>
@@ -102,7 +106,9 @@
   }
 
   // ── Tab switching ─────────────────────────────────────────────────────────
-  let nameitLoaded = false, guessnumberLoaded = false;
+  let nameitLoaded = { name_guess: false, name_hard: false };
+  let nameitSubActive = "name_guess";
+  let guessnumberLoaded = false;
   let typeLoaded = { type_easy: false, type_hard: false };
   let typeSubActive = "type_easy";
 
@@ -114,9 +120,8 @@
       document.querySelectorAll(".tab-content").forEach(t => t.classList.add("hidden"));
       const key = btn.dataset.tab;
       document.getElementById("tab-" + key).classList.remove("hidden");
-      if (key === "nameit" && !nameitLoaded) {
-        document.getElementById("nameit-loading").classList.remove("hidden");
-        loadTab("name_guess", "nameit").then(() => { nameitLoaded = true; });
+      if (key === "nameit" && !nameitLoaded[nameitSubActive]) {
+        loadNameItSubTab(nameitSubActive);
       }
       if (key === "guessnumber" && !guessnumberLoaded) {
         document.getElementById("guessnumber-loading").classList.remove("hidden");
@@ -128,16 +133,38 @@
     });
   });
 
-  // ── Type sub-switch ───────────────────────────────────────────────────────
-  document.querySelectorAll(".type-sub-btn").forEach(btn => {
+  // ── Name It sub-switch ────────────────────────────────────────────────────
+  document.querySelectorAll("[data-ni]").forEach(btn => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".type-sub-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll("[data-ni]").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      nameitSubActive = btn.dataset.ni;
+      if (!nameitLoaded[nameitSubActive]) {
+        loadNameItSubTab(nameitSubActive);
+      } else {
+        nameitLoaded[nameitSubActive] = false;
+        loadNameItSubTab(nameitSubActive);
+      }
+    });
+  });
+
+  async function loadNameItSubTab(gameType) {
+    document.getElementById("nameit-loading").classList.remove("hidden");
+    document.getElementById("nameit-table").classList.add("hidden");
+    document.getElementById("nameit-empty").classList.add("hidden");
+    await loadTab(gameType, "nameit");
+    nameitLoaded[gameType] = true;
+  }
+
+  // ── Type sub-switch ───────────────────────────────────────────────────────
+  document.querySelectorAll("[data-gt]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("[data-gt]").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       typeSubActive = btn.dataset.gt;
       if (!typeLoaded[typeSubActive]) {
         loadTypeSubTab(typeSubActive);
       } else {
-        // Data already loaded; just re-render by reloading (simple approach)
         typeLoaded[typeSubActive] = false;
         loadTypeSubTab(typeSubActive);
       }
@@ -154,7 +181,8 @@
 
   // ── Refresh ───────────────────────────────────────────────────────────────
   document.getElementById("refresh-btn").addEventListener("click", () => {
-    nameitLoaded = guessnumberLoaded = false;
+    nameitLoaded = { name_guess: false, name_hard: false };
+    guessnumberLoaded = false;
     typeLoaded = { type_easy: false, type_hard: false };
     ["global","nameit","guessnumber","type"].forEach(key => {
       const loadEl = document.getElementById(key + "-loading");
@@ -166,7 +194,7 @@
     });
     loadTab(null, "global");
     const activeTab = document.querySelector(".tab-btn.active")?.dataset.tab;
-    if (activeTab === "nameit") { loadTab("name_guess", "nameit").then(() => { nameitLoaded = true; }); }
+    if (activeTab === "nameit") loadNameItSubTab(nameitSubActive);
     if (activeTab === "guessnumber") { loadTab("number_guess", "guessnumber").then(() => { guessnumberLoaded = true; }); }
     if (activeTab === "type") loadTypeSubTab(typeSubActive);
   });

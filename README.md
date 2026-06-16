@@ -94,6 +94,11 @@ Trophy, winner, final scores, and a round-by-round recap. Rematch starts a fresh
 
 ![Match End](screenshots/20_battle_arena_match_end.png)
 
+### Battle Arena — Leaderboard
+Solo Challenge and VS Mode rankings in a shared leaderboard. Accessible from the Leaderboard nav dropdown.
+
+![Arena Leaderboard](screenshots/21_arena_leaderboard.png)
+
 ---
 
 ## Installation

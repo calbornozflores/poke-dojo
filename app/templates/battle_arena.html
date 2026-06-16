@@ -4,6 +4,24 @@
 {% block content %}
 <div class="arena-page">
 
+  <!-- ── LIFE-LOST FLASH OVERLAY ───────────────────────────────────────── -->
+  <div id="life-lost-flash" class="life-lost-flash hidden">
+    <div class="flash-content">
+      <div class="flash-icon" id="flash-icon">💔</div>
+      <div class="flash-reason" id="flash-reason">Wrong answer!</div>
+      <div class="flash-luvdisc-row" id="flash-luvdisc-row"></div>
+    </div>
+  </div>
+
+  <!-- ── SHADOW ACTIVATION BANNER ─────────────────────────────────────── -->
+  <div id="shadow-banner" class="shadow-banner hidden">
+    <div class="shadow-banner-inner">
+      <div class="shadow-banner-icon">👤</div>
+      <div class="shadow-banner-text">Your Shadow wakes up…</div>
+      <div class="shadow-banner-sub">It's been watching. Now it strikes.</div>
+    </div>
+  </div>
+
   <!-- ── PRE-MATCH SETUP ───────────────────────────────────────────────── -->
   <div id="setup-screen" class="arena-screen">
     <div class="arena-setup-card">
@@ -36,7 +54,7 @@
 
       <div id="setup-single" class="hidden">
         <h1 class="arena-title">★ Solo Challenge</h1>
-        <p class="arena-subtitle">Endless rounds — identify Pokémon as fast as possible. One wrong answer ends your run.</p>
+        <p class="arena-subtitle">Endless rounds — 3 lives (Luvdisc hearts). Wrong answer, timeout, or being slower than your Shadow removes one. Survive as long as you can.</p>
         <div class="arena-player-block" style="margin:0 auto;max-width:300px">
           <div class="arena-player-label">Your Name</div>
           <input id="solo-name" class="arena-name-input" placeholder="Enter trainer name…" maxlength="20" />
@@ -77,6 +95,11 @@
     <div class="arena-round-header">
       <div class="arena-round-num" id="arena-round-num">Round 1</div>
       <div class="arena-scoreboard" id="arena-scoreboard"></div>
+      <div id="luvdisc-bar" class="luvdisc-bar hidden">
+        <img id="luvdisc-0" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/370.png" class="luvdisc-heart" alt="♥">
+        <img id="luvdisc-1" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/370.png" class="luvdisc-heart" alt="♥">
+        <img id="luvdisc-2" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/370.png" class="luvdisc-heart" alt="♥">
+      </div>
       <div class="arena-reveal-bar-wrap">
         <div class="arena-reveal-bar" id="arena-reveal-bar"></div>
       </div>
@@ -120,13 +143,53 @@
     </div>
   </div>
 
-  <!-- ── SINGLE PLAYER GAME OVER ───────────────────────────────────────── -->
+  <!-- ── SOLO ANALYTICS SCREEN ─────────────────────────────────────────── -->
   <div id="single-gameover-screen" class="arena-screen hidden">
-    <div class="match-end-card">
-      <div class="match-winner-trophy">💀</div>
-      <div class="match-winner-name" id="sg-title">Run Over</div>
-      <div class="sg-stats" id="sg-stats"></div>
-      <div class="match-round-recap" id="sg-recap"></div>
+    <div class="analytics-card">
+      <div class="analytics-header">
+        <div class="match-winner-trophy" id="analytics-emoji">💀</div>
+        <div class="match-winner-name" id="analytics-run-title">Run Over</div>
+        <div class="analytics-stats-row">
+          <div class="analytics-stat">
+            <div class="analytics-stat-val" id="sg-rounds">0</div>
+            <div class="analytics-stat-label">Rounds</div>
+          </div>
+          <div class="analytics-stat">
+            <div class="analytics-stat-val" id="sg-score-val">0</div>
+            <div class="analytics-stat-label">Score</div>
+          </div>
+          <div class="analytics-stat">
+            <div class="analytics-stat-val" id="sg-shadow-stat">—</div>
+            <div class="analytics-stat-label">Shadow</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="analytics-chart-section" class="analytics-section hidden">
+        <div class="analytics-section-title">
+          Response time per round
+          <span class="legend-item"><span class="legend-dot" style="background:#a78bfa"></span> You</span>
+          <span class="legend-item"><span class="legend-dot legend-dot-dash" style="background:#fb923c"></span> Shadow</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#f87171"></span> Shadow won</span>
+        </div>
+        <div class="analytics-chart-wrap">
+          <svg id="analytics-svg" viewBox="0 0 760 180" preserveAspectRatio="xMidYMid meet" class="analytics-svg"></svg>
+        </div>
+      </div>
+
+      <div id="analytics-cats-section" class="analytics-section hidden">
+        <div class="analytics-cats-grid">
+          <div>
+            <div class="analytics-section-title">Slowest by Generation</div>
+            <div id="analytics-by-gen" class="analytics-cat-bars"></div>
+          </div>
+          <div>
+            <div class="analytics-section-title">Slowest by Type</div>
+            <div id="analytics-by-type" class="analytics-cat-bars"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="match-end-actions">
         <a href="/play" class="btn btn-secondary">← Back to Dojo</a>
         <button id="sg-retry-btn" class="btn btn-primary">Try Again</button>
@@ -141,7 +204,7 @@
 <script>
 // ── State ─────────────────────────────────────────────────────────────────
 const params    = new URLSearchParams(location.search);
-let MODE        = params.get("mode") || "vs";   // "vs" | "single"
+let MODE        = params.get("mode") || "vs";
 let matchId     = null;
 let currentRound = 0;
 let totalRounds  = parseInt(document.querySelector(".rounds-pill.active")?.dataset.rounds || "3", 10);
@@ -154,18 +217,22 @@ let p1Name = "", p2Name = "", soloName = "";
 let p1Score = 0, p2Score = 0;
 let soloScore = 0;
 let soloRound = 0;
-let soloTimerDuration = 10; // starts 10s, decreases each 10 rounds
+let soloTimerDuration = 10;
 
-// VS key bindings: Q/W/E → 1/2/3 (player1), I/O/P → 1/2/3 (player2)
+let luvdiscLives = 3;
+let shadowActive = false;
+let shadowCatches = 0;
+let lastRoundResult = null;
+
+// VS key bindings
 const VS_P1_KEYS = { q: 1, w: 2, e: 3 };
 const VS_P2_KEYS = { i: 1, o: 2, p: 3 };
 
-// Solo: custom key bindings (filled during setup)
-let SOLO_KEYS = {};  // key → option index (1/2/3)
-let soloKeySlots = [null, null, null]; // key names for slots 0,1,2
+// Solo: custom key bindings
+let SOLO_KEYS = {};
+let soloKeySlots = [null, null, null];
 let assigningSlot = null;
 
-// FORBIDDEN keys for solo binding
 const FORBIDDEN = new Set(["enter", "escape", " "]);
 
 // ── Init ──────────────────────────────────────────────────────────────────
@@ -174,14 +241,12 @@ const username = localStorage.getItem("poke_username") || "";
 document.getElementById("setup-vs").classList.toggle("hidden", MODE !== "vs");
 document.getElementById("setup-single").classList.toggle("hidden", MODE !== "single");
 
-// Pre-fill player names from localStorage
 if (MODE === "vs") {
   document.getElementById("p1-name").value = username;
 } else {
   document.getElementById("solo-name").value = username;
 }
 
-// Round pills
 document.querySelectorAll(".rounds-pill").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".rounds-pill").forEach(b => b.classList.remove("active"));
@@ -212,7 +277,6 @@ document.addEventListener("keydown", e => {
     showKeyError("Enter, Escape, and Space are reserved.");
     return;
   }
-  // Ensure no duplicate across slots
   if (soloKeySlots.some((k, i) => k === key && i !== assigningSlot)) {
     showKeyError(`Key "${e.key}" is already assigned.`);
     return;
@@ -222,7 +286,6 @@ document.addEventListener("keydown", e => {
   document.querySelectorAll(".key-assign-slot")[assigningSlot].classList.remove("assigning");
   document.getElementById("key-assign-error").classList.add("hidden");
 
-  // Advance to next empty slot
   const next = soloKeySlots.findIndex((k, i) => k === null && i > assigningSlot);
   if (next !== -1) activateSlot(next);
   else assigningSlot = null;
@@ -265,6 +328,15 @@ document.getElementById("start-match-btn").addEventListener("click", async () =>
   p1Score = p2Score = soloScore = 0;
   currentRound = soloRound = 0;
   soloTimerDuration = 10;
+  luvdiscLives = 3;
+  shadowActive = false;
+  shadowCatches = 0;
+  lastRoundResult = null;
+
+  if (MODE === "single") {
+    document.getElementById("luvdisc-bar").classList.remove("hidden");
+    resetLuvdiscBar();
+  }
 
   showScreen("round-screen");
   loadRound();
@@ -274,10 +346,25 @@ function officialArtwork(pokemonId) {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
 }
 
+// ── Luvdisc bar ───────────────────────────────────────────────────────────
+function resetLuvdiscBar() {
+  for (let i = 0; i < 3; i++) {
+    document.getElementById(`luvdisc-${i}`).classList.remove("lost");
+  }
+}
+
 // ── Load round ────────────────────────────────────────────────────────────
 async function loadRound() {
   currentRound++;
-  if (MODE === "single") { soloRound = currentRound; updateSoloTimer(); }
+  if (MODE === "single") {
+    soloRound = currentRound;
+    updateSoloTimer();
+
+    if (currentRound === 20 && !shadowActive) {
+      shadowActive = true;
+      await showShadowBanner();
+    }
+  }
 
   const res = await fetch(`/battle/round/next?match_id=${matchId}&round_number=${currentRound}`);
   if (!res.ok) { endMatch(); return; }
@@ -288,14 +375,11 @@ async function loadRound() {
     MODE === "vs" ? `Round ${currentRound} / ${totalRounds}` : `Round ${currentRound}`;
   updateScoreboard();
 
-  // Sprite: official artwork as white silhouette
   const spriteEl = document.getElementById("arena-sprite");
   spriteEl.style.animation = "none";
   spriteEl.style.filter = "";
-  spriteEl.src = officialArtwork(roundData.pokemon_id);
   spriteEl.className = "arena-sprite silhouette";
 
-  // Options
   const optionsEl = document.getElementById("arena-options");
   optionsEl.innerHTML = "";
   const keyLabels = MODE === "vs"
@@ -319,11 +403,71 @@ async function loadRound() {
   if (MODE === "vs") {
     infoEl.textContent = "P1: Q/W/E  •  P2: I/O/P";
   } else {
-    infoEl.textContent = `Timer: ${soloTimerDuration}s  •  Press your key to answer`;
+    const shadowHint = shadowActive ? "  •  👤 Shadow watching" : "";
+    infoEl.textContent = `Timer: ${soloTimerDuration}s  •  Press your key to answer${shadowHint}`;
   }
 
   showScreen("round-screen");
-  startReveal();
+
+  // Wait for the sprite image to load before starting the countdown
+  let _revealStarted = false;
+  function _doStartReveal() {
+    if (_revealStarted) return;
+    _revealStarted = true;
+    spriteEl.onload = null;
+    startReveal();
+  }
+  spriteEl.onload = _doStartReveal;
+  spriteEl.src = officialArtwork(roundData.pokemon_id);
+  if (spriteEl.complete && spriteEl.naturalWidth > 0) {
+    _doStartReveal(); // already cached
+  }
+}
+
+// ── Shadow banner ─────────────────────────────────────────────────────────
+function showShadowBanner() {
+  return new Promise(resolve => {
+    const banner = document.getElementById("shadow-banner");
+    banner.classList.remove("hidden");
+    setTimeout(() => {
+      banner.classList.add("hidden");
+      resolve();
+    }, 2600);
+  });
+}
+
+// ── Life-lost flash ───────────────────────────────────────────────────────
+function showLifeLostFlash(reason, callback) {
+  const flashEl = document.getElementById("life-lost-flash");
+  document.getElementById("flash-reason").textContent = reason;
+  document.getElementById("flash-icon").textContent = reason.startsWith("Shadow") ? "👤" : "💔";
+
+  const row = document.getElementById("flash-luvdisc-row");
+  row.innerHTML = Array.from({ length: 3 }, (_, i) =>
+    `<img src="${officialArtwork(370)}" class="flash-luvdisc ${i >= luvdiscLives ? 'lost' : ''}" alt="♥">`
+  ).join("");
+
+  flashEl.classList.remove("hidden");
+  setTimeout(() => {
+    flashEl.classList.add("hidden");
+    if (callback) callback();
+  }, 1300);
+}
+
+// ── Remove Luvdisc ────────────────────────────────────────────────────────
+function removeLuvdisc(reason) {
+  const idx = 3 - luvdiscLives;
+  const heart = document.getElementById(`luvdisc-${idx}`);
+  if (heart) heart.classList.add("lost");
+  luvdiscLives--;
+
+  showLifeLostFlash(reason, () => {
+    if (luvdiscLives <= 0) {
+      endSingleRun(reason);
+    } else {
+      showRoundResult(lastRoundResult);
+    }
+  });
 }
 
 // ── Silhouette reveal ─────────────────────────────────────────────────────
@@ -333,15 +477,12 @@ function startReveal() {
   const barEl = document.getElementById("arena-reveal-bar");
   barEl.style.transition = "none";
   barEl.style.width = "0%";
-
-  // Reflow to reset animation
   barEl.offsetWidth;
   barEl.style.transition = `width ${dur}s linear`;
   barEl.style.width = "100%";
 
-  // Sprite: non-linear reveal (mostly dark first 70%, fast reveal last 30%)
   const spriteEl = document.getElementById("arena-sprite");
-  spriteEl.style.animation = `none`;
+  spriteEl.style.animation = "none";
   spriteEl.offsetWidth;
   spriteEl.style.animationName = "silhouetteReveal";
   spriteEl.style.animationDuration = `${dur}s`;
@@ -351,12 +492,8 @@ function startReveal() {
   clearTimeout(revealTimer);
   revealTimer = setTimeout(() => {
     if (roundOver) return;
-    // Timer expired
-    if (MODE === "vs") {
-      autoSubmitVS();
-    } else {
-      handleSoloTimeout();
-    }
+    if (MODE === "vs") autoSubmitVS();
+    else handleSoloTimeout();
   }, dur * 1000);
 }
 
@@ -383,7 +520,6 @@ function handleVSAnswer(player, optionPos) {
     p2Answer = optionPos; p2Ms = ms;
     highlightOption(optionPos, "p2");
   }
-  // Once both answered (or auto-submit), resolve
   if (p1Answer !== null && p2Answer !== null) {
     clearTimeout(revealTimer);
     submitRound(p1Answer, p1Ms, p2Answer, p2Ms);
@@ -410,8 +546,7 @@ document.addEventListener("keydown", e => {
 function handleSoloTimeout() {
   roundOver = true;
   clearTimeout(revealTimer);
-  // Time expired = wrong answer → game over
-  endSingleRun("Time ran out!");
+  submitRound(null, null, null, null, "timeout");
 }
 
 function handleSoloAnswer(optionPos, ms) {
@@ -420,17 +555,17 @@ function handleSoloAnswer(optionPos, ms) {
   clearTimeout(revealTimer);
   const correct = optionPos === roundData.correct_position;
   if (!correct) {
-    submitRound(optionPos, ms, null, null, true /* gameOver */);
+    submitRound(optionPos, ms, null, null, "wrong");
     return;
   }
   const timeRem = Math.max(0, soloTimerDuration * 1000 - ms) / 1000;
   const score = Math.max(0, Math.floor(timeRem / soloTimerDuration * 100));
   soloScore += score;
-  submitRound(optionPos, ms, null, null, false);
+  submitRound(optionPos, ms, null, null, null);
 }
 
 // ── Submit round to server ────────────────────────────────────────────────
-async function submitRound(p1key, p1ms, p2key, p2ms, soloGameOver = false) {
+async function submitRound(p1key, p1ms, p2key, p2ms, soloEndReason = null) {
   roundOver = true;
   p1Answer = p2Answer = null; p1Ms = p2Ms = null;
 
@@ -450,24 +585,36 @@ async function submitRound(p1key, p1ms, p2key, p2ms, soloGameOver = false) {
   });
   if (!res.ok) return;
   const result = await res.json();
+  lastRoundResult = result;
 
-  // Update running scores
-  if (MODE === "vs") {
-    p1Score += result.player1_score;
-    p2Score += result.player2_score;
-  }
-
-  // Fully reveal sprite (stop animation, clear silhouette filter)
   const spriteEl = document.getElementById("arena-sprite");
   spriteEl.style.animation = "none";
   spriteEl.style.filter = "";
   spriteEl.classList.remove("silhouette");
 
-  if (soloGameOver) {
-    endSingleRun("Wrong answer!", result);
+  if (MODE === "vs") {
+    p1Score += result.player1_score;
+    p2Score += result.player2_score;
+    showRoundResult(result);
     return;
   }
 
+  // Solo path — check for life-loss conditions in priority order
+  if (soloEndReason === "timeout") {
+    removeLuvdisc("Time ran out!");
+    return;
+  }
+  if (soloEndReason === "wrong") {
+    removeLuvdisc("Wrong answer!");
+    return;
+  }
+  // Correct answer — check Shadow
+  if (shadowActive && result.shadow_wins_round) {
+    shadowCatches++;
+    removeLuvdisc("Shadow caught you!");
+    return;
+  }
+  // All good
   showRoundResult(result);
 }
 
@@ -485,9 +632,15 @@ function showRoundResult(result) {
   } else {
     const ms = result.player1_response_ms;
     const timeStr = ms ? `${(ms/1000).toFixed(2)}s` : "—";
+    let extra = "";
+    if (result.shadow_predicted_ms && result.player1_was_correct) {
+      const sIcon = result.shadow_wins_round ? "👤 Shadow beat you" : "✓ Faster than Shadow";
+      const sColor = result.shadow_wins_round ? "#fb923c" : "#22c55e";
+      extra = `<div class="rr-shadow-line" style="color:${sColor}">${sIcon} · predicted ${(result.shadow_predicted_ms/1000).toFixed(2)}s</div>`;
+    }
     barsEl.innerHTML = `<div class="rr-solo-result ${result.player1_was_correct ? 'correct' : 'wrong'}">
       ${result.player1_was_correct ? "✓ Correct" : "✗ Wrong"} · ${result.player1_score} pts · ${timeStr}
-    </div>`;
+    </div>${extra}`;
   }
 
   const nextBtn = document.getElementById("next-round-btn");
@@ -499,7 +652,6 @@ function showRoundResult(result) {
     nextBtn.textContent = isLast ? "See Final Results" : "Next Round";
     nextBtn.onclick = () => { clearVSCountdown(); nextAction(); };
 
-    // 5-second auto-advance countdown
     let secs = 5;
     countdownEl.textContent = `Next round in ${secs}s…`;
     countdownEl.classList.remove("hidden");
@@ -516,7 +668,6 @@ function showRoundResult(result) {
     window._vsCdTimer = cdTimer;
 
   } else {
-    // Solo: any key or Enter advances
     nextBtn.textContent = "Next Round";
     nextBtn.onclick = loadRound;
     countdownEl.textContent = "Press any key or Enter to continue…";
@@ -605,28 +756,156 @@ document.getElementById("rematch-btn").addEventListener("click", () => {
   location.href = `/battle-arena?mode=${MODE}`;
 });
 
-// ── End single player run ─────────────────────────────────────────────────
-function endSingleRun(reason, lastResult) {
-  document.getElementById("sg-title").textContent = reason;
-  document.getElementById("sg-stats").innerHTML = `
-    <div>Rounds survived: <strong>${soloRound}</strong></div>
-    <div>Total score: <strong>${soloScore} pts</strong></div>`;
-
-  // Finish match on server (records the run)
-  fetch("/battle/match/finish", {
+// ── End single player run → analytics ────────────────────────────────────
+async function endSingleRun(reason) {
+  await fetch("/battle/match/finish", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ match_id: matchId }),
   });
 
+  const emojiEl = document.getElementById("analytics-emoji");
+  if (shadowCatches >= 3) {
+    emojiEl.innerHTML = "👤";
+  } else if (soloRound >= 10) {
+    emojiEl.innerHTML = `<img src="${officialArtwork(289)}" class="analytics-slaking" alt="Slaking">`;
+  } else {
+    emojiEl.innerHTML = "💀";
+  }
+  document.getElementById("analytics-run-title").textContent =
+    shadowCatches >= 3 ? "Caught by Your Shadow" : reason;
+  document.getElementById("sg-rounds").textContent = soloRound;
+  document.getElementById("sg-score-val").textContent = soloScore + " pts";
+  document.getElementById("sg-shadow-stat").textContent =
+    shadowActive ? `${shadowCatches}/3 caught` : "Not active";
+
   showScreen("single-gameover-screen");
+
+  try {
+    const res = await fetch(`/battle/match/analytics?match_id=${matchId}`);
+    if (res.ok) {
+      const analytics = await res.json();
+      renderAnalytics(analytics);
+    }
+  } catch (_) {}
 }
 
 document.getElementById("sg-retry-btn").addEventListener("click", () => {
   location.href = `/battle-arena?mode=single`;
 });
 
+// ── Analytics rendering ───────────────────────────────────────────────────
+function renderAnalytics(data) {
+  if (data.rounds && data.rounds.length >= 2) {
+    renderAnalyticsChart(data.rounds);
+  }
+  if ((data.slowest_by_gen && data.slowest_by_gen.length) ||
+      (data.slowest_by_type && data.slowest_by_type.length)) {
+    renderAnalyticsCats(data.slowest_by_gen, data.slowest_by_type);
+  }
+}
+
+function renderAnalyticsChart(rounds) {
+  const hasShadow = rounds.some(r => r.shadow_ms !== null);
+  const allMs = rounds.flatMap(r => [r.actual_ms, r.shadow_ms]).filter(v => v !== null && v > 0);
+  if (!allMs.length) return;
+  const maxMs = Math.max(...allMs);
+  if (maxMs === 0) return;
+
+  const PAD_L = 44, PAD_R = 20, PAD_T = 18, PAD_B = 18;
+  const W = 760, H = 180;
+  const CW = W - PAD_L - PAD_R;
+  const CH = H - PAD_T - PAD_B;
+  const n = rounds.length;
+
+  function toX(i) { return PAD_L + (n > 1 ? (i / (n - 1)) * CW : CW / 2); }
+  function toY(ms) { return PAD_T + (1 - ms / maxMs) * CH; }
+
+  function buildPath(pts) {
+    if (!pts.length) return "";
+    if (pts.length === 1) return `M ${pts[0][0]} ${pts[0][1]}`;
+    let d = `M ${pts[0][0]} ${pts[0][1]}`;
+    for (let i = 1; i < pts.length; i++) {
+      const [px, py] = pts[i - 1], [cx, cy] = pts[i];
+      const dx = (cx - px) / 3;
+      d += ` C ${px + dx} ${py} ${cx - dx} ${cy} ${cx} ${cy}`;
+    }
+    return d;
+  }
+
+  const playerPts = rounds.map((r, i) => r.actual_ms ? [toX(i), toY(r.actual_ms)] : null).filter(Boolean);
+  const shadowPts = hasShadow ? rounds.map((r, i) => r.shadow_ms ? [toX(i), toY(r.shadow_ms)] : null).filter(Boolean) : [];
+
+  const playerPath = buildPath(playerPts);
+  const shadowPath = buildPath(shadowPts);
+
+  const svg = document.getElementById("analytics-svg");
+
+  // Y-axis labels
+  const yLabels = [0, 0.5, 1].map(frac => {
+    const ms = maxMs * (1 - frac);
+    const y = PAD_T + frac * CH;
+    return `<text x="${PAD_L - 5}" y="${y + 4}" text-anchor="end" font-size="9" fill="rgba(255,255,255,0.35)">${(ms/1000).toFixed(1)}s</text>
+            <line x1="${PAD_L}" y1="${y}" x2="${W - PAD_R}" y2="${y}" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>`;
+  }).join("");
+
+  const shadowLine = shadowPath
+    ? `<path d="${shadowPath}" fill="none" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.75"/>`
+    : "";
+
+  svg.innerHTML = `
+    ${yLabels}
+    ${shadowLine}
+    <path d="${playerPath}" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  `;
+
+  // Dots
+  rounds.forEach((r, i) => {
+    if (!r.actual_ms) return;
+    const x = toX(i), y = toY(r.actual_ms);
+    const fill = r.shadow_won ? "#f87171" : "#a78bfa";
+    const r_size = r.shadow_won ? 6 : 4;
+    const title = `Round ${r.round_number}: ${r.pokemon_name} — ${(r.actual_ms/1000).toFixed(2)}s${r.shadow_won ? " 👤" : ""}`;
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", x); circle.setAttribute("cy", y);
+    circle.setAttribute("r", r_size); circle.setAttribute("fill", fill);
+    circle.setAttribute("stroke", "#0f0f1a"); circle.setAttribute("stroke-width", "2");
+    circle.innerHTML = `<title>${title}</title>`;
+    svg.appendChild(circle);
+  });
+
+  document.getElementById("analytics-chart-section").classList.remove("hidden");
+}
+
+function renderAnalyticsCats(byGen, byType) {
+  function renderCatBars(data, containerId) {
+    const el = document.getElementById(containerId);
+    if (!data || !data.length) {
+      el.innerHTML = '<p style="color:var(--text-muted);font-size:0.78rem;padding:0.5rem 0">Not enough data yet</p>';
+      return;
+    }
+    const maxMs = Math.max(...data.map(d => d.avg_ms));
+    el.innerHTML = data.map(d => {
+      const pct = maxMs > 0 ? (d.avg_ms / maxMs * 100).toFixed(1) : 0;
+      const secs = (d.avg_ms / 1000).toFixed(2);
+      return `<div class="analytics-cat-row">
+        <div class="analytics-cat-label">${d.label}</div>
+        <div class="analytics-cat-track">
+          <div class="analytics-cat-fill" style="width:0%" data-w="${pct}%"></div>
+        </div>
+        <div class="analytics-cat-val">${secs}s <span class="analytics-cat-n">n=${d.n}</span></div>
+      </div>`;
+    }).join("");
+    setTimeout(() => {
+      el.querySelectorAll(".analytics-cat-fill").forEach(f => { f.style.width = f.dataset.w; });
+    }, 120);
+  }
+
+  renderCatBars(byGen, "analytics-by-gen");
+  renderCatBars(byType, "analytics-by-type");
+  document.getElementById("analytics-cats-section").classList.remove("hidden");
+}
+
 // ── Solo timer progression ────────────────────────────────────────────────
-// Called at the start of each solo round to reduce timer every 10 rounds
 function updateSoloTimer() {
   const reduction = Math.floor(soloRound / 10);
   soloTimerDuration = Math.max(5, 10 - reduction);
@@ -635,19 +914,17 @@ function updateSoloTimer() {
 // ── Solo: any key advances from round-result screen ───────────────────────
 document.addEventListener("keydown", e => {
   if (MODE !== "single") return;
-  // Only fire on the round-result screen, not when assigning keys or answering
   if (document.getElementById("round-result-screen").classList.contains("hidden")) return;
-  // Ignore modifier-only presses
   if (["Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
   document.getElementById("next-round-btn").click();
 });
 
-// ── Solo: Enter submits Start Match from setup screen ─────────────────────
+// ── Solo: Enter submits Start Match ───────────────────────────────────────
 document.addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
   if (MODE !== "single") return;
   if (document.getElementById("setup-screen").classList.contains("hidden")) return;
-  if (assigningSlot !== null) return;  // still assigning keys
+  if (assigningSlot !== null) return;
   document.getElementById("start-match-btn").click();
 });
 

@@ -39,6 +39,13 @@ def run_migrations():
             conn.execute(text("DELETE FROM game_results"))
             conn.commit()
 
+        # Phase 3: shadow_predicted_ms column for competitive_results
+        try:
+            conn.execute(text("ALTER TABLE competitive_results ADD COLUMN shadow_predicted_ms INTEGER"))
+            conn.commit()
+        except Exception:
+            pass
+
 
 def get_db():
     db = SessionLocal()

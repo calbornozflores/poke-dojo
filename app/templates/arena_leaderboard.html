@@ -2,120 +2,131 @@
 {% block title %}Battle Arena Leaderboard — Poke-Dojo{% endblock %}
 
 {% block content %}
-<div class="scores-page">
+<div class="scores-layout">
   <div class="scores-header">
     <h1>Battle Arena</h1>
-    <p class="scores-subtitle">Competitive records — VS matches and Solo Challenge runs.</p>
+    <button id="refresh-btn" class="btn btn-ghost btn-sm">Refresh</button>
   </div>
 
-  <div class="scores-tabs">
-    <button class="scores-tab active" data-tab="solo">Solo Challenge</button>
-    <button class="scores-tab" data-tab="vs">VS Mode</button>
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="solo">⚔ Solo Challenge</button>
+    <button class="tab-btn" data-tab="vs">VS Mode</button>
   </div>
 
-  <div id="arena-loading" class="profile-loading-panel">
-    <div class="profile-spinner"></div>
-    <p>Loading arena records…</p>
+  <!-- Solo tab -->
+  <div id="tab-solo" class="tab-content">
+    <div id="solo-loading" class="centered-msg">Loading…</div>
+    <table id="solo-table" class="score-table hidden">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Trainer</th>
+          <th>Best Run Score</th>
+          <th>Longest Streak</th>
+        </tr>
+      </thead>
+      <tbody id="solo-tbody"></tbody>
+    </table>
+    <p id="solo-empty" class="centered-msg hidden">No solo runs yet. Be the first!</p>
   </div>
 
-  <div id="arena-empty" class="profile-locked hidden">
-    <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/54.png"
-         alt="Psyduck" class="profile-locked-sprite">
-    <h2>No battles yet</h2>
-    <p>Play in the Battle Arena to appear here!</p>
-    <a href="/battle-arena?mode=vs" class="btn btn-primary">Go Fight</a>
-  </div>
-
-  <div id="arena-table-wrap" class="hidden">
-    <!-- Solo tab -->
-    <div id="tab-solo">
-      <table class="scores-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Trainer</th>
-            <th>Best Run Score</th>
-            <th>Longest Streak</th>
-          </tr>
-        </thead>
-        <tbody id="solo-tbody"></tbody>
-      </table>
-    </div>
-    <!-- VS tab -->
-    <div id="tab-vs" class="hidden">
-      <table class="scores-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Trainer</th>
-            <th>Best VS Score</th>
-            <th>Win Rate</th>
-            <th>Matches</th>
-          </tr>
-        </thead>
-        <tbody id="vs-tbody"></tbody>
-      </table>
-    </div>
+  <!-- VS tab -->
+  <div id="tab-vs" class="tab-content hidden">
+    <div id="vs-loading" class="centered-msg hidden">Loading…</div>
+    <table id="vs-table" class="score-table hidden">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Trainer</th>
+          <th>Best VS Score</th>
+          <th>Win Rate</th>
+          <th>Matches</th>
+        </tr>
+      </thead>
+      <tbody id="vs-tbody"></tbody>
+    </table>
+    <p id="vs-empty" class="centered-msg hidden">No VS matches yet. Challenge a friend!</p>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+  const username = localStorage.getItem("poke_username");
   let allData = [];
-  let activeTab = "solo";
 
   async function loadLeaderboard() {
     try {
       const res = await fetch("/battle/leaderboard");
       allData = await res.json();
-      document.getElementById("arena-loading").classList.add("hidden");
+      document.getElementById("solo-loading").classList.add("hidden");
       if (!allData.length) {
-        document.getElementById("arena-empty").classList.remove("hidden");
+        document.getElementById("solo-empty").classList.remove("hidden");
+        document.getElementById("vs-empty").classList.remove("hidden");
         return;
       }
-      document.getElementById("arena-table-wrap").classList.remove("hidden");
       renderTab("solo");
       renderTab("vs");
     } catch {
-      document.getElementById("arena-loading").classList.add("hidden");
-      document.getElementById("arena-empty").classList.remove("hidden");
+      document.getElementById("solo-loading").classList.add("hidden");
+      document.getElementById("solo-empty").classList.remove("hidden");
     }
   }
 
   function renderTab(tab) {
-    if (tab === "solo") {
-      const sorted = [...allData].sort((a, b) => b.best_run_score - a.best_run_score);
-      const tbody = document.getElementById("solo-tbody");
-      tbody.innerHTML = sorted.map((e, i) => `
-        <tr class="${i === 0 ? 'rank-gold' : i === 1 ? 'rank-silver' : i === 2 ? 'rank-bronze' : ''}">
-          <td>${i + 1}</td>
-          <td>${e.username}</td>
-          <td>${e.best_run_score} pts</td>
-          <td>${e.longest_streak}</td>
-        </tr>`).join("");
-    } else {
-      const sorted = [...allData].sort((a, b) => b.best_vs_score - a.best_vs_score);
-      const tbody = document.getElementById("vs-tbody");
-      tbody.innerHTML = sorted.map((e, i) => `
-        <tr class="${i === 0 ? 'rank-gold' : i === 1 ? 'rank-silver' : i === 2 ? 'rank-bronze' : ''}">
-          <td>${i + 1}</td>
-          <td>${e.username}</td>
-          <td>${e.best_vs_score} pts</td>
-          <td>${e.vs_win_rate !== null ? e.vs_win_rate + "%" : "—"}</td>
-          <td>${e.vs_matches}</td>
-        </tr>`).join("");
+    const isSolo = tab === "solo";
+    const sorted = isSolo
+      ? [...allData].sort((a, b) => b.best_run_score - a.best_run_score)
+      : [...allData].sort((a, b) => b.best_vs_score - a.best_vs_score);
+
+    const tbody = document.getElementById(tab + "-tbody");
+    const table = document.getElementById(tab + "-table");
+    const empty = document.getElementById(tab + "-empty");
+
+    if (!sorted.length) { empty.classList.remove("hidden"); return; }
+
+    function rankClass(i) {
+      return i === 0 ? "rank-gold" : i === 1 ? "rank-silver" : i === 2 ? "rank-bronze" : "";
     }
+    function highlightClass(e) {
+      return username && e.username === username ? "highlight-row" : "";
+    }
+
+    tbody.innerHTML = sorted.map((e, i) => isSolo ? `
+      <tr class="${rankClass(i)} ${highlightClass(e)}">
+        <td>${i + 1}</td>
+        <td><strong>${e.username}</strong></td>
+        <td class="best">${e.best_run_score} pts</td>
+        <td>${e.longest_streak}</td>
+      </tr>` : `
+      <tr class="${rankClass(i)} ${highlightClass(e)}">
+        <td>${i + 1}</td>
+        <td><strong>${e.username}</strong></td>
+        <td class="best">${e.best_vs_score} pts</td>
+        <td>${e.vs_win_rate !== null ? e.vs_win_rate + "%" : "—"}</td>
+        <td>${e.vs_matches}</td>
+      </tr>`).join("");
+
+    table.classList.remove("hidden");
   }
 
-  document.querySelectorAll(".scores-tab").forEach(btn => {
+  document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".scores-tab").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-      activeTab = btn.dataset.tab;
-      document.getElementById("tab-solo").classList.toggle("hidden", activeTab !== "solo");
-      document.getElementById("tab-vs").classList.toggle("hidden", activeTab !== "vs");
+      document.querySelectorAll(".tab-content").forEach(t => t.classList.add("hidden"));
+      document.getElementById("tab-" + btn.dataset.tab).classList.remove("hidden");
     });
+  });
+
+  document.getElementById("refresh-btn").addEventListener("click", () => {
+    ["solo", "vs"].forEach(tab => {
+      document.getElementById(tab + "-loading").classList.remove("hidden");
+      document.getElementById(tab + "-table").classList.add("hidden");
+      document.getElementById(tab + "-empty").classList.add("hidden");
+    });
+    allData = [];
+    loadLeaderboard();
   });
 
   loadLeaderboard();

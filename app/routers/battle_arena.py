@@ -8,6 +8,7 @@ from sqlalchemy import func, desc
 
 from app.database import get_db
 from app.models import Pokemon, User, CompetitiveMatch, CompetitiveResult
+from app.services import shadow_model
 
 router = APIRouter(prefix="/battle", tags=["battle"])
 
@@ -154,6 +155,8 @@ class RoundResult(BaseModel):
     correct_position: int
     pokemon_name: str
     sprite_url: str
+    shadow_predicted_ms: int | None = None
+    shadow_wins_round: bool = False
 
 
 @router.post("/round/submit", response_model=RoundResult)
@@ -180,6 +183,17 @@ def submit_round(req: SubmitRoundRequest, db: Session = Depends(get_db)):
     p1_correct, p1_score = calc_score(req.player1_key_pressed, req.player1_response_ms)
     p2_correct, p2_score = calc_score(req.player2_key_pressed, req.player2_response_ms)
 
+    # Shadow prediction (solo only) — train on first round, predict every round
+    shadow_predicted = None
+    shadow_wins = False
+    if match.mode == "single":
+        if req.round_number == 1:
+            shadow_model.train(match.player1, db)
+        if p1_correct and req.player1_response_ms is not None:
+            shadow_predicted = shadow_model.predict(match.player1, req.pokemon_id, db)
+            if shadow_predicted is not None:
+                shadow_wins = req.player1_response_ms > shadow_predicted
+
     result = CompetitiveResult(
         match_id=req.match_id,
         round_number=req.round_number,
@@ -193,6 +207,7 @@ def submit_round(req: SubmitRoundRequest, db: Session = Depends(get_db)):
         player2_response_ms=req.player2_response_ms,
         player2_was_correct=p2_correct,
         player2_score=p2_score,
+        shadow_predicted_ms=shadow_predicted,
     )
     db.add(result)
     db.commit()
@@ -205,6 +220,8 @@ def submit_round(req: SubmitRoundRequest, db: Session = Depends(get_db)):
         correct_position=req.correct_option_position,
         pokemon_name=pokemon.name,
         sprite_url=pokemon.sprite_url,
+        shadow_predicted_ms=shadow_predicted,
+        shadow_wins_round=shadow_wins,
     )
 
 
@@ -283,6 +300,103 @@ def finish_match(req: FinishMatchRequest, db: Session = Depends(get_db)):
         player1_total=p1_total,
         player2_total=p2_total,
         rounds=round_data,
+    )
+
+
+# ── Match analytics ──────────────────────────────────────────────────────────
+
+class AnalyticsRound(BaseModel):
+    round_number: int
+    pokemon_name: str
+    generation: int
+    type1: str
+    actual_ms: int | None
+    shadow_ms: int | None
+    was_correct: bool
+    shadow_won: bool
+
+
+class MatchAnalytics(BaseModel):
+    rounds: list[AnalyticsRound]
+    slowest_by_gen: list[dict]
+    slowest_by_type: list[dict]
+
+
+@router.get("/match/analytics", response_model=MatchAnalytics)
+def match_analytics(match_id: int, db: Session = Depends(get_db)):
+    match = db.get(CompetitiveMatch, match_id)
+    if not match:
+        raise HTTPException(404, "Match not found")
+
+    results = (
+        db.query(CompetitiveResult)
+        .filter(CompetitiveResult.match_id == match_id)
+        .order_by(CompetitiveResult.round_number)
+        .all()
+    )
+
+    rounds_data = []
+    for r in results:
+        poke = db.get(Pokemon, r.pokemon_id)
+        if not poke:
+            continue
+        shadow_won = (
+            r.player1_response_ms is not None
+            and r.shadow_predicted_ms is not None
+            and r.player1_was_correct
+            and r.player1_response_ms > r.shadow_predicted_ms
+        )
+        rounds_data.append(AnalyticsRound(
+            round_number=r.round_number,
+            pokemon_name=poke.name,
+            generation=poke.generation,
+            type1=poke.type1,
+            actual_ms=r.player1_response_ms,
+            shadow_ms=r.shadow_predicted_ms,
+            was_correct=r.player1_was_correct,
+            shadow_won=shadow_won,
+        ))
+
+    # Slowest categories across ALL of this player's solo history
+    all_matches = (
+        db.query(CompetitiveMatch)
+        .filter(CompetitiveMatch.player1 == match.player1, CompetitiveMatch.mode == "single")
+        .all()
+    )
+    all_match_ids = [m.id for m in all_matches]
+    all_results = (
+        db.query(CompetitiveResult)
+        .filter(
+            CompetitiveResult.match_id.in_(all_match_ids),
+            CompetitiveResult.player1_was_correct == True,  # noqa: E712
+            CompetitiveResult.player1_response_ms.isnot(None),
+        )
+        .all()
+    )
+
+    gen_data: dict[str, list[int]] = {}
+    type_data: dict[str, list[int]] = {}
+    for r in all_results:
+        poke = db.get(Pokemon, r.pokemon_id)
+        if not poke:
+            continue
+        gen_key = f"Gen {poke.generation}"
+        gen_data.setdefault(gen_key, []).append(r.player1_response_ms)
+        type_data.setdefault(poke.type1, []).append(r.player1_response_ms)
+
+    def make_cat_list(data_dict: dict, min_n: int = 3) -> list[dict]:
+        out = []
+        for label, vals in data_dict.items():
+            if len(vals) < min_n:
+                continue
+            out.append({"label": label, "avg_ms": int(sum(vals) / len(vals)), "n": len(vals)})
+        out.sort(key=lambda x: x["avg_ms"], reverse=True)
+        return out[:6]
+
+    return MatchAnalytics(
+        rounds=rounds_data,
+        slowest_by_gen=make_cat_list(gen_data),
+        slowest_by_type=make_cat_list(type_data),
     )
 
 
