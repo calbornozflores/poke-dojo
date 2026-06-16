@@ -231,8 +231,14 @@
   function renderSection(sectionKey) {
     const meta  = SECTION_META[sectionKey];
     const items = [...cachedBreakdown.breakdown[meta.dataKey]];
-    // Always sort hardest-first (lowest accuracy first)
-    items.sort((a, b) => a.avg - b.avg);
+    const hasShap = items.some(it => it.shap != null);
+    if (hasShap) {
+      // Sort by AI prediction: most "hard" (highest positive SHAP) first
+      items.sort((a, b) => (b.shap ?? -Infinity) - (a.shap ?? -Infinity));
+    } else {
+      // Fallback: sort hardest-first by accuracy (lowest first)
+      items.sort((a, b) => a.avg - b.avg);
+    }
     makeRows(items, meta.containerId, meta.hasIcon);
   }
 

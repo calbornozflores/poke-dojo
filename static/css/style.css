@@ -137,7 +137,7 @@ a:hover { color: var(--accent-hover); }
 .hint { font-size: 0.85rem; color: var(--text-muted); }
 .hint.error { color: var(--red); }
 
-.hero-actions { display: flex; gap: 1rem; justify-content: center; margin-bottom: 2rem; }
+.hero-actions { display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem; margin-bottom: 2rem; }
 
 .game-preview {
   display: grid;
@@ -1310,9 +1310,9 @@ a:hover { color: var(--accent-hover); }
 /* Sidebar buttons */
 .battle-btn {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.15rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
   text-decoration: none;
   color: var(--text);
   padding: 0.6rem 0.85rem;
@@ -1322,10 +1322,11 @@ a:hover { color: var(--accent-hover); }
   transition: background 0.15s, border-color 0.15s;
 }
 .battle-btn:hover { background: rgba(99, 102, 241, 0.18); border-color: #6366f1; }
-.battle-btn-icon { font-size: 1.1rem; margin-right: 0.4rem; display: inline-flex; align-items: center; gap: 2px; }
-.battle-btn-sprite { width: 20px; height: 20px; image-rendering: pixelated; vertical-align: middle; }
+.battle-btn-icon { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.battle-btn-sprite { width: 24px; height: 24px; image-rendering: pixelated; }
 .battle-btn-sprite-flip { transform: scaleX(-1); }
-.battle-btn-sub { font-size: 0.65rem; color: var(--text-muted); margin-left: 1.6rem; }
+.battle-btn-text { display: flex; flex-direction: column; line-height: 1.3; }
+.battle-btn-sub { font-size: 0.65rem; color: var(--text-muted); }
 
 /* ── Arena page layout ── */
 .arena-page {
