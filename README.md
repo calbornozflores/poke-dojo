@@ -7,7 +7,7 @@ A local Pokémon quiz app with five Dojo game modes, a timed scoring system, a l
 ## Screenshots
 
 ### Welcome Screen
-Enter your trainer name to start — no account needed. Your session is saved in the browser.
+Enter your trainer name to start — no account needed. Your session is saved in the browser. Includes a fan-game disclaimer crediting Nintendo, Game Freak, and The Pokémon Company.
 
 ![Home](screenshots/01_home.png)
 
@@ -70,7 +70,7 @@ Two trainers enter their names and choose a round count. P1 uses Q/W/E, P2 uses 
 ![VS Mode Setup](screenshots/15_battle_arena_vs_setup.png)
 
 ### Battle Arena — VS Round
-Official artwork shown as a white silhouette. A progress bar counts down the reveal. Both players race to press their key first.
+Official artwork shown as a white silhouette that starts fading in at 35% of the timer. Both players race to press their key first. Once a player locks in, a green **✓** appears next to their name in the scoreboard — but their chosen option stays hidden so the opponent can't copy the answer.
 
 ![VS Round](screenshots/17_battle_arena_vs_round.png)
 
@@ -201,14 +201,14 @@ A smooth SVG chart of your EVO score history. Filter by game mode with the tabs 
 ### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/249.png" height="22" align="absmiddle"> Battle Arena
 
 #### VS Mode
-Two players share the same keyboard. Official artwork is shown as a white silhouette that gradually reveals over 10 seconds. First to press the correct name key wins the round.
+Two players share the same keyboard. Official artwork is shown as a white silhouette that begins revealing at 35% of the timer and is fully visible at time-up. First to press the correct key wins the round.
 
 | Player | Keys |
 |---|---|
 | Player 1 | Q / W / E → Options 1 / 2 / 3 |
 | Player 2 | I / O / P → Options 1 / 2 / 3 |
 
-Score per round = `max(0, floor(time_remaining / 10 × 100))`. After each round a 5-second countdown auto-advances to the next.
+Once a player answers, a green ✓ appears next to their name in the scoreboard — but their chosen option stays hidden until both have answered, preventing the second player from copying. Score per round = `max(0, floor(time_remaining / 10 × 100))`. After each round a 5-second countdown auto-advances to the next.
 
 #### Solo Challenge
 Assign any 3 keys to the options (Enter, Escape and Space are reserved). Endless rounds with 3 Luvdisc lives — a wrong answer, timeout, or being slower than **Your Shadow** removes one. Timer starts at 10s and tightens by 1s every 10 rounds (floor 5s at round 50). Your Shadow learns your average response time per Pokémon and grows faster as you improve.
