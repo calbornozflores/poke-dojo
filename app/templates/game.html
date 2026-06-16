@@ -10,6 +10,10 @@
       <button class="mode-btn active" id="btn-game1" data-game="name_guess">
         <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" class="mode-sprite">Name It
       </button>
+      <div id="name-submode" class="type-submode hidden">
+        <button class="submode-pill active" id="submode-medium">Medium</button>
+        <button class="submode-pill" id="submode-name-hard">Hard ◉</button>
+      </div>
       <button class="mode-btn" id="btn-game2" data-game="number_guess">
         <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" alt="" class="mode-sprite">Guess Number
       </button>
@@ -155,7 +159,7 @@
 
   let currentGame = "name_guess";
   let currentPokemon = null;
-  let challengeModeByType = { name_guess: false, number_guess: false, type_easy: false, type_hard: false };
+  let challengeModeByType = { name_guess: false, name_hard: false, number_guess: false, type_easy: false, type_hard: false };
   let sessionAccuracies = [];
   let streak = 0;
   let selectedTypes = [];
@@ -169,12 +173,15 @@
   const resultZone    = document.getElementById("result-zone");
   const answerZone    = document.querySelector(".answer-zone");
   const challengeCheckbox = document.getElementById("challenge-checkbox");
-  const btnGame1   = document.getElementById("btn-game1");
-  const btnGame2   = document.getElementById("btn-game2");
-  const btnType    = document.getElementById("btn-type");
+  const btnGame1    = document.getElementById("btn-game1");
+  const btnGame2    = document.getElementById("btn-game2");
+  const btnType     = document.getElementById("btn-type");
+  const nameSubmode = document.getElementById("name-submode");
+  const subMedium   = document.getElementById("submode-medium");
+  const subNameHard = document.getElementById("submode-name-hard");
   const typeSubmode = document.getElementById("type-submode");
-  const subEasy    = document.getElementById("submode-easy");
-  const subHard    = document.getElementById("submode-hard");
+  const subEasy     = document.getElementById("submode-easy");
+  const subHard     = document.getElementById("submode-hard");
 
   // ── Mode switching ────────────────────────────────────────────────────────
   function switchGame(type) {
@@ -182,42 +189,50 @@
     selectedTypes = [];
     challengeCheckbox.checked = challengeModeByType[type] || false;
 
+    const isName = type === "name_guess" || type === "name_hard";
+    const isType = type === "type_easy"  || type === "type_hard";
+
     // Top-level button active states
-    const isType = type === "type_easy" || type === "type_hard";
-    btnGame1.classList.toggle("active", type === "name_guess");
+    btnGame1.classList.toggle("active", isName);
     btnGame2.classList.toggle("active", type === "number_guess");
-    btnType.classList.toggle("active", isType);
+    btnType.classList.toggle("active",  isType);
 
     // Sub-mode pills
+    nameSubmode.classList.toggle("hidden", !isName);
+    subMedium.classList.toggle("active",   type === "name_guess");
+    subNameHard.classList.toggle("active", type === "name_hard");
     typeSubmode.classList.toggle("hidden", !isType);
     subEasy.classList.toggle("active", type === "type_easy");
     subHard.classList.toggle("active", type === "type_hard");
 
     // Input areas
-    document.getElementById("game1-input-area").classList.toggle("hidden", type !== "name_guess");
+    document.getElementById("game1-input-area").classList.toggle("hidden", !isName);
     document.getElementById("game2-input-area").classList.toggle("hidden", type !== "number_guess");
     document.getElementById("type-easy-area").classList.toggle("hidden",   type !== "type_easy");
     document.getElementById("type-hard-area").classList.toggle("hidden",   type !== "type_hard");
 
-    // Name display: visible for number_guess and type_easy
+    // Name display: visible for number_guess and type_easy only
     document.getElementById("game2-name").classList.toggle("hidden",
       type !== "number_guess" && type !== "type_easy");
 
     // Submit button hidden for type_easy
     submitBtn.classList.toggle("hidden", type === "type_easy");
 
-    // Type hard uses a compact side-by-side layout
+    // Type hard compact layout
     document.getElementById("game-screen").classList.toggle("type-hard-layout", type === "type_hard");
 
     loadNext();
   }
 
-  btnGame1.addEventListener("click", () => switchGame("name_guess"));
+  btnGame1.addEventListener("click", () => {
+    if (currentGame !== "name_guess" && currentGame !== "name_hard") switchGame("name_guess");
+  });
   btnGame2.addEventListener("click", () => switchGame("number_guess"));
   btnType.addEventListener("click", () => {
-    // If not already in a type mode, enter type_easy by default
     if (currentGame !== "type_easy" && currentGame !== "type_hard") switchGame("type_easy");
   });
+  subMedium.addEventListener("click",   () => switchGame("name_guess"));
+  subNameHard.addEventListener("click", () => switchGame("name_hard"));
   subEasy.addEventListener("click", () => switchGame("type_easy"));
   subHard.addEventListener("click", () => switchGame("type_hard"));
 
@@ -265,7 +280,7 @@
     if (!currentPokemon) return;
 
     let guess;
-    if      (currentGame === "name_guess")   guess = document.getElementById("name-input").value;
+    if      (currentGame === "name_guess" || currentGame === "name_hard") guess = document.getElementById("name-input").value;
     else if (currentGame === "number_guess") guess = document.getElementById("number-input").value;
     else if (currentGame === "type_hard")    guess = selectedTypes.join(",");
 
@@ -332,7 +347,9 @@
     resultZone.classList.add("hidden");
     answerZone.classList.remove("hidden");
 
-    document.getElementById("pokemon-sprite").src = data.artwork_url;
+    const spriteEl = document.getElementById("pokemon-sprite");
+    spriteEl.src = data.artwork_url;
+    spriteEl.classList.toggle("silhouette", currentGame === "name_hard");
     document.getElementById("name-input").value = "";
     document.getElementById("number-input").value = "";
     selectedTypes = [];
@@ -388,6 +405,7 @@
   }
 
   function showResult(data, userGuessType = null) {
+    document.getElementById("pokemon-sprite").classList.remove("silhouette");
     answerZone.classList.add("hidden");
     resultZone.classList.remove("hidden");
 
@@ -399,7 +417,7 @@
     ring.style.stroke = acc >= 80 ? "#22c55e" : acc >= 50 ? "#f59e0b" : "#ef4444";
 
     document.getElementById("result-name-text").textContent =
-      currentGame === "name_guess" ? `Correct name: ${data.correct_name}` : "";
+      (currentGame === "name_guess" || currentGame === "name_hard") ? `Correct name: ${data.correct_name}` : "";
     document.getElementById("result-number-text").textContent =
       currentGame === "number_guess" ? `Pokédex #${data.correct_number}` : "";
     document.getElementById("result-distance-text").textContent =

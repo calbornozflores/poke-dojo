@@ -142,7 +142,7 @@ def profile_breakdown(
         if poke.type2:
             type_acc[poke.type2].append(result.accuracy)
 
-    MIN_N = 3
+    MIN_N = 5
     _TYPE_IDS = {
         "normal": 1, "fighting": 2, "flying": 3, "poison": 4, "ground": 5,
         "rock": 6, "bug": 7, "ghost": 8, "steel": 9, "fire": 10, "water": 11,
@@ -275,7 +275,7 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
     correct_types: list[str] = []
     user_types: list[str] = []
 
-    if req.game_type == "name_guess":
+    if req.game_type in ("name_guess", "name_hard"):
         accuracy = name_accuracy(req.guess, pokemon.name)
 
     elif req.game_type == "number_guess":

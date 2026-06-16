@@ -14,6 +14,10 @@
       <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="">
       Name It
     </button>
+    <button class="profile-game-tab" data-game="name_hard">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" style="filter:brightness(0) invert(1)">
+      Name Hard
+    </button>
     <button class="profile-game-tab" data-game="number_guess">
       <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" alt="">
       Guess Number
@@ -53,23 +57,41 @@
 
     <div class="breakdown-sections">
       <div class="breakdown-section">
-        <div class="breakdown-section-title">By Generation</div>
+        <div class="breakdown-section-header">
+          <div class="breakdown-section-title">By Generation</div>
+          <div class="sort-btns">
+            <button class="sort-btn active" data-section="gen" data-by="you">YOU</button>
+            <button class="sort-btn ai-btn" data-section="gen" data-by="ai" disabled>AI</button>
+          </div>
+        </div>
         <div class="breakdown-bars" id="breakdown-gen"></div>
       </div>
 
       <div class="breakdown-section">
-        <div class="breakdown-section-title">By Evolution Stage</div>
+        <div class="breakdown-section-header">
+          <div class="breakdown-section-title">By Evolution Stage</div>
+          <div class="sort-btns">
+            <button class="sort-btn active" data-section="stage" data-by="you">YOU</button>
+            <button class="sort-btn ai-btn" data-section="stage" data-by="ai" disabled>AI</button>
+          </div>
+        </div>
         <div class="breakdown-bars" id="breakdown-stage"></div>
       </div>
 
       <div class="breakdown-section">
-        <div class="breakdown-section-title">By Type</div>
+        <div class="breakdown-section-header">
+          <div class="breakdown-section-title">By Type</div>
+          <div class="sort-btns">
+            <button class="sort-btn active" data-section="type" data-by="you">YOU</button>
+            <button class="sort-btn ai-btn" data-section="type" data-by="ai" disabled>AI</button>
+          </div>
+        </div>
         <div class="breakdown-bars" id="breakdown-type"></div>
       </div>
     </div>
 
     <p class="breakdown-hint">
-      Only categories with ≥ 3 games shown. &nbsp;
+      Only categories with ≥ 5 games shown. &nbsp;
       <strong>YOU</strong>:
         <span style="color:#4ade80">■</span> ≥70% &nbsp;
         <span style="color:#fbbf24">■</span> 50–69% &nbsp;
@@ -88,14 +110,21 @@
   const username = localStorage.getItem("poke_username");
   if (!username) window.location.href = "/";
 
-  let activeGame = "name_guess";
-  let progressTimer = null;
+  let activeGame       = "name_guess";
+  let progressTimer    = null;
+  let cachedBreakdown  = null;
+
+  const sectionSortState = { gen: "you", stage: "you", type: "you" };
+  const SECTION_META = {
+    gen:   { containerId: "breakdown-gen",   hasIcon: false, dataKey: "by_generation" },
+    stage: { containerId: "breakdown-stage", hasIcon: false, dataKey: "by_stage" },
+    type:  { containerId: "breakdown-type",  hasIcon: true,  dataKey: "by_type" },
+  };
 
   const loadingPanel = document.getElementById("profile-loading");
   const lockedPanel  = document.getElementById("profile-locked");
   const resultPanel  = document.getElementById("profile-result");
   const progressFill = document.getElementById("profile-progress-fill");
-  const loadingText  = document.getElementById("profile-loading-text");
   const gamesLabel   = document.getElementById("profile-games-label");
   const gamesInfo    = document.getElementById("profile-games-info");
 
@@ -127,7 +156,6 @@
     return "#f87171";
   }
 
-  // Build one bar line: tag label | track | value label
   function makeLine(tag, valueText, fillPct, color, isShap) {
     const line = document.createElement("div");
     line.className = "breakdown-bar-line" + (isShap ? " shap-line" : "");
@@ -141,18 +169,16 @@
 
     const fill = document.createElement("div");
     fill.className = "breakdown-fill";
-    if (isShap) {
-      fill.style.background = `linear-gradient(to right, ${color}66, ${color})`;
-    } else {
-      fill.style.background = color;
-      fill.style.boxShadow  = `0 0 8px ${color}44`;
-    }
-    fill.dataset.w     = fillPct + "%";
-    fill.style.width   = "0%";
+    fill.style.background = isShap
+      ? `linear-gradient(to right, ${color}66, ${color})`
+      : color;
+    if (!isShap) fill.style.boxShadow = `0 0 8px ${color}44`;
+    fill.dataset.w   = fillPct + "%";
+    fill.style.width = "0%";
     track.appendChild(fill);
 
     const val = document.createElement("span");
-    val.className  = "bar-line-val" + (isShap ? " shap-verdict" : "");
+    val.className   = "bar-line-val" + (isShap ? " shap-verdict" : "");
     val.style.color = color;
     val.textContent = valueText;
 
@@ -182,7 +208,6 @@
       const row = document.createElement("div");
       row.className = "breakdown-row";
 
-      // Label (with optional type icon)
       const labelEl = document.createElement("div");
       labelEl.className = "breakdown-label";
       if (hasIcon && item.icon) {
@@ -193,22 +218,21 @@
       }
       labelEl.appendChild(Object.assign(document.createElement("span"), { textContent: item.label }));
 
-      // Bar group
       const barGroup = document.createElement("div");
       barGroup.className = "breakdown-bar-group";
 
       const accColor = accuracyColor(item.avg);
       const accLine  = makeLine("YOU", item.avg + "%", item.avg, accColor, false);
       barGroup.appendChild(accLine.el);
-      fills.push({ fill: accLine.fill, delay: 80 + i * 60 });
+      fills.push({ fill: accLine.fill, delay: 80 + i * 55 });
 
       if (hasShap && item.shap != null) {
-        const hard       = item.shap > 0;
-        const shapColor  = hard ? "#fb923c" : "#60a5fa";
-        const shapPct    = (Math.abs(item.shap) / maxAbsShap * 100).toFixed(1);
-        const shapLine   = makeLine("AI", hard ? "HARD ↑" : "EASY ↓", shapPct, shapColor, true);
+        const hard      = item.shap > 0;
+        const shapColor = hard ? "#fb923c" : "#60a5fa";
+        const shapPct   = (Math.abs(item.shap) / maxAbsShap * 100).toFixed(1);
+        const shapLine  = makeLine("AI", hard ? "HARD ↑" : "EASY ↓", shapPct, shapColor, true);
         barGroup.appendChild(shapLine.el);
-        fills.push({ fill: shapLine.fill, delay: 80 + i * 60 + 80 });
+        fills.push({ fill: shapLine.fill, delay: 80 + i * 55 + 70 });
       }
 
       const nEl = Object.assign(document.createElement("div"), {
@@ -221,19 +245,61 @@
       el.appendChild(row);
     });
 
-    // Animate all fills after DOM is built
     fills.forEach(({ fill, delay }) => {
       setTimeout(() => { fill.style.width = fill.dataset.w; }, delay);
     });
   }
 
-  function renderBreakdown(bd) {
-    makeRows(bd.by_generation, "breakdown-gen",   false);
-    makeRows(bd.by_stage,      "breakdown-stage", false);
-    makeRows(bd.by_type,       "breakdown-type",  true);
+  function getSorted(items, by) {
+    const copy = [...items];
+    if (by === "you") copy.sort((a, b) => a.avg - b.avg);
+    else if (by === "ai") copy.sort((a, b) => (b.shap ?? -Infinity) - (a.shap ?? -Infinity));
+    return copy;
   }
 
+  function renderSection(sectionKey) {
+    const meta   = SECTION_META[sectionKey];
+    const sortBy = sectionSortState[sectionKey];
+    const items  = cachedBreakdown.breakdown[meta.dataKey];
+    makeRows(getSorted(items, sortBy), meta.containerId, meta.hasIcon);
+
+    // Sync active button state
+    const container = document.getElementById(meta.containerId).closest(".breakdown-section");
+    container.querySelectorAll(".sort-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.by === sortBy);
+    });
+  }
+
+  function renderBreakdown(bd) {
+    cachedBreakdown = bd;
+
+    const hasAnySHAP = [
+      ...bd.by_generation, ...bd.by_stage, ...bd.by_type
+    ].some(it => it.shap != null);
+
+    document.querySelectorAll(".sort-btn.ai-btn").forEach(btn => {
+      btn.disabled = !hasAnySHAP;
+      btn.title = hasAnySHAP ? "" : "Unlocks after 20 games";
+    });
+
+    Object.keys(SECTION_META).forEach(key => renderSection(key));
+  }
+
+  // Sort button clicks
+  document.querySelectorAll(".sort-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (btn.disabled) return;
+      sectionSortState[btn.dataset.section] = btn.dataset.by;
+      renderSection(btn.dataset.section);
+    });
+  });
+
   async function loadProfile(gameType) {
+    // Reset sort state when switching tabs
+    Object.keys(sectionSortState).forEach(k => sectionSortState[k] = "you");
+    document.querySelectorAll(".sort-btn[data-by='you']").forEach(b => b.classList.add("active"));
+    document.querySelectorAll(".sort-btn[data-by='ai']").forEach(b => b.classList.remove("active"));
+
     showLoading();
     try {
       const res  = await fetch(
@@ -254,7 +320,7 @@
         }
 
         gamesLabel.textContent = `Based on ${data.total_games} game${data.total_games !== 1 ? "s" : ""} in this mode`;
-        renderBreakdown(data.breakdown);
+        renderBreakdown(data);
         resultPanel.classList.remove("hidden");
       });
     } catch {
