@@ -465,7 +465,34 @@ a:hover { color: var(--accent-hover); }
 }
 .type-icon-img { width: 100%; height: auto; display: block; border-radius: 6px; }
 
-/* ── Type Hard: 3-column toggle grid ── */
+/* ── Type Hard: compact side-by-side layout ── */
+.type-hard-layout {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+.type-hard-layout .pokemon-card {
+  flex-shrink: 0;
+  width: 155px;
+  padding: 0.75rem;
+  margin-bottom: 0;
+}
+.type-hard-layout .pokemon-sprite {
+  width: 120px;
+  height: 120px;
+}
+.type-hard-layout .answer-zone,
+.type-hard-layout .result-zone {
+  flex: 1;
+  min-width: 0;
+}
+.type-hard-layout .type-grid {
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.45rem;
+}
+
+/* ── Type Hard: 3-column toggle grid (default / mobile) ── */
 .type-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

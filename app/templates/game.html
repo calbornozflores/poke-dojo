@@ -206,6 +206,9 @@
     // Submit button hidden for type_easy
     submitBtn.classList.toggle("hidden", type === "type_easy");
 
+    // Type hard uses a compact side-by-side layout
+    document.getElementById("game-screen").classList.toggle("type-hard-layout", type === "type_hard");
+
     loadNext();
   }
 
