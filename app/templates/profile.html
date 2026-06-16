@@ -273,8 +273,9 @@
   function renderBreakdown(bd) {
     cachedBreakdown = bd;
 
+    const brk = bd.breakdown;
     const hasAnySHAP = [
-      ...bd.by_generation, ...bd.by_stage, ...bd.by_type
+      ...brk.by_generation, ...brk.by_stage, ...brk.by_type
     ].some(it => it.shap != null);
 
     document.querySelectorAll(".sort-btn.ai-btn").forEach(btn => {

@@ -12,7 +12,7 @@
       </button>
       <div id="name-submode" class="type-submode hidden">
         <button class="submode-pill active" id="submode-medium">Medium</button>
-        <button class="submode-pill" id="submode-name-hard">Hard ◉</button>
+        <button class="submode-pill" id="submode-name-hard">Hard</button>
       </div>
       <button class="mode-btn" id="btn-game2" data-game="number_guess">
         <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" alt="" class="mode-sprite">Guess Number
@@ -494,7 +494,7 @@
     }, 4000);
   });
 
-  // Initial load
-  loadNext();
+  // Initial load — call switchGame so sub-mode pills and input areas are initialised
+  switchGame("name_guess");
 </script>
 {% endblock %}
