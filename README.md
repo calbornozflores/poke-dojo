@@ -89,6 +89,11 @@ Endless mode with custom keys (A/S/D shown). Timer tightens every 10 rounds — 
 
 ![Solo Round](screenshots/19_battle_arena_solo_round.png)
 
+### Battle Arena — Match End
+Trophy, winner, final scores, and a round-by-round recap. Rematch starts a fresh match with the same settings.
+
+![Match End](screenshots/20_battle_arena_match_end.png)
+
 ---
 
 ## Installation

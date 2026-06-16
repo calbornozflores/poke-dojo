@@ -144,7 +144,7 @@ const params    = new URLSearchParams(location.search);
 let MODE        = params.get("mode") || "vs";   // "vs" | "single"
 let matchId     = null;
 let currentRound = 0;
-let totalRounds  = 5;
+let totalRounds  = parseInt(document.querySelector(".rounds-pill.active")?.dataset.rounds || "3", 10);
 let roundData    = null;
 let roundStartMs = 0;
 let revealTimer  = null;
@@ -640,6 +640,15 @@ document.addEventListener("keydown", e => {
   // Ignore modifier-only presses
   if (["Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
   document.getElementById("next-round-btn").click();
+});
+
+// ── Solo: Enter submits Start Match from setup screen ─────────────────────
+document.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  if (MODE !== "single") return;
+  if (document.getElementById("setup-screen").classList.contains("hidden")) return;
+  if (assigningSlot !== null) return;  // still assigning keys
+  document.getElementById("start-match-btn").click();
 });
 
 // ── Screen switcher ───────────────────────────────────────────────────────
