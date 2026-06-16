@@ -1,6 +1,6 @@
 # Poke-Dojo <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/107.png" height="32" align="absmiddle">
 
-A local Pokémon quiz app with five Dojo game modes, a timed scoring system, a leaderboard, a personal profile, and a **Trainer Journey** page to track your EVO score over time. After 20 games, **Professor Oak Analysis** activates automatically — using machine learning to serve the Pokémon most likely to stump you. Plus a **Battle Arena** with VS Mode (2 players, same keyboard) and Solo Challenge (endless, custom keys, tightening timer).
+A local Pokémon quiz app with five Dojo game modes, a timed scoring system, a leaderboard, a personal profile with AI-powered breakdown, and a **Trainer Journey** page to track your EVO score over time. After 20 games, **Professor Oak Analysis** activates automatically — using machine learning to serve the Pokémon most likely to stump you. Plus a **Battle Arena** with VS Mode (2 players, same keyboard) and Solo Challenge (endless, custom keys, tightening timer, and a personal Shadow that learns your response times).
 
 ---
 
@@ -12,7 +12,7 @@ Enter your trainer name to start — no account needed. Your session is saved in
 ![Home](screenshots/01_home.png)
 
 ### Game Intro Screen
-Each mode begins with a brief intro explaining the rules, scoring formula, and controls.
+Each mode begins with a brief intro explaining the rules, scoring formula, and controls. Battle Arena buttons show Metapod sprites (VS Mode) and Mewtwo (Solo Challenge) inline with the mode name.
 
 ![Intro Screen](screenshots/02_play_intro.png)
 
@@ -55,7 +55,7 @@ Global ranking and per-mode tabs showing scores in pts (not raw accuracy).
 ![Leaderboard](screenshots/12_leaderboard.png)
 
 ### My Profile
-Categorical accuracy breakdown by generation, evolution stage, and type — sorted hardest-first. After 20 games, AI (SHAP) bars predict which categories will stay hard.
+Categorical breakdown by generation, evolution stage, and type. After 20 games, AI (SHAP) bars appear and become the sort key — orange bars (HARD ↑) rise to the top, blue bars (EASY ↓) sink to the bottom. Falls back to accuracy sort before the model trains.
 
 ![My Profile](screenshots/13_profile.png)
 
@@ -65,7 +65,7 @@ Your EVO score — a smoothed measure of long-term skill growth — plotted over
 ![Trainer Journey](screenshots/14_trainer_journey.png)
 
 ### Battle Arena — VS Mode Setup
-Two trainers enter their names and choose a round count. P1 uses Q/W/E, P2 uses I/O/P.
+Two trainers enter their names and choose a round count. P1 uses Q/W/E, P2 uses I/O/P. Metapod sprites flank the title.
 
 ![VS Mode Setup](screenshots/15_battle_arena_vs_setup.png)
 
@@ -80,7 +80,7 @@ After both players answer: animated score bars, ✓/✗ per player, and a 5-seco
 ![VS Round Result](screenshots/18_battle_arena_vs_result.png)
 
 ### Battle Arena — Solo Challenge Setup
-Assign any three keys to the three options (Enter, Escape and Space are reserved). One wrong answer ends the run.
+Assign any three keys to the three options (Enter, Escape and Space are reserved). Mewtwo sprite marks the title. Three Luvdisc hearts are your lives.
 
 ![Solo Setup](screenshots/16_battle_arena_solo_setup.png)
 
@@ -90,7 +90,7 @@ Endless mode with custom keys (A/S/D shown). Timer tightens every 10 rounds — 
 ![Solo Round](screenshots/19_battle_arena_solo_round.png)
 
 ### Battle Arena — Solo Game Over
-Three wrong answers (or timeouts, or being beaten by Your Shadow) ends the run. Analytics show response-time chart and your slowest Pokémon categories.
+Three wrong answers, timeouts, or being beaten by Your Shadow ends the run. Gastly's official artwork marks the screen. Analytics show a response-time chart and slowest Pokémon categories.
 
 ![Solo Game Over](screenshots/20b_solo_gameover.png)
 
@@ -190,9 +190,10 @@ EVOₜ = min(100, 0.12 × adjusted + 0.88 × EVOₜ₋₁)
 Where `adjusted = min(100, FinalScore × 1.15)` when Professor Oak is active (challenge bonus), else `adjusted = FinalScore`. Starts at your first game score, approaches 100 as you improve.
 
 ### My Profile
-Accuracy breakdown by generation ("Gen I • Kanto"), evolution stage, and type — sorted hardest-first. Categories with fewer than 5 games are hidden. After 20 games, dual AI (SHAP) bars appear:
-- **Orange bar** — Professor Oak predicts this category will stay hard for you
-- **Blue bar** — Professor Oak predicts this category will be easy
+Accuracy breakdown by generation ("Gen I • Kanto"), evolution stage, and type. Categories with fewer than 5 games are hidden. After 20 games, AI (SHAP) bars appear and **become the primary sort key**:
+- **Orange bar (HARD ↑)** — Professor Oak predicts this category will stay hard for you; floats to the top
+- **Blue bar (EASY ↓)** — Professor Oak predicts this category will be easy; sinks to the bottom
+- Before 20 games, categories are sorted by accuracy (lowest first)
 
 ### Trainer Journey
 A smooth SVG chart of your EVO score history. Filter by game mode with the tabs at the top.
@@ -210,7 +211,7 @@ Two players share the same keyboard. Official artwork is shown as a white silhou
 Score per round = `max(0, floor(time_remaining / 10 × 100))`. After each round a 5-second countdown auto-advances to the next.
 
 #### Solo Challenge
-Assign any 3 keys to the options (Enter, Escape and Space are reserved). Endless rounds — one wrong answer or a timeout ends your run. Timer starts at 10s and tightens by 1s every 10 rounds (floor 5s at round 50).
+Assign any 3 keys to the options (Enter, Escape and Space are reserved). Endless rounds with 3 Luvdisc lives — a wrong answer, timeout, or being slower than **Your Shadow** removes one. Timer starts at 10s and tightens by 1s every 10 rounds (floor 5s at round 50). Your Shadow learns your average response time per Pokémon and grows faster as you improve.
 
 ---
 
@@ -225,14 +226,15 @@ poke-dojo/
 │   │                         #   CompetitiveMatch, CompetitiveResult
 │   ├── routers/
 │   │   ├── game.py           # /game/start, /game/submit, /game/profile/breakdown
-│   │   ├── scores.py         # /scores/leaderboard
-│   │   ├── journey.py        # /journey/history
+│   │   ├── scores.py         # /scores/leaderboard (Dojo, per-mode tabs)
+│   │   ├── journey.py        # /journey/history (EVO score chart data)
 │   │   ├── battle_arena.py   # /battle/match/*, /battle/round/*, /battle/leaderboard
 │   │   └── challenge.py      # /challenge/train (legacy)
 │   ├── services/
 │   │   ├── data_loader.py    # Background PokeAPI fetch with progress
 │   │   ├── string_match.py   # rapidfuzz accuracy for Name It
-│   │   ├── pokemon_data.py   # Random Pokémon selection
+│   │   ├── pokemon_data.py   # Random / Professor Oak Pokémon selection
+│   │   ├── shadow_model.py   # Per-user Shadow (response-time rolling average)
 │   │   └── xgboost_model.py  # Per-user XGBoost + SHAP category analysis
 │   └── templates/            # Jinja2 HTML (base, index, game, scores, profile,
 │                             #   trainer_journey, battle_arena, arena_leaderboard)
