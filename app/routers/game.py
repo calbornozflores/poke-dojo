@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User, GameResult, Pokemon
+from app.models import User, GameResult, Pokemon, EvoScoreHistory
 from app.services.string_match import name_accuracy
 from app.services.pokemon_data import get_random_pokemon, number_accuracy
 from app.services import xgboost_model
@@ -13,6 +13,12 @@ from app.services import xgboost_model
 router = APIRouter(prefix="/game", tags=["game"])
 
 CHALLENGE_THRESHOLD = 20
+
+GEN_LABELS = {
+    1: "Gen I • Kanto",   2: "Gen II • Johto",   3: "Gen III • Hoenn",
+    4: "Gen IV • Sinnoh", 5: "Gen V • Unova",    6: "Gen VI • Kalos",
+    7: "Gen VII • Alola", 8: "Gen VIII • Galar",  9: "Gen IX • Paldea",
+}
 
 ALL_TYPES = [
     "normal", "fire", "water", "electric", "grass", "ice",
@@ -60,11 +66,14 @@ class SubmitRequest(BaseModel):
     pokemon_id: int
     game_type: str
     guess: str
-    was_challenge: bool = False
+    time_used: float = 60.0
+    was_challenge: bool = False  # kept for API compat, now computed server-side
 
 
 class SubmitResponse(BaseModel):
     accuracy: float
+    final_score: float
+    evo_score: float | None
     correct_name: str
     correct_number: int
     distance: int | None
@@ -156,7 +165,7 @@ def profile_breakdown(
     def _avg(lst): return round(sum(lst) / len(lst), 1)
 
     by_generation = [
-        {"label": f"Gen {gen}", "avg": _avg(accs), "n": len(accs)}
+        {"label": GEN_LABELS.get(gen, f"Gen {gen}"), "avg": _avg(accs), "n": len(accs)}
         for gen, accs in sorted(gen_acc.items())
         if len(accs) >= MIN_N
     ]
@@ -182,8 +191,10 @@ def profile_breakdown(
     shap = xgboost_model.get_category_shap(user.id, game_type, db)
     if shap:
         _rev_stage = {"Basic": "basic", "Stage 1": "stage_1", "Stage 2": "stage_2"}
+        _gen_num = {v: k for k, v in GEN_LABELS.items()}
         for item in by_generation:
-            s = shap["generation"].get(int(item["label"].split()[-1]))
+            gen_num = _gen_num.get(item["label"])
+            s = shap["generation"].get(gen_num) if gen_num is not None else None
             if s is not None:
                 item["shap"] = s
         for item in by_stage:
@@ -212,7 +223,8 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
     games_played = _game_count(user.id, req.game_type, db)
     challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
 
-    if req.challenge_mode and challenge_unlocked:
+    if challenge_unlocked:
+        # Professor Oak Analysis auto-active: 80% XGBoost hardest, 20% random
         recent_ids = [
             r.pokemon_id
             for r in db.query(GameResult)
@@ -221,9 +233,14 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
             .limit(10)
             .all()
         ]
-        hard_ids = xgboost_model.predict_hardest(user.id, req.game_type, db, n=50)
-        candidates = [pid for pid in hard_ids if pid not in recent_ids] or hard_ids
-        pokemon_id = random.choice(candidates[:20])
+        if random.random() < 0.2:
+            all_ids = [row[0] for row in db.query(Pokemon).with_entities(Pokemon.id).all()]
+            candidates = [pid for pid in all_ids if pid not in recent_ids] or all_ids
+            pokemon_id = random.choice(candidates)
+        else:
+            hard_ids = xgboost_model.predict_hardest(user.id, req.game_type, db, n=50)
+            candidates = [pid for pid in hard_ids if pid not in recent_ids] or hard_ids
+            pokemon_id = random.choice(candidates[:20])
         pokemon = db.query(Pokemon).get(pokemon_id)
     else:
         recent_ids = [
@@ -280,7 +297,7 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
 
     elif req.game_type == "number_guess":
         try:
-            guess_num = int(req.guess)
+            guess_num = int(req.guess) if req.guess.strip() else 0
         except ValueError:
             raise HTTPException(status_code=422, detail="guess must be an integer for number_guess")
         distance = abs(guess_num - pokemon.id)
@@ -290,7 +307,7 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
         pokemon_types = [t.lower() for t in [pokemon.type1, pokemon.type2] if t]
         accuracy = 100.0 if req.guess.lower() in pokemon_types else 0.0
         correct_types = [t for t in [pokemon.type1, pokemon.type2] if t]
-        user_types = [req.guess.lower()]
+        user_types = [req.guess.lower()] if req.guess else []
 
     elif req.game_type == "type_hard":
         selected = [t.strip().lower() for t in req.guess.split(",") if t.strip()]
@@ -305,14 +322,46 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
     else:
         raise HTTPException(status_code=422, detail="invalid game_type")
 
+    # Compute final score: accuracy × time_score (both 0-100)
+    time_used = max(0.0, min(60.0, req.time_used))
+    time_score = max(0.0, 100.0 - (time_used / 60.0) * 100.0)
+    final_score = round((accuracy / 100.0) * time_score, 1)
+
+    # Determine if Professor Oak Analysis was active when this game was played
+    games_before = _game_count(user.id, req.game_type, db)
+    was_challenge = games_before >= CHALLENGE_THRESHOLD
+
     result = GameResult(
         user_id=user.id,
         pokemon_id=pokemon.id,
         game_type=req.game_type,
         accuracy=accuracy,
-        was_challenge=req.was_challenge,
+        time_used=time_used,
+        final_score=final_score,
+        was_challenge=was_challenge,
     )
     db.add(result)
+    db.commit()
+
+    # Update EVO score history
+    adjusted = min(100.0, final_score * 1.15) if was_challenge else final_score
+    latest_evo = (
+        db.query(EvoScoreHistory)
+        .filter(EvoScoreHistory.user_id == user.id, EvoScoreHistory.game_type == req.game_type)
+        .order_by(EvoScoreHistory.timestamp.desc())
+        .first()
+    )
+    if latest_evo:
+        new_evo = min(100.0, 0.12 * adjusted + 0.88 * latest_evo.evo_score)
+    else:
+        new_evo = min(100.0, adjusted)
+    evo_record = EvoScoreHistory(
+        user_id=user.id,
+        game_type=req.game_type,
+        evo_score=round(new_evo, 2),
+        final_score=final_score,
+    )
+    db.add(evo_record)
     db.commit()
 
     games_played = _game_count(user.id, req.game_type, db)
@@ -323,6 +372,8 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
 
     return SubmitResponse(
         accuracy=round(accuracy, 1),
+        final_score=final_score,
+        evo_score=round(new_evo, 1),
         correct_name=pokemon.name,
         correct_number=pokemon.id,
         distance=distance,

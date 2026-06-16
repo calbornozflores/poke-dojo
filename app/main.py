@@ -7,7 +7,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.database import engine, run_migrations
 from app.models import Base
-from app.routers import game, scores, challenge
+from app.routers import game, scores, challenge, journey
 from app.services.data_loader import (
     check_db_ready,
     fetch_all_pokemon_background,
@@ -27,6 +27,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 app.include_router(game.router)
 app.include_router(scores.router)
 app.include_router(challenge.router)
+app.include_router(journey.router)
 
 
 @app.on_event("startup")
@@ -73,6 +74,11 @@ async def leaderboard(request: Request):
 @app.get("/profile")
 async def profile(request: Request):
     return templates.TemplateResponse(request=request, name="profile.html")
+
+
+@app.get("/journey")
+async def trainer_journey(request: Request):
+    return templates.TemplateResponse(request=request, name="trainer_journey.html")
 
 
 # ── API ───────────────────────────────────────────────────────────────────────

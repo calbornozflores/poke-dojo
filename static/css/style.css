@@ -908,6 +908,365 @@ a:hover { color: var(--accent-hover); }
   line-height: 1.7;
 }
 
+/* ── DOJO / BATTLE ARENA sidebar sections ── */
+.game-section-label {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0.6rem 0 0.3rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.4rem;
+}
+.game-section-label:first-child { padding-top: 0; }
+.battle-label { color: #fb923c; margin-top: 0.6rem; }
+
+.battle-arena-teaser {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  background: rgba(251, 146, 60, 0.06);
+  border: 1px solid rgba(251, 146, 60, 0.2);
+  border-radius: 8px;
+  margin-bottom: 0.25rem;
+}
+.battle-arena-teaser-icon { font-size: 1.1rem; }
+.battle-title { font-size: 0.82rem; font-weight: 700; color: #fb923c; }
+.battle-sub   { font-size: 0.7rem;  color: var(--text-muted); }
+
+/* ── Professor Oak Analysis ── */
+.professor-oak-box {
+  background: var(--surface2);
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  margin-top: 0.75rem;
+}
+.oak-header {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a78bfa;
+  margin-bottom: 0.55rem;
+}
+.oak-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.oak-info { flex: 1; min-width: 0; }
+.oak-desc {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+.oak-right { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.oak-active-badge {
+  background: rgba(74, 222, 128, 0.12);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+.oak-progress-bar {
+  width: 72px;
+  height: 5px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.oak-progress-fill {
+  height: 100%;
+  background: #a78bfa;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.oak-progress-label {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ── Round timer ── */
+.pokemon-card { position: relative; }
+.round-timer {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  font-weight: 800;
+  background: rgba(15, 15, 26, 0.75);
+  border: 2.5px solid currentColor;
+  z-index: 10;
+  transition: color 0.3s, border-color 0.3s;
+}
+.round-timer.timer-green { color: #22c55e; }
+.round-timer.timer-amber { color: #f59e0b; }
+.round-timer.timer-red   { color: #ef4444; }
+@keyframes timerPulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.12); }
+}
+.round-timer.timer-pulse { animation: timerPulse 0.5s ease-in-out infinite; }
+
+/* ── Result score displays ── */
+.result-scores {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.6rem;
+}
+.final-score-display {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.final-score-display.score-high { color: #22c55e; }
+.final-score-display.score-mid  { color: #f59e0b; }
+.final-score-display.score-low  { color: #ef4444; }
+.evo-score-result {
+  font-size: 0.72rem;
+  color: #a78bfa;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* ── Game intro screen ── */
+.intro-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 380px;
+  padding: 1.5rem;
+}
+.intro-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem 2.25rem;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.intro-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.6rem;
+}
+.intro-desc {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.65;
+  margin-bottom: 1.25rem;
+}
+.intro-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+.intro-meta-block {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+}
+.intro-meta-label {
+  display: block;
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin-bottom: 0.3rem;
+}
+.intro-meta-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Trainer Journey page ── */
+.journey-page { max-width: 900px; margin: 0 auto; padding: 1rem 0; }
+
+.journey-header { margin-bottom: 1.25rem; }
+.journey-header h1 { font-size: 1.75rem; font-weight: 700; }
+.journey-subtitle { color: var(--text-muted); font-size: 0.88rem; margin-top: 0.3rem; line-height: 1.6; }
+
+.journey-game-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.journey-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.journey-tab img {
+  width: 22px;
+  height: 22px;
+  image-rendering: pixelated;
+}
+.journey-tab:hover { color: var(--text); border-color: var(--accent); }
+.journey-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.journey-loading, .journey-empty {
+  text-align: center;
+  padding: 3.5rem 2rem;
+  color: var(--text-muted);
+}
+.journey-empty-sprite {
+  width: 96px;
+  height: 96px;
+  image-rendering: pixelated;
+  margin-bottom: 1rem;
+}
+.journey-empty h2 { font-size: 1.3rem; margin-bottom: 0.5rem; color: var(--text); }
+
+.journey-chart-area {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.5rem 1rem;
+}
+
+.journey-current-score {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+.journey-evo-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a78bfa;
+  margin-bottom: 0.2rem;
+}
+.journey-evo-value {
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.journey-chart-wrapper {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.journey-y-axis {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 260px;
+  padding: 0;
+  flex-shrink: 0;
+}
+.journey-axis-sprite {
+  width: 36px;
+  height: 36px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+.journey-y-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 180px;
+  text-align: right;
+  flex: 1;
+}
+.journey-y-labels span {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.journey-chart-container {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+.journey-svg {
+  width: 100%;
+  height: 260px;
+  display: block;
+  overflow: visible;
+}
+
+.journey-dot { cursor: pointer; }
+
+.journey-tooltip {
+  position: absolute;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.78rem;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 20;
+  transform: translate(-50%, calc(-100% - 10px));
+  box-shadow: var(--shadow);
+}
+.journey-tooltip-evo  { font-weight: 700; color: #a78bfa; }
+.journey-tooltip-score { color: var(--text-muted); font-size: 0.72rem; }
+.journey-tooltip-date  { color: var(--text-muted); font-size: 0.68rem; }
+
+.journey-stats-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.journey-stat { flex: 1; text-align: center; }
+.journey-stat-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+.journey-stat-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .game-layout { grid-template-columns: 1fr; }
@@ -916,4 +1275,7 @@ a:hover { color: var(--accent-hover); }
   .game-preview { grid-template-columns: 1fr; }
   .input-row { flex-direction: column; }
   .type-grid { grid-template-columns: repeat(3, 1fr); }
+  .intro-meta { grid-template-columns: 1fr; }
+  .journey-chart-wrapper { flex-direction: column; }
+  .journey-y-axis { flex-direction: row; height: auto; width: 100%; }
 }

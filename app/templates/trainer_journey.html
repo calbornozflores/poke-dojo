@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}Trainer Journey — Poke-Dojo{% endblock %}
+
+{% block content %}
+<div class="journey-page">
+  <div class="journey-header">
+    <h1>Trainer Journey</h1>
+    <p class="journey-subtitle">Your EVO score tracks skill growth across all your games. It rises with every strong performance.</p>
+  </div>
+
+  <div class="journey-game-tabs">
+    <button class="journey-tab active" data-game="">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png" alt="">
+      All Modes
+    </button>
+    <button class="journey-tab" data-game="name_guess">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="">
+      Name It
+    </button>
+    <button class="journey-tab" data-game="name_hard">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" style="filter:brightness(0) invert(1)">
+      Name Hard
+    </button>
+    <button class="journey-tab" data-game="number_guess">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" alt="">
+      Guess Number
+    </button>
+    <button class="journey-tab" data-game="type_easy">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" alt="">
+      Type Easy
+    </button>
+    <button class="journey-tab" data-game="type_hard">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png" alt="">
+      Type Hard
+    </button>
+  </div>
+
+  <div id="journey-loading" class="journey-loading">
+    <div class="profile-spinner"></div>
+    <p>Loading your journey…</p>
+  </div>
+
+  <div id="journey-empty" class="journey-empty hidden">
+    <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10.png"
+         alt="Caterpie" class="journey-empty-sprite">
+    <h2>Journey Not Started</h2>
+    <p>Play your first game to begin your trainer journey!</p>
+    <a href="/play" class="btn btn-primary" style="margin-top:1rem;">Go Play</a>
+  </div>
+
+  <div id="journey-chart-area" class="journey-chart-area hidden">
+    <div class="journey-current-score">
+      <div class="journey-evo-label">Current EVO Score</div>
+      <div class="journey-evo-value" id="journey-evo-value">0</div>
+    </div>
+
+    <div class="journey-chart-wrapper">
+      <div class="journey-y-axis">
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png"
+             alt="Arceus (100)" class="journey-axis-sprite" title="EVO 100">
+        <div class="journey-y-labels">
+          <span>100</span>
+          <span>75</span>
+          <span>50</span>
+          <span>25</span>
+          <span>0</span>
+        </div>
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10.png"
+             alt="Caterpie (0)" class="journey-axis-sprite" title="EVO 0">
+      </div>
+      <div class="journey-chart-container">
+        <svg id="journey-svg" class="journey-svg" viewBox="0 0 760 260" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="journeyGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="#a78bfa" stop-opacity="0.02"/>
+            </linearGradient>
+          </defs>
+          <!-- Horizontal grid lines -->
+          <line x1="0" y1="10"  x2="760" y2="10"  stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+          <line x1="0" y1="72"  x2="760" y2="72"  stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          <line x1="0" y1="135" x2="760" y2="135" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          <line x1="0" y1="197" x2="760" y2="197" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          <line x1="0" y1="250" x2="760" y2="250" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+          <!-- Max score reference line (dashed) -->
+          <line id="max-line" x1="0" y1="10" x2="760" y2="10"
+                stroke="#a78bfa" stroke-opacity="0.3" stroke-dasharray="8,5" stroke-width="1.5"/>
+          <!-- Area fill -->
+          <path id="journey-area" fill="url(#journeyGradient)" stroke="none"/>
+          <!-- Main curve -->
+          <path id="journey-path" fill="none" stroke="#a78bfa" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Data points (rendered by JS) -->
+          <g id="journey-dots"></g>
+        </svg>
+        <div id="journey-tooltip" class="journey-tooltip hidden"></div>
+      </div>
+    </div>
+
+    <div class="journey-stats-row">
+      <div class="journey-stat">
+        <div class="journey-stat-label">Total Games</div>
+        <div class="journey-stat-value" id="journey-total-games">0</div>
+      </div>
+      <div class="journey-stat">
+        <div class="journey-stat-label">Peak EVO</div>
+        <div class="journey-stat-value" id="journey-peak-evo">0</div>
+      </div>
+      <div class="journey-stat">
+        <div class="journey-stat-label">Avg Score</div>
+        <div class="journey-stat-value" id="journey-avg-score">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const username = localStorage.getItem("poke_username");
+  if (!username) window.location.href = "/";
+
+  let activeGameType = "";
+  const SVG_W = 760, SVG_H = 260;
+  const PAD_L = 10, PAD_R = 20, PAD_T = 10, PAD_B = 10;
+  const CHART_W = SVG_W - PAD_L - PAD_R;
+  const CHART_H = SVG_H - PAD_T - PAD_B;
+
+  // Convert EVO score (0-100) and index to SVG coordinates
+  function toX(i, n) {
+    if (n <= 1) return PAD_L + CHART_W / 2;
+    return PAD_L + (i / (n - 1)) * CHART_W;
+  }
+  function toY(score) {
+    return PAD_T + (1 - score / 100) * CHART_H;
+  }
+
+  // Build smooth cubic bezier path through points
+  function buildPath(pts) {
+    if (!pts.length) return { line: "", area: "" };
+    if (pts.length === 1) {
+      const [x, y] = pts[0];
+      return { line: `M ${x} ${y}`, area: `M ${x} ${SVG_H - PAD_B} L ${x} ${y} Z` };
+    }
+    let d = `M ${pts[0][0]} ${pts[0][1]}`;
+    for (let i = 1; i < pts.length; i++) {
+      const [px, py] = pts[i - 1];
+      const [cx, cy] = pts[i];
+      const dx = (cx - px) / 3;
+      d += ` C ${px + dx} ${py} ${cx - dx} ${cy} ${cx} ${cy}`;
+    }
+    const areaD = d
+      + ` L ${pts[pts.length - 1][0]} ${SVG_H - PAD_B}`
+      + ` L ${pts[0][0]} ${SVG_H - PAD_B} Z`;
+    return { line: d, area: areaD };
+  }
+
+  function renderChart(history) {
+    const n = history.length;
+    const pts = history.map((h, i) => [toX(i, n), toY(h.evo_score)]);
+
+    const { line, area } = buildPath(pts);
+    document.getElementById("journey-path").setAttribute("d", line);
+    document.getElementById("journey-area").setAttribute("d", area);
+
+    // Draw dots
+    const dotsG = document.getElementById("journey-dots");
+    dotsG.innerHTML = "";
+    const tooltip = document.getElementById("journey-tooltip");
+
+    pts.forEach(([x, y], i) => {
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", x);
+      circle.setAttribute("cy", y);
+      circle.setAttribute("r", 4);
+      circle.setAttribute("fill", "#a78bfa");
+      circle.setAttribute("stroke", "#0f0f1a");
+      circle.setAttribute("stroke-width", "2");
+      circle.setAttribute("class", "journey-dot");
+      circle.setAttribute("data-index", i);
+
+      circle.addEventListener("mouseenter", () => {
+        circle.setAttribute("r", 7);
+        const h = history[i];
+        const date = new Date(h.timestamp).toLocaleDateString();
+        tooltip.innerHTML =
+          `<div class="journey-tooltip-evo">EVO ${h.evo_score.toFixed(1)}</div>` +
+          `<div class="journey-tooltip-score">Score: ${h.final_score.toFixed(1)} pts</div>` +
+          `<div class="journey-tooltip-date">${date}</div>`;
+
+        // Position tooltip
+        const svgEl = document.getElementById("journey-svg");
+        const rect  = svgEl.getBoundingClientRect();
+        const scaleX = rect.width / SVG_W;
+        const scaleY = rect.height / SVG_H;
+        const container = document.querySelector(".journey-chart-container");
+        const cRect = container.getBoundingClientRect();
+        const tooltipX = rect.left - cRect.left + x * scaleX;
+        const tooltipY = rect.top  - cRect.top  + y * scaleY;
+        tooltip.style.left = tooltipX + "px";
+        tooltip.style.top  = tooltipY + "px";
+        tooltip.classList.remove("hidden");
+      });
+      circle.addEventListener("mouseleave", () => {
+        circle.setAttribute("r", 4);
+        tooltip.classList.add("hidden");
+      });
+
+      dotsG.appendChild(circle);
+    });
+  }
+
+  async function loadJourney(gameType) {
+    document.getElementById("journey-loading").classList.remove("hidden");
+    document.getElementById("journey-empty").classList.add("hidden");
+    document.getElementById("journey-chart-area").classList.add("hidden");
+
+    const url = `/journey/history?username=${encodeURIComponent(username)}` +
+                (gameType ? `&game_type=${encodeURIComponent(gameType)}` : "");
+    try {
+      const res  = await fetch(url);
+      const data = await res.json();
+
+      document.getElementById("journey-loading").classList.add("hidden");
+
+      if (!data.has_data || !data.history.length) {
+        document.getElementById("journey-empty").classList.remove("hidden");
+        return;
+      }
+
+      document.getElementById("journey-evo-value").textContent = data.current_score.toFixed(1);
+
+      const history = data.history;
+      const peak    = Math.max(...history.map(h => h.evo_score));
+      const avgScore = history.reduce((s, h) => s + h.final_score, 0) / history.length;
+
+      document.getElementById("journey-total-games").textContent = history.length;
+      document.getElementById("journey-peak-evo").textContent   = peak.toFixed(1);
+      document.getElementById("journey-avg-score").textContent  = avgScore.toFixed(1) + " pts";
+
+      document.getElementById("journey-chart-area").classList.remove("hidden");
+      renderChart(history);
+    } catch (err) {
+      document.getElementById("journey-loading").classList.add("hidden");
+      document.getElementById("journey-empty").classList.remove("hidden");
+    }
+  }
+
+  document.querySelectorAll(".journey-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".journey-tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeGameType = btn.dataset.game;
+      loadJourney(activeGameType);
+    });
+  });
+
+  loadJourney(activeGameType);
+</script>
+{% endblock %}

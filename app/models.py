@@ -34,6 +34,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     results: Mapped[list["GameResult"]] = relationship(back_populates="user")
+    evo_history: Mapped[list["EvoScoreHistory"]] = relationship(back_populates="user")
 
 
 class GameResult(Base):
@@ -42,10 +43,25 @@ class GameResult(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     pokemon_id: Mapped[int] = mapped_column(Integer, ForeignKey("pokemon.id"), nullable=False)
-    game_type: Mapped[str] = mapped_column(String, nullable=False)  # name_guess / number_guess
+    game_type: Mapped[str] = mapped_column(String, nullable=False)
     accuracy: Mapped[float] = mapped_column(Float, nullable=False)
+    time_used: Mapped[float | None] = mapped_column(Float, nullable=True)
+    final_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     was_challenge: Mapped[bool] = mapped_column(Boolean, default=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped["User"] = relationship(back_populates="results")
     pokemon: Mapped["Pokemon"] = relationship(back_populates="results")
+
+
+class EvoScoreHistory(Base):
+    __tablename__ = "evo_score_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    game_type: Mapped[str] = mapped_column(String, nullable=False)
+    evo_score: Mapped[float] = mapped_column(Float, nullable=False)
+    final_score: Mapped[float] = mapped_column(Float, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="evo_history")

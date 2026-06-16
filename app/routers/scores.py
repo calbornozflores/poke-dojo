@@ -13,9 +13,9 @@ router = APIRouter(prefix="/scores", tags=["scores"])
 class UserScore(BaseModel):
     username: str
     total_games: int
-    avg_accuracy: float
-    best_accuracy: float
-    worst_accuracy: float
+    avg_score: float
+    best_score: float
+    worst_score: float
 
 
 class LeaderboardResponse(BaseModel):
@@ -35,23 +35,28 @@ def list_game_types(db: Session = Depends(get_db)):
 
 @router.get("/leaderboard", response_model=LeaderboardResponse)
 def leaderboard(
-    game_type: Optional[str] = Query(default=None, pattern="^(name_guess|number_guess|type_easy|type_hard)$"),
+    game_type: Optional[str] = Query(
+        default=None,
+        pattern="^(name_guess|name_hard|number_guess|type_easy|type_hard)$",
+    ),
     db: Session = Depends(get_db),
 ):
     q = db.query(
         User.username,
         func.count(GameResult.id).label("total_games"),
-        func.avg(GameResult.accuracy).label("avg_accuracy"),
-        func.max(GameResult.accuracy).label("best_accuracy"),
-        func.min(GameResult.accuracy).label("worst_accuracy"),
-    ).join(GameResult, GameResult.user_id == User.id)
+        func.avg(GameResult.final_score).label("avg_score"),
+        func.max(GameResult.final_score).label("best_score"),
+        func.min(GameResult.final_score).label("worst_score"),
+    ).join(GameResult, GameResult.user_id == User.id).filter(
+        GameResult.final_score.isnot(None)
+    )
 
     if game_type:
         q = q.filter(GameResult.game_type == game_type)
 
     rows = (
         q.group_by(User.id)
-        .order_by(func.avg(GameResult.accuracy).desc())
+        .order_by(func.avg(GameResult.final_score).desc())
         .all()
     )
 
@@ -59,9 +64,9 @@ def leaderboard(
         UserScore(
             username=row.username,
             total_games=row.total_games,
-            avg_accuracy=round(row.avg_accuracy or 0, 1),
-            best_accuracy=round(row.best_accuracy or 0, 1),
-            worst_accuracy=round(row.worst_accuracy or 0, 1),
+            avg_score=round(row.avg_score or 0, 1),
+            best_score=round(row.best_score or 0, 1),
+            worst_score=round(row.worst_score or 0, 1),
         )
         for row in rows
         if row.total_games > 0
@@ -88,6 +93,8 @@ def user_scores(username: str, db: Session = Depends(get_db)):
         {
             "game_type": r.game_type,
             "accuracy": round(r.accuracy, 1),
+            "final_score": round(r.final_score, 1) if r.final_score is not None else None,
+            "time_used": round(r.time_used, 1) if r.time_used is not None else None,
             "pokemon_id": r.pokemon_id,
             "was_challenge": r.was_challenge,
             "timestamp": r.timestamp.isoformat(),

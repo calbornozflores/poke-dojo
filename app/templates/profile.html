@@ -59,10 +59,6 @@
       <div class="breakdown-section">
         <div class="breakdown-section-header">
           <div class="breakdown-section-title">By Generation</div>
-          <div class="sort-btns">
-            <button class="sort-btn active" data-section="gen" data-by="you">YOU</button>
-            <button class="sort-btn ai-btn" data-section="gen" data-by="ai" disabled>AI</button>
-          </div>
         </div>
         <div class="breakdown-bars" id="breakdown-gen"></div>
       </div>
@@ -70,10 +66,6 @@
       <div class="breakdown-section">
         <div class="breakdown-section-header">
           <div class="breakdown-section-title">By Evolution Stage</div>
-          <div class="sort-btns">
-            <button class="sort-btn active" data-section="stage" data-by="you">YOU</button>
-            <button class="sort-btn ai-btn" data-section="stage" data-by="ai" disabled>AI</button>
-          </div>
         </div>
         <div class="breakdown-bars" id="breakdown-stage"></div>
       </div>
@@ -81,17 +73,13 @@
       <div class="breakdown-section">
         <div class="breakdown-section-header">
           <div class="breakdown-section-title">By Type</div>
-          <div class="sort-btns">
-            <button class="sort-btn active" data-section="type" data-by="you">YOU</button>
-            <button class="sort-btn ai-btn" data-section="type" data-by="ai" disabled>AI</button>
-          </div>
         </div>
         <div class="breakdown-bars" id="breakdown-type"></div>
       </div>
     </div>
 
     <p class="breakdown-hint">
-      Only categories with ≥ 5 games shown. &nbsp;
+      Sorted hardest-first. Only categories with ≥ 5 games shown. &nbsp;
       <strong>YOU</strong>:
         <span style="color:#4ade80">■</span> ≥70% &nbsp;
         <span style="color:#fbbf24">■</span> 50–69% &nbsp;
@@ -114,7 +102,6 @@
   let progressTimer    = null;
   let cachedBreakdown  = null;
 
-  const sectionSortState = { gen: "you", stage: "you", type: "you" };
   const SECTION_META = {
     gen:   { containerId: "breakdown-gen",   hasIcon: false, dataKey: "by_generation" },
     stage: { containerId: "breakdown-stage", hasIcon: false, dataKey: "by_stage" },
@@ -250,57 +237,20 @@
     });
   }
 
-  function getSorted(items, by) {
-    const copy = [...items];
-    if (by === "you") copy.sort((a, b) => a.avg - b.avg);
-    else if (by === "ai") copy.sort((a, b) => (b.shap ?? -Infinity) - (a.shap ?? -Infinity));
-    return copy;
-  }
-
   function renderSection(sectionKey) {
-    const meta   = SECTION_META[sectionKey];
-    const sortBy = sectionSortState[sectionKey];
-    const items  = cachedBreakdown.breakdown[meta.dataKey];
-    makeRows(getSorted(items, sortBy), meta.containerId, meta.hasIcon);
-
-    // Sync active button state
-    const container = document.getElementById(meta.containerId).closest(".breakdown-section");
-    container.querySelectorAll(".sort-btn").forEach(btn => {
-      btn.classList.toggle("active", btn.dataset.by === sortBy);
-    });
+    const meta  = SECTION_META[sectionKey];
+    const items = [...cachedBreakdown.breakdown[meta.dataKey]];
+    // Always sort hardest-first (lowest accuracy first)
+    items.sort((a, b) => a.avg - b.avg);
+    makeRows(items, meta.containerId, meta.hasIcon);
   }
 
   function renderBreakdown(bd) {
     cachedBreakdown = bd;
-
-    const brk = bd.breakdown;
-    const hasAnySHAP = [
-      ...brk.by_generation, ...brk.by_stage, ...brk.by_type
-    ].some(it => it.shap != null);
-
-    document.querySelectorAll(".sort-btn.ai-btn").forEach(btn => {
-      btn.disabled = !hasAnySHAP;
-      btn.title = hasAnySHAP ? "" : "Unlocks after 20 games";
-    });
-
     Object.keys(SECTION_META).forEach(key => renderSection(key));
   }
 
-  // Sort button clicks
-  document.querySelectorAll(".sort-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      if (btn.disabled) return;
-      sectionSortState[btn.dataset.section] = btn.dataset.by;
-      renderSection(btn.dataset.section);
-    });
-  });
-
   async function loadProfile(gameType) {
-    // Reset sort state when switching tabs
-    Object.keys(sectionSortState).forEach(k => sectionSortState[k] = "you");
-    document.querySelectorAll(".sort-btn[data-by='you']").forEach(b => b.classList.add("active"));
-    document.querySelectorAll(".sort-btn[data-by='ai']").forEach(b => b.classList.remove("active"));
-
     showLoading();
     try {
       const res  = await fetch(

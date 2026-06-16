@@ -7,6 +7,10 @@
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="game-selector">
+
+      <!-- DOJO section -->
+      <div class="game-section-label">DOJO</div>
+
       <button class="mode-btn active" id="btn-game1" data-game="name_guess">
         <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" class="mode-sprite">Name It
       </button>
@@ -14,9 +18,11 @@
         <button class="submode-pill active" id="submode-medium">Medium</button>
         <button class="submode-pill" id="submode-name-hard">Hard</button>
       </div>
+
       <button class="mode-btn" id="btn-game2" data-game="number_guess">
         <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" alt="" class="mode-sprite">Guess Number
       </button>
+
       <button class="mode-btn" id="btn-type">
         <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" alt="" class="mode-sprite">Guess the Type
       </button>
@@ -24,6 +30,17 @@
         <button class="submode-pill active" id="submode-easy">Easy</button>
         <button class="submode-pill" id="submode-hard">Hard</button>
       </div>
+
+      <!-- BATTLE ARENA section -->
+      <div class="game-section-label battle-label">BATTLE ARENA</div>
+      <div class="battle-arena-teaser">
+        <span class="battle-arena-teaser-icon">⚔</span>
+        <div>
+          <div class="battle-title">Coming Soon</div>
+          <div class="battle-sub">Competitive VS &amp; Solo Challenge</div>
+        </div>
+      </div>
+
     </div>
 
     <div class="stats-box">
@@ -32,7 +49,7 @@
         <span class="stat-value" id="stat-games">0</span>
       </div>
       <div class="stat">
-        <span class="stat-label">Session Accuracy</span>
+        <span class="stat-label">Session Avg Score</span>
         <span class="stat-value" id="stat-accuracy">—</span>
       </div>
       <div class="stat">
@@ -41,20 +58,21 @@
       </div>
     </div>
 
-    <div id="challenge-section" class="challenge-box hidden">
-      <div class="challenge-locked" id="challenge-locked">
-        <p>Challenge Mode unlocks after <span id="games-needed">20</span> games</p>
-        <div class="progress-bar">
-          <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    <div id="professor-oak-section" class="professor-oak-box hidden">
+      <div class="oak-header">Professor Oak Analysis</div>
+      <div class="oak-body">
+        <div class="oak-info">
+          <div class="oak-desc" id="oak-desc"></div>
         </div>
-      </div>
-      <div class="challenge-unlocked hidden" id="challenge-unlocked">
-        <label class="challenge-toggle">
-          <input type="checkbox" id="challenge-checkbox" />
-          <span>Challenge Mode</span>
-          <button type="button" class="challenge-info-btn" id="challenge-info-btn" title="What is Challenge Mode?">ℹ️</button>
-        </label>
-        <p class="challenge-hint">Machine learning picks your hardest Pokémon</p>
+        <div class="oak-right">
+          <div id="oak-locked-wrap" class="hidden">
+            <div class="oak-progress-bar">
+              <div class="oak-progress-fill" id="oak-progress-fill"></div>
+            </div>
+            <div class="oak-progress-label"><span id="oak-games-count">0</span>/20</div>
+          </div>
+          <div id="oak-active-badge" class="oak-active-badge hidden">ACTIVE</div>
+        </div>
       </div>
     </div>
   </aside>
@@ -71,8 +89,30 @@
       <code>uv run python data/fetch_data.py</code>
     </div>
 
+    <!-- Intro screen: shown when switching game modes -->
+    <div id="intro-screen" class="intro-screen hidden">
+      <div class="intro-card">
+        <div class="intro-title" id="intro-title"></div>
+        <p class="intro-desc" id="intro-desc"></p>
+        <div class="intro-meta">
+          <div class="intro-meta-block">
+            <span class="intro-meta-label">Scoring</span>
+            <p class="intro-meta-text" id="intro-scoring-text"></p>
+          </div>
+          <div class="intro-meta-block">
+            <span class="intro-meta-label">Controls</span>
+            <p class="intro-meta-text" id="intro-controls-text"></p>
+          </div>
+        </div>
+        <button id="intro-start-btn" class="btn btn-primary btn-lg">Start</button>
+      </div>
+    </div>
+
     <div id="game-screen" class="hidden">
       <div class="pokemon-card">
+        <div id="round-timer" class="round-timer hidden timer-green">
+          <span id="timer-value">60</span>
+        </div>
         <div class="sprite-wrapper">
           <img id="pokemon-sprite" src="" alt="Pokémon sprite" class="pokemon-sprite" />
         </div>
@@ -80,22 +120,22 @@
       </div>
 
       <div class="answer-zone">
-        <!-- Game 1 input -->
+        <!-- Name It input -->
         <div id="game1-input-area">
           <label>What's this Pokémon's name?</label>
           <input type="text" id="name-input" placeholder="Type the name..." autocomplete="off" autocorrect="off" spellcheck="false" />
         </div>
-        <!-- Game 2 input -->
+        <!-- Guess Number input -->
         <div id="game2-input-area" class="hidden">
           <label>What's its Pokédex number?</label>
           <input type="number" id="number-input" placeholder="1 – 1025" min="1" max="1025" />
         </div>
-        <!-- Type Easy: 4 choice buttons (clicking one submits immediately) -->
+        <!-- Type Easy: 4 choice buttons -->
         <div id="type-easy-area" class="hidden">
           <label>What type is this Pokémon?</label>
           <div id="type-choices" class="type-choices"></div>
         </div>
-        <!-- Type Hard: all 18 type toggles + submit -->
+        <!-- Type Hard: all 18 type toggles -->
         <div id="type-hard-area" class="hidden">
           <label>Select all types this Pokémon has (max 2):</label>
           <div id="type-grid" class="type-grid"></div>
@@ -112,6 +152,14 @@
                 stroke-dasharray="314" stroke-dashoffset="314"/>
             </svg>
             <span class="accuracy-number" id="accuracy-number">0%</span>
+          </div>
+          <div class="result-scores">
+            <div id="final-score-display" class="final-score-display hidden">
+              +<span id="final-score-val">0</span> pts
+            </div>
+            <div id="evo-score-result" class="evo-score-result hidden">
+              EVO <span id="evo-score-val">0</span>
+            </div>
           </div>
         </div>
         <div class="result-details">
@@ -153,51 +201,137 @@
     return `<span class="type-badge" style="background:${color}">${type}</span>`;
   }
 
+  // ── Intro data ────────────────────────────────────────────────────────────
+  const GAME_INTROS = {
+    name_guess: {
+      title: "Name It — Medium",
+      desc: "A Pokémon appears with its artwork fully visible. Type its name as quickly as you can!",
+      scoring: "Score = Accuracy × Time Bonus. Perfect answer at the start = 100 pts. Timer counts down from 60 s.",
+      controls: "Type the Pokémon name and press Enter or click Submit.",
+    },
+    name_hard: {
+      title: "Name It — Hard",
+      desc: "Only the silhouette is shown. Can you identify the Pokémon from its outline alone?",
+      scoring: "Score = Accuracy × Time Bonus. Perfect answer at the start = 100 pts. Timer counts down from 60 s.",
+      controls: "Type the Pokémon name and press Enter or click Submit.",
+    },
+    number_guess: {
+      title: "Guess the Number",
+      desc: "The Pokémon's name and artwork are shown. Enter its Pokédex number — the closer the better!",
+      scoring: "Score = Closeness × Time Bonus. Exact match at the start = 100 pts. Timer counts down from 60 s.",
+      controls: "Type a number from 1 to 1025 and press Enter or click Submit.",
+    },
+    type_easy: {
+      title: "Guess the Type — Easy",
+      desc: "A Pokémon appears. Select its primary type from four choices.",
+      scoring: "Score = 100 × Time Bonus if correct, 0 if wrong. Timer counts down from 60 s.",
+      controls: "Click the correct type button — it submits instantly.",
+    },
+    type_hard: {
+      title: "Guess the Type — Hard",
+      desc: "Select ALL types this Pokémon has — it may be single or dual type.",
+      scoring: "Score = Type Accuracy × Time Bonus. Timer counts down from 60 s.",
+      controls: "Toggle type buttons (max 2), then click Submit.",
+    },
+  };
+
   // ── State ─────────────────────────────────────────────────────────────────
   const username = localStorage.getItem("poke_username");
   if (!username) window.location.href = "/";
 
   let currentGame = "name_guess";
   let currentPokemon = null;
-  let challengeModeByType = { name_guess: false, name_hard: false, number_guess: false, type_easy: false, type_hard: false };
-  let sessionAccuracies = [];
+  let sessionScores = [];
   let streak = 0;
   let selectedTypes = [];
 
+  // Timer state
+  const ROUND_DURATION = 60;
+  let roundStartTime = null;
+  let timerInterval = null;
+
   // ── DOM refs ──────────────────────────────────────────────────────────────
-  const loadingScreen = document.getElementById("loading-screen");
-  const noDataScreen  = document.getElementById("no-data-screen");
-  const gameScreen    = document.getElementById("game-screen");
-  const submitBtn     = document.getElementById("submit-btn");
-  const nextBtn       = document.getElementById("next-btn");
-  const resultZone    = document.getElementById("result-zone");
-  const answerZone    = document.querySelector(".answer-zone");
-  const challengeCheckbox = document.getElementById("challenge-checkbox");
-  const btnGame1    = document.getElementById("btn-game1");
-  const btnGame2    = document.getElementById("btn-game2");
-  const btnType     = document.getElementById("btn-type");
-  const nameSubmode = document.getElementById("name-submode");
-  const subMedium   = document.getElementById("submode-medium");
-  const subNameHard = document.getElementById("submode-name-hard");
-  const typeSubmode = document.getElementById("type-submode");
-  const subEasy     = document.getElementById("submode-easy");
-  const subHard     = document.getElementById("submode-hard");
+  const loadingScreen  = document.getElementById("loading-screen");
+  const noDataScreen   = document.getElementById("no-data-screen");
+  const introScreen    = document.getElementById("intro-screen");
+  const gameScreen     = document.getElementById("game-screen");
+  const submitBtn      = document.getElementById("submit-btn");
+  const nextBtn        = document.getElementById("next-btn");
+  const resultZone     = document.getElementById("result-zone");
+  const answerZone     = document.querySelector(".answer-zone");
+  const btnGame1       = document.getElementById("btn-game1");
+  const btnGame2       = document.getElementById("btn-game2");
+  const btnType        = document.getElementById("btn-type");
+  const nameSubmode    = document.getElementById("name-submode");
+  const subMedium      = document.getElementById("submode-medium");
+  const subNameHard    = document.getElementById("submode-name-hard");
+  const typeSubmode    = document.getElementById("type-submode");
+  const subEasy        = document.getElementById("submode-easy");
+  const subHard        = document.getElementById("submode-hard");
+  const roundTimerEl   = document.getElementById("round-timer");
+  const timerValueEl   = document.getElementById("timer-value");
+
+  // ── Timer ─────────────────────────────────────────────────────────────────
+  function startTimer() {
+    roundStartTime = Date.now();
+    roundTimerEl.classList.remove("hidden");
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      const elapsed   = (Date.now() - roundStartTime) / 1000;
+      const remaining = Math.max(0, ROUND_DURATION - elapsed);
+      timerValueEl.textContent = Math.ceil(remaining);
+
+      roundTimerEl.className = "round-timer";
+      if (remaining > 30)       roundTimerEl.classList.add("timer-green");
+      else if (remaining > 15)  roundTimerEl.classList.add("timer-amber");
+      else {
+        roundTimerEl.classList.add("timer-red");
+        if (remaining <= 10)    roundTimerEl.classList.add("timer-pulse");
+      }
+
+      if (remaining <= 0) {
+        clearInterval(timerInterval);
+        autoSubmit();
+      }
+    }, 100);
+  }
+
+  function stopTimer() {
+    clearInterval(timerInterval);
+    roundTimerEl.classList.add("hidden");
+    roundStartTime = null;
+  }
+
+  function getTimeUsed() {
+    if (!roundStartTime) return ROUND_DURATION;
+    return Math.min(ROUND_DURATION, (Date.now() - roundStartTime) / 1000);
+  }
+
+  function autoSubmit() {
+    if (!resultZone.classList.contains("hidden")) return;
+    if (currentGame === "name_guess" || currentGame === "name_hard") {
+      doSubmit(document.getElementById("name-input").value || "");
+    } else if (currentGame === "number_guess") {
+      doSubmit(document.getElementById("number-input").value || "0");
+    } else if (currentGame === "type_hard") {
+      doSubmit(selectedTypes.join(","));
+    } else if (currentGame === "type_easy") {
+      submitTypeEasy("");
+    }
+  }
 
   // ── Mode switching ────────────────────────────────────────────────────────
   function switchGame(type) {
     currentGame = type;
     selectedTypes = [];
-    challengeCheckbox.checked = challengeModeByType[type] || false;
 
     const isName = type === "name_guess" || type === "name_hard";
     const isType = type === "type_easy"  || type === "type_hard";
 
-    // Top-level button active states
     btnGame1.classList.toggle("active", isName);
     btnGame2.classList.toggle("active", type === "number_guess");
     btnType.classList.toggle("active",  isType);
 
-    // Sub-mode pills
     nameSubmode.classList.toggle("hidden", !isName);
     subMedium.classList.toggle("active",   type === "name_guess");
     subNameHard.classList.toggle("active", type === "name_hard");
@@ -205,43 +339,49 @@
     subEasy.classList.toggle("active", type === "type_easy");
     subHard.classList.toggle("active", type === "type_hard");
 
-    // Input areas
     document.getElementById("game1-input-area").classList.toggle("hidden", !isName);
     document.getElementById("game2-input-area").classList.toggle("hidden", type !== "number_guess");
     document.getElementById("type-easy-area").classList.toggle("hidden",   type !== "type_easy");
     document.getElementById("type-hard-area").classList.toggle("hidden",   type !== "type_hard");
 
-    // Name display: visible for number_guess and type_easy only
     document.getElementById("game2-name").classList.toggle("hidden",
       type !== "number_guess" && type !== "type_easy");
 
-    // Submit button hidden for type_easy
     submitBtn.classList.toggle("hidden", type === "type_easy");
-
-    // Type hard compact layout
     document.getElementById("game-screen").classList.toggle("type-hard-layout", type === "type_hard");
 
-    loadNext();
+    showIntro(type);
+  }
+
+  function showIntro(type) {
+    stopTimer();
+    const intro = GAME_INTROS[type] || {};
+    document.getElementById("intro-title").textContent    = intro.title    || "";
+    document.getElementById("intro-desc").textContent     = intro.desc     || "";
+    document.getElementById("intro-scoring-text").textContent  = intro.scoring  || "";
+    document.getElementById("intro-controls-text").textContent = intro.controls || "";
+
+    loadingScreen.classList.add("hidden");
+    noDataScreen.classList.add("hidden");
+    gameScreen.classList.add("hidden");
+    introScreen.classList.remove("hidden");
   }
 
   btnGame1.addEventListener("click", () => {
     if (currentGame !== "name_guess" && currentGame !== "name_hard") switchGame("name_guess");
   });
   btnGame2.addEventListener("click", () => switchGame("number_guess"));
-  btnType.addEventListener("click", () => {
+  btnType.addEventListener("click",  () => {
     if (currentGame !== "type_easy" && currentGame !== "type_hard") switchGame("type_easy");
   });
-  subMedium.addEventListener("click",   () => switchGame("name_guess"));
-  subNameHard.addEventListener("click", () => switchGame("name_hard"));
-  subEasy.addEventListener("click", () => switchGame("type_easy"));
-  subHard.addEventListener("click", () => switchGame("type_hard"));
+  subMedium.addEventListener("click",   () => { if (currentGame !== "name_guess")  switchGame("name_guess"); });
+  subNameHard.addEventListener("click", () => { if (currentGame !== "name_hard")   switchGame("name_hard"); });
+  subEasy.addEventListener("click",     () => { if (currentGame !== "type_easy")   switchGame("type_easy"); });
+  subHard.addEventListener("click",     () => { if (currentGame !== "type_hard")   switchGame("type_hard"); });
 
-  challengeCheckbox.addEventListener("change", e => {
-    challengeModeByType[currentGame] = e.target.checked;
-    loadNext();
-  });
+  document.getElementById("intro-start-btn").addEventListener("click", loadNext);
   submitBtn.addEventListener("click", submitAnswer);
-  nextBtn.addEventListener("click", loadNext);
+  nextBtn.addEventListener("click",   loadNext);
 
   document.getElementById("name-input").addEventListener("keydown",   e => { if (e.key === "Enter") submitBtn.click(); });
   document.getElementById("number-input").addEventListener("keydown", e => { if (e.key === "Enter") submitBtn.click(); });
@@ -251,6 +391,9 @@
     if (!resultZone.classList.contains("hidden")) {
       e.preventDefault();
       nextBtn.click();
+    } else if (!introScreen.classList.contains("hidden")) {
+      e.preventDefault();
+      document.getElementById("intro-start-btn").click();
     } else if (currentGame === "type_hard" && !answerZone.classList.contains("hidden")) {
       e.preventDefault();
       submitBtn.click();
@@ -259,59 +402,72 @@
 
   // ── API calls ─────────────────────────────────────────────────────────────
   async function loadNext() {
+    stopTimer();
     showLoading();
     try {
       const res = await fetch("/game/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, game_type: currentGame, challenge_mode: challengeModeByType[currentGame] }),
+        body: JSON.stringify({ username, game_type: currentGame }),
       });
       if (!res.ok) { showNoData(); return; }
       const data = await res.json();
       currentPokemon = data;
-      updateChallengeUI(data);
+      updateProfessorOakUI(data);
       showGame(data);
     } catch {
       showNoData();
     }
   }
 
+  async function doSubmit(guess) {
+    if (!currentPokemon) return;
+    const timeUsed = getTimeUsed();
+    stopTimer();
+    submitBtn.disabled = true;
+    try {
+      const res = await fetch("/game/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          pokemon_id: currentPokemon.pokemon_id,
+          game_type: currentGame,
+          guess: String(guess),
+          time_used: timeUsed,
+        }),
+      });
+      const data = await res.json();
+      showResult(data);
+      updateStats(data);
+    } finally {
+      submitBtn.disabled = false;
+    }
+  }
+
   async function submitAnswer() {
     if (!currentPokemon) return;
-
-    let guess;
-    if      (currentGame === "name_guess" || currentGame === "name_hard") guess = document.getElementById("name-input").value;
-    else if (currentGame === "number_guess") guess = document.getElementById("number-input").value;
-    else if (currentGame === "type_hard")    guess = selectedTypes.join(",");
-
-    if (!guess || !String(guess).trim()) return;
-
-    submitBtn.disabled = true;
-    const res = await fetch("/game/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username,
-        pokemon_id: currentPokemon.pokemon_id,
-        game_type: currentGame,
-        guess: String(guess),
-        was_challenge: challengeModeByType[currentGame],
-      }),
-    });
-    const data = await res.json();
-    submitBtn.disabled = false;
-    showResult(data);
-    updateStats(data);
+    let guess = "";
+    if (currentGame === "name_guess" || currentGame === "name_hard") {
+      guess = document.getElementById("name-input").value;
+      if (!guess.trim()) return;
+    } else if (currentGame === "number_guess") {
+      guess = document.getElementById("number-input").value;
+      if (!guess.trim()) return;
+    } else if (currentGame === "type_hard") {
+      guess = selectedTypes.join(",");
+    }
+    await doSubmit(guess);
   }
 
   async function submitTypeEasy(selectedType) {
     if (!currentPokemon) return;
-    // Immediate visual feedback before network response
+    const timeUsed = getTimeUsed();
+    stopTimer();
     document.querySelectorAll(".type-choice-btn").forEach(b => {
       b.disabled = true;
       if (b.dataset.type === selectedType) b.classList.add("selected");
     });
-
     const res = await fetch("/game/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -320,7 +476,7 @@
         pokemon_id: currentPokemon.pokemon_id,
         game_type: "type_easy",
         guess: selectedType,
-        was_challenge: challengeModeByType["type_easy"],
+        time_used: timeUsed,
       }),
     });
     const data = await res.json();
@@ -330,19 +486,23 @@
 
   // ── Screen transitions ────────────────────────────────────────────────────
   function showLoading() {
+    stopTimer();
     loadingScreen.classList.remove("hidden");
     noDataScreen.classList.add("hidden");
+    introScreen.classList.add("hidden");
     gameScreen.classList.add("hidden");
   }
   function showNoData() {
     loadingScreen.classList.add("hidden");
     noDataScreen.classList.remove("hidden");
+    introScreen.classList.add("hidden");
     gameScreen.classList.add("hidden");
   }
 
   function showGame(data) {
     loadingScreen.classList.add("hidden");
     noDataScreen.classList.add("hidden");
+    introScreen.classList.add("hidden");
     gameScreen.classList.remove("hidden");
     resultZone.classList.add("hidden");
     answerZone.classList.remove("hidden");
@@ -364,9 +524,13 @@
     }
 
     setTimeout(() => {
-      if (currentGame === "name_guess")        document.getElementById("name-input").focus();
-      else if (currentGame === "number_guess") document.getElementById("number-input").focus();
+      if (currentGame === "name_guess" || currentGame === "name_hard")
+        document.getElementById("name-input").focus();
+      else if (currentGame === "number_guess")
+        document.getElementById("number-input").focus();
     }, 50);
+
+    startTimer();
   }
 
   function renderTypeChoices(choices) {
@@ -405,6 +569,7 @@
   }
 
   function showResult(data, userGuessType = null) {
+    stopTimer();
     document.getElementById("pokemon-sprite").classList.remove("silhouette");
     answerZone.classList.add("hidden");
     resultZone.classList.remove("hidden");
@@ -415,6 +580,25 @@
     const ring = document.getElementById("ring-fill");
     ring.style.strokeDashoffset = 314 - (acc / 100) * 314;
     ring.style.stroke = acc >= 80 ? "#22c55e" : acc >= 50 ? "#f59e0b" : "#ef4444";
+
+    // Final score display
+    const fsDisplay = document.getElementById("final-score-display");
+    const fsVal     = document.getElementById("final-score-val");
+    if (data.final_score !== undefined && data.final_score !== null) {
+      fsVal.textContent = Math.round(data.final_score);
+      fsDisplay.className = "final-score-display " + (
+        data.final_score >= 70 ? "score-high" :
+        data.final_score >= 40 ? "score-mid"  : "score-low"
+      );
+      fsDisplay.classList.remove("hidden");
+    }
+
+    // EVO score display
+    const evoDisplay = document.getElementById("evo-score-result");
+    if (data.evo_score !== undefined && data.evo_score !== null) {
+      document.getElementById("evo-score-val").textContent = data.evo_score.toFixed(1);
+      evoDisplay.classList.remove("hidden");
+    }
 
     document.getElementById("result-name-text").textContent =
       (currentGame === "name_guess" || currentGame === "name_hard") ? `Correct name: ${data.correct_name}` : "";
@@ -452,49 +636,36 @@
 
   function updateStats(data) {
     document.getElementById("stat-games").textContent = data.games_played;
-    sessionAccuracies.push(data.accuracy);
-    const avg = sessionAccuracies.reduce((a, b) => a + b, 0) / sessionAccuracies.length;
-    document.getElementById("stat-accuracy").textContent = avg.toFixed(1) + "%";
+    sessionScores.push(data.final_score !== undefined ? data.final_score : data.accuracy);
+    const avg = sessionScores.reduce((a, b) => a + b, 0) / sessionScores.length;
+    document.getElementById("stat-accuracy").textContent = avg.toFixed(1) + " pts";
     streak = data.accuracy >= 80 ? streak + 1 : 0;
     document.getElementById("stat-streak").textContent = streak;
   }
 
-  function updateChallengeUI(data) {
-    document.getElementById("challenge-section").classList.remove("hidden");
-    const locked   = document.getElementById("challenge-locked");
-    const unlocked = document.getElementById("challenge-unlocked");
+  function updateProfessorOakUI(data) {
+    const section   = document.getElementById("professor-oak-section");
+    const oakDesc   = document.getElementById("oak-desc");
+    const lockedWrap = document.getElementById("oak-locked-wrap");
+    const activeBadge = document.getElementById("oak-active-badge");
+
+    section.classList.remove("hidden");
+
     if (data.challenge_unlocked) {
-      locked.classList.add("hidden");
-      unlocked.classList.remove("hidden");
+      lockedWrap.classList.add("hidden");
+      activeBadge.classList.remove("hidden");
+      oakDesc.textContent = "80% of Pokémon are selected from your weak spots. 20% are random for variety.";
     } else {
-      locked.classList.remove("hidden");
-      unlocked.classList.add("hidden");
-      document.getElementById("games-needed").textContent = Math.max(0, 20 - data.games_played);
-      document.getElementById("progress-fill").style.width = Math.min(100, (data.games_played / 20) * 100) + "%";
+      lockedWrap.classList.remove("hidden");
+      activeBadge.classList.add("hidden");
+      oakDesc.textContent = "Complete 20 games to unlock. Professor Oak will analyse your history and serve your toughest Pokémon.";
+      document.getElementById("oak-games-count").textContent = data.games_played || 0;
+      document.getElementById("oak-progress-fill").style.width =
+        Math.min(100, ((data.games_played || 0) / 20) * 100) + "%";
     }
   }
 
-  // ── Challenge Mode info tooltip ───────────────────────────────────────────
-  let tooltipTimer = null;
-  document.getElementById("challenge-info-btn").addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const existing = document.getElementById("challenge-tooltip");
-    if (existing) { clearTimeout(tooltipTimer); existing.remove(); return; }
-
-    const tip = document.createElement("div");
-    tip.id = "challenge-tooltip";
-    tip.className = "challenge-tooltip";
-    tip.textContent = "We use machine learning to analyse your game history, identify your weakest Pokémon, and serve them more often — so you train where it counts most.";
-    document.getElementById("challenge-unlocked").appendChild(tip);
-
-    tooltipTimer = setTimeout(() => {
-      tip.classList.add("fade-out");
-      setTimeout(() => tip.remove(), 500);
-    }, 4000);
-  });
-
-  // Initial load — call switchGame so sub-mode pills and input areas are initialised
+  // Initial load: show intro for the default mode
   switchGame("name_guess");
 </script>
 {% endblock %}

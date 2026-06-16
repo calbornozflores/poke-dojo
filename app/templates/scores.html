@@ -25,7 +25,7 @@
   <div id="tab-global" class="tab-content">
     <div id="global-loading" class="centered-msg">Loading...</div>
     <table id="global-table" class="score-table hidden">
-      <thead><tr><th>#</th><th>Trainer</th><th>Games</th><th>Avg Accuracy</th><th>Best</th><th>Worst</th></tr></thead>
+      <thead><tr><th>#</th><th>Trainer</th><th>Games</th><th>Avg Score</th><th>Best</th><th>Worst</th></tr></thead>
       <tbody id="global-body"></tbody>
     </table>
     <p id="global-empty" class="centered-msg hidden">No scores yet. Go play some games!</p>
@@ -35,7 +35,7 @@
   <div id="tab-nameit" class="tab-content hidden">
     <div id="nameit-loading" class="centered-msg">Loading...</div>
     <table id="nameit-table" class="score-table hidden">
-      <thead><tr><th>#</th><th>Trainer</th><th>Games</th><th>Avg Accuracy</th><th>Best</th><th>Worst</th></tr></thead>
+      <thead><tr><th>#</th><th>Trainer</th><th>Games</th><th>Avg Score</th><th>Best</th><th>Worst</th></tr></thead>
       <tbody id="nameit-body"></tbody>
     </table>
     <p id="nameit-empty" class="centered-msg hidden">No Name It scores yet.</p>
@@ -45,7 +45,7 @@
   <div id="tab-guessnumber" class="tab-content hidden">
     <div id="guessnumber-loading" class="centered-msg">Loading...</div>
     <table id="guessnumber-table" class="score-table hidden">
-      <thead><tr><th>#</th><th>Trainer</th><th>Games</th><th>Avg Accuracy</th><th>Best</th><th>Worst</th></tr></thead>
+      <thead><tr><th>#</th><th>Trainer</th><th>Games</th><th>Avg Score</th><th>Best</th><th>Worst</th></tr></thead>
       <tbody id="guessnumber-body"></tbody>
     </table>
     <p id="guessnumber-empty" class="centered-msg hidden">No Guess Number scores yet.</p>
@@ -59,7 +59,7 @@
     </div>
     <div id="type-loading" class="centered-msg hidden">Loading...</div>
     <table id="type-table" class="score-table hidden">
-      <thead><tr><th>#</th><th>Trainer</th><th>Games</th><th>Avg Accuracy</th><th>Best</th><th>Worst</th></tr></thead>
+      <thead><tr><th>#</th><th>Trainer</th><th>Games</th><th>Avg Score</th><th>Best</th><th>Worst</th></tr></thead>
       <tbody id="type-body"></tbody>
     </table>
     <p id="type-empty" class="centered-msg hidden">No Type scores yet.</p>
@@ -71,8 +71,8 @@
 <script>
   const username = localStorage.getItem("poke_username");
 
-  function fmtAcc(val) {
-    return val !== null && val !== undefined ? val.toFixed(1) + "%" : "—";
+  function fmtScore(val) {
+    return val !== null && val !== undefined ? val.toFixed(1) + " pts" : "—";
   }
 
   function renderRows(tbodyId, tableId, loadingId, emptyId, scores) {
@@ -87,9 +87,9 @@
         <td>${i + 1}</td>
         <td><strong>${s.username}</strong></td>
         <td>${s.total_games}</td>
-        <td class="acc-cell">${fmtAcc(s.avg_accuracy)}</td>
-        <td class="best">${fmtAcc(s.best_accuracy)}</td>
-        <td class="worst">${fmtAcc(s.worst_accuracy)}</td>
+        <td class="acc-cell">${fmtScore(s.avg_score)}</td>
+        <td class="best">${fmtScore(s.best_score)}</td>
+        <td class="worst">${fmtScore(s.worst_score)}</td>
       </tr>
     `).join("");
     table.classList.remove("hidden");

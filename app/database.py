@@ -21,7 +21,23 @@ def run_migrations():
                 conn.execute(text(f"ALTER TABLE pokemon ADD COLUMN {col} {ddl}"))
                 conn.commit()
             except Exception:
-                pass  # column already exists
+                pass
+
+        # Phase 2: add time_used and final_score to game_results.
+        # When time_used is first added (migration needed), delete old scoreless rows.
+        time_used_added = False
+        for col, ddl in [("time_used", "REAL"), ("final_score", "REAL")]:
+            try:
+                conn.execute(text(f"ALTER TABLE game_results ADD COLUMN {col} {ddl}"))
+                conn.commit()
+                if col == "time_used":
+                    time_used_added = True
+            except Exception:
+                pass
+
+        if time_used_added:
+            conn.execute(text("DELETE FROM game_results"))
+            conn.commit()
 
 
 def get_db():
