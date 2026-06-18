@@ -124,7 +124,7 @@
   const username = localStorage.getItem("poke_username");
   if (!username) window.location.href = "/";
 
-  let activeGameType = "";
+  let activeGameType = sessionStorage.getItem("journey_tab") ?? "";
   const SVG_W = 760, SVG_H = 260;
   const PAD_L = 10, PAD_R = 20, PAD_T = 10, PAD_B = 10;
   const CHART_W = SVG_W - PAD_L - PAD_R;
@@ -255,10 +255,17 @@
       document.querySelectorAll(".journey-tab").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       activeGameType = btn.dataset.game;
+      sessionStorage.setItem("journey_tab", activeGameType);
       loadJourney(activeGameType);
     });
   });
 
+  // Apply remembered or default tab
+  const savedJourneyTab = document.querySelector(`.journey-tab[data-game="${activeGameType}"]`);
+  if (savedJourneyTab) {
+    document.querySelectorAll(".journey-tab").forEach(b => b.classList.remove("active"));
+    savedJourneyTab.classList.add("active");
+  }
   loadJourney(activeGameType);
 </script>
 {% endblock %}
