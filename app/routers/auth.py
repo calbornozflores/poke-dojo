@@ -35,7 +35,7 @@ def claim_username(req: ClaimRequest):
     if not supabase_client.is_configured():
         raise HTTPException(503, "Global features not configured on this instance")
 
-    name = req.username.strip()
+    name = req.username.strip().lower()
     if len(name) < _USERNAME_MIN or len(name) > _USERNAME_MAX:
         raise HTTPException(400, f"Username must be {_USERNAME_MIN}–{_USERNAME_MAX} characters")
     if not all(c.isalnum() or c in "-_" for c in name):
