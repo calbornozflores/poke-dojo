@@ -10,11 +10,11 @@
 
   <!-- Game type selector -->
   <div class="profile-game-tabs">
-    <button class="profile-game-tab" data-game="name_easy">
+    <button class="profile-game-tab active" data-game="name_easy">
       <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/172.png" alt="">
       Name Easy
     </button>
-    <button class="profile-game-tab active" data-game="name_guess">
+    <button class="profile-game-tab" data-game="name_guess">
       <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="">
       Name Medium
     </button>
@@ -98,7 +98,7 @@
   const username = localStorage.getItem("poke_username");
   if (!username) window.location.href = "/";
 
-  let activeGame       = "name_guess";
+  let activeGame       = sessionStorage.getItem("profile_tab") || "name_easy";
   let progressTimer    = null;
   let cachedBreakdown  = null;
 
@@ -289,10 +289,17 @@
       document.querySelectorAll(".profile-game-tab").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       activeGame = btn.dataset.game;
+      sessionStorage.setItem("profile_tab", activeGame);
       loadProfile(activeGame);
     });
   });
 
+  // Apply remembered or default tab
+  const savedTab = document.querySelector(`.profile-game-tab[data-game="${activeGame}"]`);
+  if (savedTab) {
+    document.querySelectorAll(".profile-game-tab").forEach(b => b.classList.remove("active"));
+    savedTab.classList.add("active");
+  }
   loadProfile(activeGame);
 </script>
 {% endblock %}
