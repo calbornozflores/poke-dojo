@@ -1873,3 +1873,52 @@ a:hover { color: var(--accent-hover); }
 
 
 .analytics-card .match-end-actions { margin-top: 2rem; }
+
+/* ── Name It Easy: name-choice buttons ── */
+.name-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 380px;
+  margin: 0.25rem auto 0;
+}
+.name-choice-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1.1rem;
+  background: rgba(255,255,255,0.05);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.12s;
+  text-align: left;
+}
+.name-choice-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: rgba(108,99,255,0.1);
+  transform: translateY(-2px);
+}
+.name-choice-btn.selected {
+  border-color: var(--accent);
+  background: rgba(108,99,255,0.18);
+}
+.name-choice-btn:disabled { opacity: 0.6; cursor: default; transform: none; }
+.name-choice-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: var(--border);
+  border-radius: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}

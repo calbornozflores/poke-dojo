@@ -37,7 +37,7 @@ def list_game_types(db: Session = Depends(get_db)):
 def leaderboard(
     game_type: Optional[str] = Query(
         default=None,
-        pattern="^(name_guess|name_hard|number_guess|type_easy|type_hard)$",
+        pattern="^(name_easy|name_guess|name_hard|number_guess|type_easy|type_hard)$",
     ),
     db: Session = Depends(get_db),
 ):
