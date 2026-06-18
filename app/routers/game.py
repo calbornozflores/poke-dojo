@@ -2,6 +2,7 @@ import random
 from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -59,6 +60,7 @@ class StartResponse(BaseModel):
     challenge_unlocked: bool
     games_played: int
     type_choices: list[str] = []
+    name_choices: list[str] = []
 
 
 class SubmitRequest(BaseModel):
@@ -256,8 +258,9 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
     if not pokemon:
         raise HTTPException(status_code=503, detail="No Pokémon data found. Run the fetch script first.")
 
-    # Build type choices for type games
+    # Build type/name choices
     type_choices: list[str] = []
+    name_choices: list[str] = []
     if req.game_type == "type_easy":
         # Correct types + random wrong types to fill 4 slots
         pokemon_types = [t for t in [pokemon.type1, pokemon.type2] if t]
@@ -267,6 +270,11 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
         type_choices = choices
     elif req.game_type == "type_hard":
         type_choices = list(ALL_TYPES)
+    elif req.game_type == "name_easy":
+        wrong = db.query(Pokemon).filter(Pokemon.id != pokemon.id).order_by(func.random()).limit(2).all()
+        choices = [pokemon.name] + [p.name for p in wrong]
+        random.shuffle(choices)
+        name_choices = choices
 
     show_name = req.game_type in ("number_guess", "type_easy")
 
@@ -278,6 +286,7 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
         challenge_unlocked=challenge_unlocked,
         games_played=games_played,
         type_choices=type_choices,
+        name_choices=name_choices,
     )
 
 
@@ -318,6 +327,9 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
         accuracy = max(0.0, (correct_hits - wrong_hits) / n_types * 100.0) if n_types > 0 else 0.0
         correct_types = [t for t in [pokemon.type1, pokemon.type2] if t]
         user_types = selected
+
+    elif req.game_type == "name_easy":
+        accuracy = 100.0 if req.guess.strip().lower() == pokemon.name.lower() else 0.0
 
     else:
         raise HTTPException(status_code=422, detail="invalid game_type")

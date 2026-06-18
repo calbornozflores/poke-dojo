@@ -36,6 +36,7 @@
   <!-- Name It leaderboard -->
   <div id="tab-nameit" class="tab-content hidden">
     <div class="type-sub-switch">
+      <button class="type-sub-btn" data-ni="name_easy">Easy</button>
       <button class="type-sub-btn active" data-ni="name_guess">Medium</button>
       <button class="type-sub-btn" data-ni="name_hard">Hard</button>
     </div>
@@ -111,7 +112,7 @@
   }
 
   // ── Tab switching ─────────────────────────────────────────────────────────
-  let nameitLoaded = { name_guess: false, name_hard: false };
+  let nameitLoaded = { name_easy: false, name_guess: false, name_hard: false };
   let nameitSubActive = "name_guess";
   let guessnumberLoaded = false;
   let typeLoaded = { type_easy: false, type_hard: false };
