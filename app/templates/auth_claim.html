@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Choose Your Trainer Name — Poke-Dojo{% endblock %}
+
+{% block content %}
+<div class="hero">
+  <div class="hero-card">
+    <h1>Choose Your Trainer Name</h1>
+    <p class="subtitle">
+      This name will appear on the global leaderboard.<br>
+      It's permanent — choose wisely!
+    </p>
+
+    <div class="username-form" id="claim-form">
+      <div class="input-row">
+        <input
+          type="text"
+          id="claim-input"
+          placeholder="e.g. AshKetchum97"
+          maxlength="20"
+          autocomplete="off"
+        />
+        <button id="claim-btn" class="btn btn-primary">Claim Name</button>
+      </div>
+      <p class="hint" id="claim-hint">
+        3–20 characters · letters, numbers, hyphens, underscores · no offensive words
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if supabase_configured %}
+<script>
+const claimInput = document.getElementById("claim-input");
+const claimBtn   = document.getElementById("claim-btn");
+const claimHint  = document.getElementById("claim-hint");
+
+async function getToken() {
+  const stored = sessionStorage.getItem("pending_access_token");
+  if (stored) return stored;
+  const { data: { session } } = await _supabaseClient.auth.getSession();
+  return session?.access_token ?? null;
+}
+
+// Redirect to home if there's no active session
+(async () => {
+  const token = await getToken();
+  if (!token) window.location.href = "/";
+})();
+
+claimBtn.addEventListener("click", async () => {
+  const name = claimInput.value.trim();
+  if (!name) {
+    claimHint.textContent = "Please enter a name.";
+    claimHint.className = "hint error";
+    return;
+  }
+
+  claimBtn.disabled = true;
+  claimBtn.textContent = "Claiming…";
+
+  try {
+    const token = await getToken();
+    if (!token) { window.location.href = "/"; return; }
+
+    const resp = await fetch("/auth/claim-username", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ access_token: token, username: name }),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      claimHint.textContent = data.detail ?? "Could not claim that name.";
+      claimHint.className = "hint error";
+      claimBtn.disabled = false;
+      claimBtn.textContent = "Claim Name";
+      return;
+    }
+
+    localStorage.setItem("poke_username", data.username);
+    sessionStorage.removeItem("pending_access_token");
+    window.location.href = "/";
+  } catch (_) {
+    claimHint.textContent = "Something went wrong. Please try again.";
+    claimHint.className = "hint error";
+    claimBtn.disabled = false;
+    claimBtn.textContent = "Claim Name";
+  }
+});
+
+claimInput.addEventListener("keydown", e => { if (e.key === "Enter") claimBtn.click(); });
+</script>
+{% else %}
+<script>window.location.href = "/";</script>
+{% endif %}
+{% endblock %}

@@ -95,6 +95,11 @@ a:hover { color: var(--accent-hover); }
 .btn-ghost:hover, .btn-secondary:hover { color: var(--text); border-color: var(--accent); }
 .btn-lg { padding: 0.75rem 2rem; font-size: 1.05rem; }
 .btn-sm { padding: 0.35rem 0.85rem; font-size: 0.85rem; }
+.btn-google { background: #fff; color: #3c4043; border: 1px solid #dadce0; font-weight: 500; }
+.btn-google:hover { background: #f8f9fa; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+.auth-divider { display: flex; align-items: center; gap: 0.75rem; margin: 1rem 0; color: var(--text-muted); font-size: 0.85rem; }
+.auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.badge-global { font-size: 0.78rem; font-weight: 600; background: rgba(108,99,255,0.15); color: var(--accent); border: 1px solid rgba(108,99,255,0.3); border-radius: 999px; padding: 0.15rem 0.55rem; vertical-align: middle; }
 
 /* ── Container ── */
 .container { max-width: 1200px; margin: 0 auto; padding: 2rem; flex: 1; width: 100%; }
@@ -1865,4 +1870,6 @@ a:hover { color: var(--accent-hover); }
 }
 .analytics-cat-n { color: var(--text-muted); font-size: 0.62rem; }
 .analytics-slaking { width: 80px; height: 80px; object-fit: contain; }
+
+
 .analytics-card .match-end-actions { margin-top: 2rem; }

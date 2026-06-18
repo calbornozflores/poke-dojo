@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Signing In — Poke-Dojo{% endblock %}
+
+{% block content %}
+<div class="hero">
+  <div class="hero-card" style="text-align:center;">
+    <p style="font-size:1.1rem;">Signing you in…</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if supabase_configured %}
+<script>
+(async () => {
+  // Supabase JS SDK automatically processes the PKCE code from the URL on init.
+  // Give it a tick to exchange the code before calling getSession().
+  await new Promise(r => setTimeout(r, 300));
+
+  try {
+    const { data: { session }, error } = await _supabaseClient.auth.getSession();
+    if (error || !session) {
+      window.location.href = "/?auth_error=1";
+      return;
+    }
+
+    const resp = await fetch("/auth/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ access_token: session.access_token }),
+    });
+    if (!resp.ok) { window.location.href = "/?auth_error=1"; return; }
+
+    const info = await resp.json();
+    if (info.authenticated && info.username) {
+      localStorage.setItem("poke_username", info.username);
+      window.location.href = "/";
+    } else if (info.authenticated) {
+      // New user — needs to claim a username
+      sessionStorage.setItem("pending_access_token", session.access_token);
+      window.location.href = "/auth/claim";
+    } else {
+      window.location.href = "/?auth_error=1";
+    }
+  } catch (_) {
+    window.location.href = "/?auth_error=1";
+  }
+})();
+</script>
+{% else %}
+<script>window.location.href = "/";</script>
+{% endif %}
+{% endblock %}

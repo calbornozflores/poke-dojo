@@ -1,5 +1,9 @@
 import asyncio
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()  # Must run before any service that reads env vars
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -7,7 +11,8 @@ from fastapi.templating import Jinja2Templates
 
 from app.database import engine, run_migrations
 from app.models import Base
-from app.routers import game, scores, challenge, journey, battle_arena
+from app.routers import game, scores, challenge, journey, battle_arena, auth
+from app.services import supabase_client
 from app.services.data_loader import (
     check_db_ready,
     fetch_all_pokemon_background,
@@ -24,11 +29,17 @@ ROOT = Path(__file__).parent.parent
 app.mount("/static", StaticFiles(directory=str(ROOT / "static")), name="static")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
+# Inject Supabase config as template globals so every page can check availability
+templates.env.globals["supabase_configured"] = supabase_client.is_configured()
+templates.env.globals["supabase_url"] = supabase_client._url()
+templates.env.globals["supabase_anon_key"] = supabase_client._anon_key()
+
 app.include_router(game.router)
 app.include_router(scores.router)
 app.include_router(challenge.router)
 app.include_router(journey.router)
 app.include_router(battle_arena.router)
+app.include_router(auth.router)
 
 
 @app.on_event("startup")
@@ -90,6 +101,16 @@ async def battle_arena_page(request: Request):
 @app.get("/arena-leaderboard")
 async def arena_leaderboard_page(request: Request):
     return templates.TemplateResponse(request=request, name="arena_leaderboard.html")
+
+
+@app.get("/auth/callback")
+async def auth_callback_page(request: Request):
+    return templates.TemplateResponse(request=request, name="auth_callback.html")
+
+
+@app.get("/auth/claim")
+async def auth_claim_page(request: Request):
+    return templates.TemplateResponse(request=request, name="auth_claim.html")
 
 
 # ── API ───────────────────────────────────────────────────────────────────────

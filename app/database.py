@@ -46,6 +46,13 @@ def run_migrations():
         except Exception:
             pass
 
+        # Phase 4: shadow_level column for competitive_results
+        try:
+            conn.execute(text("ALTER TABLE competitive_results ADD COLUMN shadow_level REAL DEFAULT 0"))
+            conn.commit()
+        except Exception:
+            pass
+
 
 def get_db():
     db = SessionLocal()

@@ -98,6 +98,7 @@ class CompetitiveResult(Base):
     player2_was_correct: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     player2_score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     shadow_predicted_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    shadow_level: Mapped[float] = mapped_column(Float, default=0.0)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     match: Mapped["CompetitiveMatch"] = relationship(back_populates="competitive_results")
