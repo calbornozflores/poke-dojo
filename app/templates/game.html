@@ -214,7 +214,7 @@
       title: "Name It — Easy",
       desc: "A Pokémon appears with its artwork fully visible. Pick its name from three options!",
       scoring: "Score = 100 × Time Bonus if correct, 0 if wrong. Timer counts down from 60 s.",
-      controls: "Click the correct name button, or press A / B / C for the three options.",
+      controls: "Click the correct name button, or press Q / W / E for the three options.",
     },
     name_guess: {
       title: "Name It — Medium",
@@ -409,7 +409,7 @@
   document.addEventListener("keydown", e => {
     if (currentGame === "name_easy" && resultZone.classList.contains("hidden")
         && introScreen.classList.contains("hidden")) {
-      const idx = ["a", "b", "c"].indexOf(e.key.toLowerCase());
+      const idx = ["q", "w", "e"].indexOf(e.key.toLowerCase());
       if (idx >= 0) {
         const btns = document.querySelectorAll(".name-choice-btn");
         if (btns[idx] && !btns[idx].disabled) btns[idx].click();
@@ -568,7 +568,7 @@
     const container = document.getElementById("name-choices");
     container.innerHTML = choices.map((name, i) =>
       `<button class="name-choice-btn" data-name="${name}">
-         <span class="name-choice-key">${["A","B","C"][i]}</span>${name}
+         <span class="name-choice-key">${["Q","W","E"][i]}</span>${name}
        </button>`
     ).join("");
     container.querySelectorAll(".name-choice-btn").forEach(btn =>
