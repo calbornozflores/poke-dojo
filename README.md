@@ -1,13 +1,13 @@
 # Poke-Dojo <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/107.png" height="32" align="absmiddle">
 
-A local Pokémon quiz app with five Dojo game modes, a timed scoring system, a leaderboard, a personal profile with AI-powered breakdown, and a **Trainer Journey** page to track your EVO score over time. After 20 games, **Professor Oak Analysis** activates automatically — using machine learning to serve the Pokémon most likely to stump you. Plus a **Battle Arena** with VS Mode (2 players, same keyboard) and Solo Challenge (endless, custom keys, tightening timer, and a personal Shadow that learns your response times).
+A local Pokémon quiz app with five Dojo game modes, a timed scoring system, a leaderboard, a personal profile with AI-powered breakdown, and a **Trainer Journey** page to track your EVO score over time. After 20 games, **Professor Oak Analysis** activates automatically — using machine learning to serve the Pokémon most likely to stump you. Plus a **Battle Arena** with VS Mode (2 players, same keyboard) and Solo Challenge (endless, custom keys, tightening timer, and a personal Shadow that learns your response times). Sign in with Google to claim a unique trainer name and compete on the **Global Leaderboard** — your Solo Challenge best score is synced to a shared cloud ranking visible to all players worldwide.
 
 ---
 
 ## Screenshots
 
 ### Welcome Screen
-Enter your trainer name to start — no account needed. Your session is saved in the browser. Includes a fan-game disclaimer crediting Nintendo, Game Freak, and The Pokémon Company.
+Sign in with Google to claim a unique trainer name shared across all instances of the app — or skip auth and play as a local guest. Your session is saved in the browser. Includes a fan-game disclaimer crediting Nintendo, Game Freak, and The Pokémon Company.
 
 ![Home](screenshots/01_home.png)
 
@@ -50,7 +50,7 @@ Toggle all types this Pokémon has (up to 2) from all 18 options, then submit.
 ![Type Hard](screenshots/11_play_typehard.png)
 
 ### Leaderboard
-Global ranking and per-mode tabs showing scores in pts (not raw accuracy).
+**All Modes** tab (Snorlax sprite) aggregates scores across all Dojo game modes. Per-mode tabs show Name It (Medium / Hard), Guess Number, and Guess the Type (Easy / Hard) individually. All scores are in pts (not raw accuracy).
 
 ![Leaderboard](screenshots/12_leaderboard.png)
 
@@ -100,7 +100,7 @@ Trophy, winner, final scores, and a round-by-round recap. Rematch starts a fresh
 ![Match End](screenshots/20_battle_arena_match_end.png)
 
 ### Battle Arena — Leaderboard
-Solo Challenge and VS Mode rankings in a shared leaderboard. Accessible from the Leaderboard nav dropdown.
+Solo Challenge and VS Mode rankings in a shared leaderboard. A **🌐 Global** tab appears when Supabase is configured — showing the worldwide Solo Challenge ranking (one best score per Google account). Accessible from the Leaderboard nav dropdown.
 
 ![Arena Leaderboard](screenshots/21_arena_leaderboard.png)
 
@@ -233,6 +233,11 @@ Once a player answers, a green ✓ appears next to their name in the scoreboard 
 #### Solo Challenge
 Assign any 3 keys to the options (Enter, Escape and Space are reserved). Endless rounds with 3 Luvdisc lives — a wrong answer, timeout, or being slower than **Your Shadow** removes one. Timer starts at 10s and tightens by 1s every 10 rounds (floor 5s at round 50). Your Shadow learns your average response time per Pokémon and grows faster as you improve.
 
+#### Global Leaderboard
+Sign in with Google once, claim a unique trainer name, and your best Solo Challenge run is automatically synced to a shared global ranking. Only your personal best score is kept — the leaderboard always reflects your peak performance. Trainer names are moderated to block offensive words (English and Chilean Spanish) including leet-speak substitutions (e.g. `p3rr4`).
+
+> **Optional — self-hosting with global features:** set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_KEY` in a `.env` file (see `.env.example`). Without these variables the app runs fully offline with no Google auth.
+
 ---
 
 ## Project Structure
@@ -248,19 +253,25 @@ poke-dojo/
 │   │   ├── game.py           # /game/start, /game/submit, /game/profile/breakdown
 │   │   ├── scores.py         # /scores/leaderboard (Dojo, per-mode tabs)
 │   │   ├── journey.py        # /journey/history (EVO score chart data)
-│   │   ├── battle_arena.py   # /battle/match/*, /battle/round/*, /battle/leaderboard
+│   │   ├── battle_arena.py   # /battle/match/*, /battle/round/*, /battle/leaderboard,
+│   │   │                     #   /battle/submit-global-score, /battle/global-leaderboard
+│   │   ├── auth.py           # /auth/claim-username, /auth/verify (Google OAuth)
 │   │   └── challenge.py      # /challenge/train (legacy)
 │   ├── services/
 │   │   ├── data_loader.py    # Background PokeAPI fetch with progress
 │   │   ├── string_match.py   # rapidfuzz accuracy for Name It
 │   │   ├── pokemon_data.py   # Random / Professor Oak Pokémon selection
 │   │   ├── shadow_model.py   # Per-user Shadow (response-time rolling average)
-│   │   └── xgboost_model.py  # Per-user XGBoost + SHAP category analysis
+│   │   ├── xgboost_model.py  # Per-user XGBoost + SHAP category analysis
+│   │   ├── supabase_client.py# Supabase admin + anon client helpers
+│   │   └── username_filter.py# Profanity filter (English + Chilean, leet-speak aware)
 │   └── templates/            # Jinja2 HTML (base, index, game, scores, profile,
-│                             #   trainer_journey, battle_arena, arena_leaderboard)
+│                             #   trainer_journey, battle_arena, arena_leaderboard,
+│                             #   auth_callback, auth_claim)
 ├── data/
 │   ├── fetch_data.py         # Manual pre-fetch script
 │   └── pokemon.db            # SQLite database (git-ignored)
+├── .env.example              # Supabase env var template + SQL setup instructions
 ├── screenshots/              # README screenshots
 └── static/
     └── css/style.css
@@ -276,6 +287,8 @@ poke-dojo/
 | Database | SQLite via SQLAlchemy ORM |
 | String matching | rapidfuzz |
 | ML (Professor Oak + Profile) | XGBoost (native SHAP) |
+| Global leaderboard + Auth | Supabase (PostgreSQL + Google OAuth) |
+| Profanity filter | better-profanity + custom Chilean wordlist |
 | Package manager | uv |
 | Data source | PokéAPI (pokeapi.co) |
 | Frontend | Vanilla JS + CSS (no framework) |

@@ -1,12 +1,11 @@
 from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from better_profanity import profanity
 
 from app.services import supabase_client
+from app.services.username_filter import is_banned
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-profanity.load_censor_words()
 
 _USERNAME_MIN = 3
 _USERNAME_MAX = 20
@@ -41,7 +40,7 @@ def claim_username(req: ClaimRequest):
         raise HTTPException(400, f"Username must be {_USERNAME_MIN}–{_USERNAME_MAX} characters")
     if not all(c.isalnum() or c in "-_" for c in name):
         raise HTTPException(400, "Only letters, numbers, hyphens, and underscores allowed")
-    if profanity.contains_profanity(name):
+    if is_banned(name):
         raise HTTPException(400, "That name is not allowed")
 
     user = supabase_client.verify_token(req.access_token)
