@@ -106,7 +106,7 @@
     </div>
 
     <div class="arena-pokemon-stage">
-      <img id="arena-sprite" src="" alt="Pokémon silhouette" class="arena-sprite silhouette" />
+      <img id="arena-sprite" src="" alt="Pokémon silhouette" class="arena-sprite" />
     </div>
 
     <div class="arena-options" id="arena-options">
@@ -198,6 +198,7 @@
   </div>
 
 </div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -376,9 +377,18 @@ async function loadRound() {
   updateScoreboard();
 
   const spriteEl = document.getElementById("arena-sprite");
+  spriteEl.getAnimations().forEach(a => a.cancel());
   spriteEl.style.animation = "none";
-  spriteEl.style.filter = "";
-  spriteEl.className = "arena-sprite silhouette";
+  spriteEl.className = "arena-sprite";
+  if (MODE === "vs") {
+    spriteEl.classList.add("silhouette");
+    spriteEl.style.filter = "";
+  } else {
+    const sl = roundData.shadow_level ?? 0;
+    spriteEl.style.filter = sl > 0
+      ? `brightness(${(1 - sl).toFixed(3)}) invert(${sl.toFixed(3)})`
+      : "";
+  }
 
   const optionsEl = document.getElementById("arena-options");
   optionsEl.innerHTML = "";
@@ -482,12 +492,32 @@ function startReveal() {
   barEl.style.width = "100%";
 
   const spriteEl = document.getElementById("arena-sprite");
-  spriteEl.style.animation = "none";
-  spriteEl.offsetWidth;
-  spriteEl.style.animationName = "silhouetteReveal";
-  spriteEl.style.animationDuration = `${dur}s`;
-  spriteEl.style.animationTimingFunction = "linear";
-  spriteEl.style.animationFillMode = "forwards";
+
+  if (MODE === "vs") {
+    // VS mode: existing CSS animation (always full silhouette)
+    spriteEl.style.animation = "none";
+    spriteEl.offsetWidth;
+    spriteEl.style.animationName = "silhouetteReveal";
+    spriteEl.style.animationDuration = `${dur}s`;
+    spriteEl.style.animationTimingFunction = "linear";
+    spriteEl.style.animationFillMode = "forwards";
+  } else {
+    // Solo mode: WAAPI reveal from current shadow level to fully visible
+    const sl = roundData.shadow_level ?? 0;
+    if (sl > 0 && sl < 1.0) {
+      // Partial silhouette (rounds 31–49): animate to fully visible
+      spriteEl.getAnimations().forEach(a => a.cancel());
+      spriteEl.animate(
+        [
+          { filter: `brightness(${(1 - sl).toFixed(3)}) invert(${sl.toFixed(3)})` },
+          { filter: "none" },
+        ],
+        { duration: dur * 1000, easing: "linear", fill: "forwards" }
+      );
+    }
+    // sl === 0: fully visible, no animation needed
+    // sl >= 1.0: full silhouette stays white until player answers
+  }
 
   clearTimeout(revealTimer);
   revealTimer = setTimeout(() => {
@@ -590,6 +620,7 @@ async function submitRound(p1key, p1ms, p2key, p2ms, soloEndReason = null) {
   lastRoundResult = result;
 
   const spriteEl = document.getElementById("arena-sprite");
+  spriteEl.getAnimations().forEach(a => a.cancel());
   spriteEl.style.animation = "none";
   spriteEl.style.filter = "";
   spriteEl.classList.remove("silhouette");
@@ -635,7 +666,7 @@ function showRoundResult(result) {
     const ms = result.player1_response_ms;
     const timeStr = ms ? `${(ms/1000).toFixed(2)}s` : "—";
     let extra = "";
-    if (result.shadow_predicted_ms && result.player1_was_correct) {
+    if (result.shadow_predicted_ms && result.player1_was_correct && shadowActive) {
       const sIcon = result.shadow_wins_round ? "👤 Shadow beat you" : "✓ Faster than Shadow";
       const sColor = result.shadow_wins_round ? "#fb923c" : "#22c55e";
       extra = `<div class="rr-shadow-line" style="color:${sColor}">${sIcon} · predicted ${(result.shadow_predicted_ms/1000).toFixed(2)}s</div>`;
@@ -765,6 +796,21 @@ async function endSingleRun(reason) {
     body: JSON.stringify({ match_id: matchId }),
   });
 
+  // Submit to global leaderboard if the player is authenticated
+  {% if supabase_configured %}
+  (async () => {
+    try {
+      const { data: { session } } = await _supabaseClient.auth.getSession();
+      if (!session) return;
+      await fetch("/battle/submit-global-score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ match_id: matchId, access_token: session.access_token }),
+      });
+    } catch (_) {} // best-effort — never block the game
+  })();
+  {% endif %}
+
   const emojiEl = document.getElementById("analytics-emoji");
   if (shadowCatches >= 3) {
     emojiEl.innerHTML = "👤";
@@ -865,18 +911,29 @@ function renderAnalyticsChart(rounds) {
     if (!r.actual_ms) return;
     const x = toX(i), y = toY(r.actual_ms);
     const fill = r.shadow_won ? "#f87171" : "#a78bfa";
-    const r_size = r.shadow_won ? 6 : 4;
-    const title = `Round ${r.round_number}: ${r.pokemon_name} — ${(r.actual_ms/1000).toFixed(2)}s${r.shadow_won ? " 👤" : ""}`;
+    const dotR = r.shadow_won ? 6 : 4;
     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     circle.setAttribute("cx", x); circle.setAttribute("cy", y);
-    circle.setAttribute("r", r_size); circle.setAttribute("fill", fill);
+    circle.setAttribute("r", dotR); circle.setAttribute("fill", fill);
     circle.setAttribute("stroke", "#0f0f1a"); circle.setAttribute("stroke-width", "2");
-    circle.innerHTML = `<title>${title}</title>`;
+
     svg.appendChild(circle);
+  });
+
+  // Shadow dots — rendered after player dots so they sit on top
+  rounds.forEach((r, i) => {
+    if (!r.shadow_ms) return;
+    const sx = toX(i), sy = toY(r.shadow_ms);
+    const sc = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    sc.setAttribute("cx", sx); sc.setAttribute("cy", sy);
+    sc.setAttribute("r", 3); sc.setAttribute("fill", "#fb923c");
+    sc.setAttribute("stroke", "#0f0f1a"); sc.setAttribute("stroke-width", "1.5");
+    svg.appendChild(sc);
   });
 
   document.getElementById("analytics-chart-section").classList.remove("hidden");
 }
+
 
 function renderAnalyticsCats(byGen, byType) {
   function renderCatBars(data, containerId) {

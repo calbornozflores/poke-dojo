@@ -9,6 +9,13 @@
       Name it, guess the number, or identify its type!</p>
 
     <div class="username-form" id="username-section">
+      {% if supabase_configured %}
+      <button id="google-btn" class="btn btn-google">
+        <svg width="18" height="18" viewBox="0 0 18 18" style="vertical-align:middle;margin-right:8px"><path d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.84-1.57 2.4v2h2.53c1.49-1.37 2.27-3.38 2.27-5.4 0-.37-.04-.73-.1-1z" fill="#4285F4"/><path d="M8.98 17c2.16 0 3.97-.71 5.3-1.93l-2.54-2c-.72.48-1.64.77-2.76.77-2.12 0-3.91-1.43-4.55-3.35H1.8v2.07C3.13 15.19 5.88 17 8.98 17z" fill="#34A853"/><path d="M4.43 10.49a5.4 5.4 0 0 1 0-3.43V4.99H1.8a8.96 8.96 0 0 0 0 8.07l2.63-2.57z" fill="#FBBC05"/><path d="M8.98 3.58c1.19 0 2.26.41 3.1 1.21l2.32-2.32C12.95 1.18 11.13.36 8.98.36 5.88.36 3.13 2.16 1.8 4.99l2.63 2.07c.64-1.92 2.43-3.48 4.55-3.48z" fill="#EA4335"/></svg>
+        Sign in with Google
+      </button>
+      <div class="auth-divider"><span>or play as guest</span></div>
+      {% endif %}
       <label for="username-input">Choose your trainer name:</label>
       <div class="input-row">
         <input
@@ -18,16 +25,17 @@
           maxlength="30"
           autocomplete="off"
         />
-        <button id="start-btn" class="btn btn-primary">Start Training</button>
+        <button id="start-btn" class="btn btn-primary">{% if supabase_configured %}Play as Guest{% else %}Start Training{% endif %}</button>
       </div>
-      <p class="hint" id="username-hint"></p>
+      <p class="hint" id="username-hint">{% if supabase_configured %}Guest scores are local only — they won't appear on the global leaderboard.{% endif %}</p>
     </div>
 
     <div id="returning-section" class="hidden">
-      <p>Welcome back, <strong id="returning-name"></strong>!</p>
+      <p>Welcome back, <strong id="returning-name"></strong>! <span id="returning-badge" class="badge-global hidden">🌐 Global</span></p>
       <div class="hero-actions">
         <a href="/play" class="btn btn-primary">Continue Training</a>
         <button id="change-user-btn" class="btn btn-ghost">Change Trainer</button>
+        <button id="logout-btn" class="btn btn-ghost hidden">Sign Out</button>
       </div>
     </div>
 
@@ -69,13 +77,57 @@
   const returningName = document.getElementById("returning-name");
   const changeUserBtn = document.getElementById("change-user-btn");
 
-  const stored = localStorage.getItem("poke_username");
-  if (stored) {
+  function showReturning(name, isGlobal) {
     usernameSection.classList.add("hidden");
     returningSection.classList.remove("hidden");
-    returningName.textContent = stored;
-    document.getElementById("nav-user").textContent = stored;
+    returningName.textContent = name;
+    document.getElementById("nav-user").textContent = isGlobal ? "🌐 " + name : name;
+    if (isGlobal) {
+      document.getElementById("returning-badge").classList.remove("hidden");
+      document.getElementById("logout-btn").classList.remove("hidden");
+    }
   }
+
+  const stored = localStorage.getItem("poke_username");
+  if (stored) showReturning(stored, false);
+
+  // If Supabase is configured, check for an active Google session and upgrade UI
+  {% if supabase_configured %}
+  (async () => {
+    try {
+      const { data: { session } } = await _supabaseClient.auth.getSession();
+      if (!session) return;
+      const resp = await fetch("/auth/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: session.access_token }),
+      });
+      if (!resp.ok) return;
+      const info = await resp.json();
+      if (info.authenticated && info.username) {
+        localStorage.setItem("poke_username", info.username);
+        showReturning(info.username, true);
+      } else if (info.authenticated && !info.username) {
+        sessionStorage.setItem("pending_access_token", session.access_token);
+        window.location.href = "/auth/claim";
+      }
+    } catch (_) {}
+  })();
+
+  document.getElementById("google-btn").addEventListener("click", async () => {
+    const { error } = await _supabaseClient.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin + "/auth/callback" },
+    });
+    if (error) alert("Sign-in failed: " + error.message);
+  });
+
+  document.getElementById("logout-btn").addEventListener("click", async () => {
+    await _supabaseClient.auth.signOut();
+    localStorage.removeItem("poke_username");
+    window.location.reload();
+  });
+  {% endif %}
 
   startBtn.addEventListener("click", () => {
     const name = usernameInput.value.trim();
@@ -92,9 +144,17 @@
     if (e.key === "Enter") startBtn.click();
   });
 
-  changeUserBtn.addEventListener("click", () => {
+  changeUserBtn.addEventListener("click", async () => {
+    {% if supabase_configured %}
+    const { data: { session } } = await _supabaseClient.auth.getSession();
+    if (session) {
+      await _supabaseClient.auth.signOut();
+    }
+    {% endif %}
     localStorage.removeItem("poke_username");
     returningSection.classList.add("hidden");
+    document.getElementById("returning-badge").classList.add("hidden");
+    document.getElementById("logout-btn").classList.add("hidden");
     usernameSection.classList.remove("hidden");
     usernameInput.focus();
   });

@@ -8,11 +8,20 @@ from sqlalchemy import func, desc
 
 from app.database import get_db
 from app.models import Pokemon, User, CompetitiveMatch, CompetitiveResult
-from app.services import shadow_model
+from app.services import shadow_model, supabase_client
 
 router = APIRouter(prefix="/battle", tags=["battle"])
 
 REVEAL_DURATION = 10  # seconds for silhouette reveal
+
+
+def _compute_shadow_level(round_number: int) -> float:
+    """0.0 = fully visible, 1.0 = full white silhouette. Ramps from round 31→50."""
+    if round_number <= 30:
+        return 0.0
+    if round_number >= 50:
+        return 1.0
+    return (round_number - 30) / 20.0
 
 
 def _get_or_create_user(username: str, db: Session) -> User:
@@ -116,6 +125,7 @@ class RoundData(BaseModel):
     correct_position: int    # 1/2/3
     generation: int
     reveal_duration: int     # seconds
+    shadow_level: float      # 0.0 = fully visible, 1.0 = full silhouette (solo only)
 
 
 @router.get("/round/next", response_model=RoundData)
@@ -134,6 +144,7 @@ def next_round(match_id: int, round_number: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "No Pokémon available")
 
     options, correct_pos = _pick_options(pokemon, db)
+    shadow_level = _compute_shadow_level(round_number) if match.mode == "single" else 1.0
     return RoundData(
         match_id=match_id,
         round_number=round_number,
@@ -143,6 +154,7 @@ def next_round(match_id: int, round_number: int, db: Session = Depends(get_db)):
         correct_position=correct_pos,
         generation=pokemon.generation,
         reveal_duration=REVEAL_DURATION,
+        shadow_level=shadow_level,
     )
 
 
@@ -198,11 +210,13 @@ def submit_round(req: SubmitRoundRequest, db: Session = Depends(get_db)):
     # Shadow prediction (solo only) — train on first round, predict every round
     shadow_predicted = None
     shadow_wins = False
+    round_shadow_level = 0.0
     if match.mode == "single":
+        round_shadow_level = _compute_shadow_level(req.round_number)
         if req.round_number == 1:
             shadow_model.train(match.player1, db)
         if p1_correct and req.player1_response_ms is not None:
-            shadow_predicted = shadow_model.predict(match.player1, req.pokemon_id, db)
+            shadow_predicted = shadow_model.predict(match.player1, req.pokemon_id, round_shadow_level, db)
             if shadow_predicted is not None:
                 shadow_wins = req.player1_response_ms > shadow_predicted
 
@@ -220,9 +234,14 @@ def submit_round(req: SubmitRoundRequest, db: Session = Depends(get_db)):
         player2_was_correct=p2_correct,
         player2_score=p2_score,
         shadow_predicted_ms=shadow_predicted,
+        shadow_level=round_shadow_level,
     )
     db.add(result)
     db.commit()
+
+    # Eager training: build model as soon as 20+ results exist (not just round 1)
+    if match.mode == "single" and not shadow_model.model_exists(match.player1):
+        shadow_model.train(match.player1, db)
 
     return RoundResult(
         player1_was_correct=p1_correct,
@@ -319,6 +338,7 @@ def finish_match(req: FinishMatchRequest, db: Session = Depends(get_db)):
 
 class AnalyticsRound(BaseModel):
     round_number: int
+    pokemon_id: int
     pokemon_name: str
     generation: int
     type1: str
@@ -360,6 +380,7 @@ def match_analytics(match_id: int, db: Session = Depends(get_db)):
         )
         rounds_data.append(AnalyticsRound(
             round_number=r.round_number,
+            pokemon_id=poke.id,
             pokemon_name=poke.name,
             generation=poke.generation,
             type1=poke.type1,
@@ -498,3 +519,90 @@ def arena_leaderboard(db: Session = Depends(get_db)):
 
     entries.sort(key=lambda e: e.best_run_score, reverse=True)
     return entries
+
+
+# ── Global leaderboard (Supabase) ────────────────────────────────────────────
+
+class GlobalScoreRequest(BaseModel):
+    match_id: int
+    access_token: str
+
+
+class GlobalLeaderEntry(BaseModel):
+    username: str
+    score: int
+    rounds: int
+    shadow_won_rounds: int
+
+
+@router.post("/submit-global-score")
+def submit_global_score(req: GlobalScoreRequest, db: Session = Depends(get_db)):
+    """Submit a completed solo run score to the global Supabase leaderboard."""
+    if not supabase_client.is_configured():
+        raise HTTPException(503, "Global features not configured on this instance")
+
+    user = supabase_client.verify_token(req.access_token)
+    if not user:
+        raise HTTPException(401, "Invalid or expired session")
+
+    match = db.get(CompetitiveMatch, req.match_id)
+    if not match or match.mode != "single":
+        raise HTTPException(404, "Solo match not found")
+
+    results = (
+        db.query(CompetitiveResult)
+        .filter(CompetitiveResult.match_id == req.match_id)
+        .all()
+    )
+    total_score = sum(r.player1_score for r in results)
+    rounds_played = len(results)
+    shadow_won_rounds = sum(
+        1 for r in results
+        if r.shadow_predicted_ms and r.player1_response_ms
+        and r.player1_was_correct
+        and r.player1_response_ms > r.shadow_predicted_ms
+    )
+
+    client = supabase_client.get_admin_client()
+    row = client.table("players").select("id, username").eq("google_id", user["id"]).execute()
+    if not row.data:
+        raise HTTPException(400, "No username claimed — sign in and pick a username first")
+
+    player_id = row.data[0]["id"]
+    username = row.data[0]["username"]
+
+    # Only update if this run beats the player's current best (1 row per player)
+    existing = (
+        client.table("solo_runs")
+        .select("score")
+        .eq("player_id", player_id)
+        .execute()
+    )
+    current_best = existing.data[0]["score"] if existing.data else -1
+    if total_score > current_best:
+        client.table("solo_runs").upsert({
+            "player_id": player_id,
+            "username": username,
+            "score": total_score,
+            "rounds": rounds_played,
+            "shadow_won_rounds": shadow_won_rounds,
+        }, on_conflict="player_id").execute()
+
+    return {"ok": True, "score": total_score, "is_best": total_score > current_best, "username": username}
+
+
+@router.get("/global-leaderboard", response_model=list[GlobalLeaderEntry])
+def global_leaderboard():
+    """Fetch the top-50 global solo runs from Supabase. Returns [] if not configured."""
+    if not supabase_client.is_configured():
+        return []
+
+    client = supabase_client.get_admin_client()
+    result = (
+        client.table("solo_runs")
+        .select("username, score, rounds, shadow_won_rounds")
+        .order("score", desc=True)
+        .limit(50)
+        .execute()
+    )
+    return result.data

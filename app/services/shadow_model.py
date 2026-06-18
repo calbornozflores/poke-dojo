@@ -22,6 +22,10 @@ def _model_path(username: str) -> Path:
     return MODEL_DIR / f"shadow_model_{safe}.json"
 
 
+def model_exists(username: str) -> bool:
+    return _model_path(username).exists()
+
+
 def _build_features(pokemon: Pokemon) -> dict:
     return {
         "type1":       TYPE_ENC.get(pokemon.type1, 0),
@@ -71,6 +75,7 @@ def train(username: str, db: Session) -> bool:
         if poke is None:
             continue
         feat = _build_features(poke)
+        feat["shadow_level"] = r.shadow_level if r.shadow_level is not None else 0.0
         feat["response_ms"] = r.player1_response_ms
         rows.append(feat)
 
@@ -89,7 +94,7 @@ def train(username: str, db: Session) -> bool:
     return True
 
 
-def predict(username: str, pokemon_id: int, db: Session) -> int | None:
+def predict(username: str, pokemon_id: int, shadow_level: float, db: Session) -> int | None:
     """Predict response time (ms) for this player on this pokemon. None if no model."""
     path = _model_path(username)
     if not path.exists():
@@ -103,6 +108,12 @@ def predict(username: str, pokemon_id: int, db: Session) -> int | None:
     model.load_model(str(path))
 
     feat = _build_features(poke)
+    feat["shadow_level"] = shadow_level
     df = pd.DataFrame([feat])
-    predicted = float(model.predict(df)[0])
+    try:
+        predicted = float(model.predict(df)[0])
+    except Exception:
+        # Stale model trained on different features — delete and force rebuild
+        path.unlink(missing_ok=True)
+        return None
     return max(0, int(round(predicted)))

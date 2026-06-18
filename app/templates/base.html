@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Poke-Dojo{% endblock %}</title>
   <link rel="stylesheet" href="/static/css/style.css" />
+  {% if supabase_configured %}
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const _supabaseClient = window.supabase.createClient(
+      "{{ supabase_url }}",
+      "{{ supabase_anon_key }}"
+    );
+  </script>
+  {% endif %}
 </head>
 <body>
   <header class="navbar">
@@ -30,9 +39,8 @@
 
   <script>
     const _navUser = localStorage.getItem("poke_username");
-    if (_navUser) {
-      document.getElementById("nav-user").textContent = _navUser;
-    }
+    if (_navUser) document.getElementById("nav-user").textContent = _navUser;
+
     function toggleLbMenu() {
       document.getElementById("nav-lb-menu").classList.toggle("hidden");
     }
@@ -43,6 +51,31 @@
     document.addEventListener("click", () => {
       document.getElementById("nav-lb-menu")?.classList.add("hidden");
     });
+
+    {% if supabase_configured %}
+    // Keep nav username in sync with Google session
+    (async () => {
+      try {
+        const { data: { session } } = await _supabaseClient.auth.getSession();
+        if (!session) return;
+        const resp = await fetch("/auth/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ access_token: session.access_token }),
+        });
+        if (!resp.ok) return;
+        const info = await resp.json();
+        if (info.authenticated && info.username) {
+          localStorage.setItem("poke_username", info.username);
+          document.getElementById("nav-user").textContent = "🌐 " + info.username;
+        } else if (info.authenticated && !info.username) {
+          if (!window.location.pathname.startsWith("/auth/")) {
+            window.location.href = "/auth/claim";
+          }
+        }
+      } catch (_) {}
+    })();
+    {% endif %}
   </script>
   {% block scripts %}{% endblock %}
 </body>

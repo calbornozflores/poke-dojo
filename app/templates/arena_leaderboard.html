@@ -11,6 +11,9 @@
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="solo">⚔ Solo Challenge</button>
     <button class="tab-btn" data-tab="vs">VS Mode</button>
+    {% if supabase_configured %}
+    <button class="tab-btn" data-tab="global">🌐 Global</button>
+    {% endif %}
   </div>
 
   <!-- Solo tab -->
@@ -29,6 +32,26 @@
     </table>
     <p id="solo-empty" class="centered-msg hidden">No solo runs yet. Be the first!</p>
   </div>
+
+  {% if supabase_configured %}
+  <!-- Global tab -->
+  <div id="tab-global" class="tab-content hidden">
+    <div id="global-loading" class="centered-msg">Loading global leaderboard…</div>
+    <table id="global-table" class="score-table hidden">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Trainer</th>
+          <th>Best Score</th>
+          <th>Rounds</th>
+          <th>Shadow Wins</th>
+        </tr>
+      </thead>
+      <tbody id="global-tbody"></tbody>
+    </table>
+    <p id="global-empty" class="centered-msg hidden">No global scores yet — be the first!</p>
+  </div>
+  {% endif %}
 
   <!-- VS tab -->
   <div id="tab-vs" class="tab-content hidden">
@@ -73,6 +96,14 @@
     }
   }
 
+  function rankClass(i, n) {
+    if (i === 0) return "rank-gold";
+    if (i === 1) return "rank-silver";
+    if (i === 2) return "rank-bronze";
+    if (i === n - 1) return "rank-last";
+    return "";
+  }
+
   function renderTab(tab) {
     const isSolo = tab === "solo";
     const sorted = isSolo
@@ -85,13 +116,6 @@
 
     if (!sorted.length) { empty.classList.remove("hidden"); return; }
 
-    function rankClass(i, n) {
-      if (i === 0) return "rank-gold";
-      if (i === 1) return "rank-silver";
-      if (i === 2) return "rank-bronze";
-      if (i === n - 1) return "rank-last";
-      return "";
-    }
     function highlightClass(e) {
       return username && e.username === username ? "highlight-row" : "";
     }
@@ -123,15 +147,61 @@
     });
   });
 
+  {% if supabase_configured %}
+  async function loadGlobalLeaderboard() {
+    try {
+      const res = await fetch("/battle/global-leaderboard");
+      const data = await res.json();
+      document.getElementById("global-loading").classList.add("hidden");
+      if (!data.length) {
+        document.getElementById("global-empty").classList.remove("hidden");
+        return;
+      }
+      const tbody = document.getElementById("global-tbody");
+      tbody.innerHTML = data.map((e, i) => `
+        <tr class="${rankClass(i, data.length)} ${username && e.username === username ? "highlight-row" : ""}">
+          <td>${i + 1}</td>
+          <td><strong>${e.username}</strong></td>
+          <td class="best">${e.score} pts</td>
+          <td>${e.rounds}</td>
+          <td>${e.shadow_won_rounds}</td>
+        </tr>`).join("");
+      document.getElementById("global-table").classList.remove("hidden");
+    } catch {
+      document.getElementById("global-loading").classList.add("hidden");
+      document.getElementById("global-empty").classList.remove("hidden");
+    }
+  }
+  {% endif %}
+
   document.getElementById("refresh-btn").addEventListener("click", () => {
     ["solo", "vs"].forEach(tab => {
       document.getElementById(tab + "-loading").classList.remove("hidden");
       document.getElementById(tab + "-table").classList.add("hidden");
       document.getElementById(tab + "-empty").classList.add("hidden");
     });
+    {% if supabase_configured %}
+    document.getElementById("global-loading").classList.remove("hidden");
+    document.getElementById("global-table").classList.add("hidden");
+    document.getElementById("global-empty").classList.add("hidden");
+    loadGlobalLeaderboard();
+    {% endif %}
     allData = [];
     loadLeaderboard();
   });
+
+  // Load global tab on first click
+  {% if supabase_configured %}
+  let _globalLoaded = false;
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.tab === "global" && !_globalLoaded) {
+        _globalLoaded = true;
+        loadGlobalLeaderboard();
+      }
+    });
+  });
+  {% endif %}
 
   loadLeaderboard();
 </script>
