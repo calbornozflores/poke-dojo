@@ -16,6 +16,11 @@ Each mode begins with a brief intro explaining the rules, scoring formula, and c
 
 ![Intro Screen](screenshots/02_play_intro.png)
 
+### Name It — Easy
+Full artwork shown. Pick the correct name from three choices — click a button or press Q / W / E.
+
+![Name It Easy](screenshots/03b_play_nameit_easy.png)
+
 ### Name It — Medium
 A Pokémon appears with full artwork. Type its name as fast as you can — speed matters for your score.
 
@@ -50,12 +55,12 @@ Toggle all types this Pokémon has (up to 2) from all 18 options, then submit.
 ![Type Hard](screenshots/11_play_typehard.png)
 
 ### Leaderboard
-**All Modes** tab (Snorlax sprite) aggregates scores across all Dojo game modes. Per-mode tabs show Name It (Medium / Hard), Guess Number, and Guess the Type (Easy / Hard) individually. All scores are in pts (not raw accuracy).
+**All Modes** tab (Snorlax sprite) aggregates scores across all Dojo game modes. Per-mode tabs show Name It (Easy / Medium / Hard), Guess Number, and Guess the Type (Easy / Hard) individually. All scores are in pts (not raw accuracy).
 
 ![Leaderboard](screenshots/12_leaderboard.png)
 
 ### My Profile
-Categorical breakdown by generation, evolution stage, and type. After 20 games, AI (SHAP) bars appear and become the sort key — orange bars (HARD ↑) rise to the top, blue bars (EASY ↓) sink to the bottom. Falls back to accuracy sort before the model trains.
+Categorical breakdown by generation, evolution stage, and type. Tabs are ordered Easy → Medium → Hard for Name It modes. The page defaults to **Name Easy** on first visit and remembers your last selected tab for the rest of the session. After 20 games, AI (SHAP) bars appear and become the sort key — orange bars (HARD ↑) rise to the top, blue bars (EASY ↓) sink to the bottom. Falls back to accuracy sort before the model trains.
 
 ![My Profile](screenshots/13_profile.png)
 
@@ -168,7 +173,8 @@ uv run python data/fetch_data.py
 
 ## How to Play
 
-### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" height="22" align="absmiddle"> Name It
+### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/172.png" height="22" align="absmiddle"> <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" height="22" align="absmiddle"> Name It
+- **Easy** — full artwork shown, pick the correct name from three choices. Click or press Q / W / E.
 - **Medium** — full artwork shown, name hidden. Type the name and press Enter.
 - **Hard** — only the silhouette is shown. Identify from the outline alone.
 
@@ -216,7 +222,7 @@ Accuracy breakdown by generation ("Gen I • Kanto"), evolution stage, and type.
 - Before 20 games, categories are sorted by accuracy (lowest first)
 
 ### Trainer Journey
-A smooth SVG chart of your EVO score history. Filter by game mode with the tabs at the top.
+A smooth SVG chart of your EVO score history. Filter by game mode with the tabs at the top. Defaults to **All Modes** on first visit and remembers your last selected tab for the rest of the session.
 
 ### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/249.png" height="22" align="absmiddle"> Battle Arena
 
