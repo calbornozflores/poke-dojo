@@ -1,11 +1,11 @@
 import random
 from collections import defaultdict
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import get_db, SessionLocal
 from app.models import User, GameResult, Pokemon, EvoScoreHistory
 from app.services.string_match import name_accuracy
 from app.services.pokemon_data import get_random_pokemon, number_accuracy
@@ -36,6 +36,14 @@ def _upsert_user(username: str, db: Session) -> User:
         db.commit()
         db.refresh(user)
     return user
+
+
+def _train_bg(user_id: int, game_type: str) -> None:
+    db = SessionLocal()
+    try:
+        xgboost_model.train(user_id, game_type, db)
+    finally:
+        db.close()
 
 
 def _game_count(user_id: int, game_type: str, db: Session) -> int:
@@ -291,7 +299,7 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/submit", response_model=SubmitResponse)
-def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
+def submit_answer(req: SubmitRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     user = _upsert_user(req.username, db)
     pokemon = db.query(Pokemon).get(req.pokemon_id)
     if not pokemon:
@@ -380,7 +388,7 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
     challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
 
     if challenge_unlocked:
-        xgboost_model.train(user.id, req.game_type, db)
+        background_tasks.add_task(_train_bg, user.id, req.game_type)
 
     return SubmitResponse(
         accuracy=round(accuracy, 1),
