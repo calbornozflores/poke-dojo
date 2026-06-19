@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Poke-Dojo{% endblock %}</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=20260619" />
+  <link rel="stylesheet" href="/static/css/style.css?v=20260620" />
   {% if supabase_configured %}
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -30,6 +30,13 @@
       </div>
       <a href="/profile" id="nav-profile">My Profile</a>
       <a href="/journey" id="nav-journey">Trainer Journey</a>
+      <div class="nav-dropdown" id="nav-help-wrap">
+        <button class="nav-dropdown-trigger" id="nav-help-btn">Help ▾</button>
+        <div class="nav-dropdown-menu hidden" id="nav-help-menu">
+          <a href="/faq">FAQ</a>
+          <a href="/contact">Contact Us</a>
+        </div>
+      </div>
       <span id="nav-user" class="nav-user"></span>
     </nav>
   </header>
@@ -49,8 +56,12 @@
       e.stopPropagation();
       toggleLbMenu();
     });
+    document.getElementById("nav-help-btn").addEventListener("click", e => {
+      e.stopPropagation();
+      document.getElementById("nav-help-menu").classList.toggle("hidden");
+    });
     document.addEventListener("click", () => {
-      document.getElementById("nav-lb-menu")?.classList.add("hidden");
+      document.querySelectorAll(".nav-dropdown-menu").forEach(m => m.classList.add("hidden"));
     });
 
     {% if supabase_configured %}

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}FAQ — Poke-Dojo{% endblock %}
+
+{% block content %}
+<div class="scores-layout">
+  <div class="faq-page-header">
+    <div class="faq-page-title">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/196.png"
+           alt="Espeon" class="arena-title-sprite arena-title-sprite-flip">
+      <h1>Frequently Asked Questions</h1>
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/196.png"
+           alt="" class="arena-title-sprite">
+    </div>
+    <p class="faq-page-subtitle">Everything you need to know about Poke-Dojo.</p>
+  </div>
+
+  <div class="faq-list">
+
+    <details class="faq-item" open>
+      <summary class="faq-question">What is Poke-Dojo?</summary>
+      <p class="faq-answer">
+        Poke-Dojo is a local Pokémon quiz game covering all 1025 Pokémon. It features five Dojo
+        training modes, a Battle Arena with VS Mode and Solo Challenge, and a Daily Challenge —
+        all with score tracking, a personal profile with AI analysis, and a Trainer Journey chart.
+      </p>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-question">What game modes are available?</summary>
+      <p class="faq-answer">
+        <strong>Dojo (5 modes):</strong><br>
+        · <strong>Name It — Easy</strong>: full artwork shown, type the Pokémon name (fuzzy matching)<br>
+        · <strong>Name It — Medium</strong>: same as Easy but stricter scoring<br>
+        · <strong>Name It — Hard</strong>: silhouette only — identify from the outline<br>
+        · <strong>Guess the Number</strong>: name + artwork shown, enter the Pokédex number<br>
+        · <strong>Guess the Type — Easy</strong>: pick primary type from 4 choices<br>
+        · <strong>Guess the Type — Hard</strong>: toggle all correct types from 18 options<br><br>
+        <strong>Battle Arena:</strong><br>
+        · <strong>VS Mode</strong>: 2 players, same keyboard — silhouette reveals over 10 seconds<br>
+        · <strong>Solo Challenge</strong>: endless rounds, 3 lives, tightening timer — your AI Shadow competes against you<br>
+        · <strong>Daily Challenge</strong>: Wordle-style — guess today's mystery Pokémon
+      </p>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-question">What is the EVO score?</summary>
+      <p class="faq-answer">
+        The EVO score is an exponential moving average of your final scores across all game sessions.
+        It rises as you improve and is charted over time on the Trainer Journey page, giving you a
+        single number that reflects your overall performance trend.
+      </p>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-question">What is the Professor Oak Analysis?</summary>
+      <p class="faq-answer">
+        After completing 20 games in a mode, the Professor Oak Analysis unlocks on your Profile page.
+        An XGBoost model trained on your answers uses SHAP values to identify which Pokémon categories
+        (by type, generation, or evolution stage) you find hardest. The app then preferentially
+        selects those Pokémon for you 80% of the time, so you train where you need it most.
+      </p>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-question">How does the Daily Challenge work?</summary>
+      <p class="faq-answer">
+        Every day a new mystery Pokémon is chosen — the same one for all players worldwide.
+        Type any Pokémon name into the autocomplete input and press Enter. After each guess you
+        see a distance score:<br><br>
+        · <strong>Distance = name similarity (50%) + Pokédex proximity (50%)</strong><br>
+        · 0.000 = exact match · 1.000 = as far as possible<br><br>
+        🟩 ≤ 0.2 — Very close &nbsp; 🟨 0.2–0.5 — Warmer &nbsp; 🟥 &gt; 0.5 — Far away<br><br>
+        Guesses are sorted closest-first. The Pokémon resets at midnight each day.
+      </p>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-question">How does sign-in with Google work?</summary>
+      <p class="faq-answer">
+        Signing in with Google lets you claim a permanent trainer nickname that appears on the
+        global leaderboard and Battle Arena rankings. You choose your own nickname — your Google
+        email is never displayed or shared anywhere in the app.
+      </p>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-question">Is my data private?</summary>
+      <p class="faq-answer">
+        Game results are stored in a local SQLite database on the server. Your chosen trainer
+        nickname is public on the leaderboard — that is the only piece of information other
+        players can see. No email address, real name, or Google account details are ever
+        displayed or accessible to other users.
+      </p>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-question">I found a bug — what do I do?</summary>
+      <p class="faq-answer">
+        Please open an issue on GitHub:
+        <a href="https://github.com/calbornozflores/poke-dojo/issues" target="_blank">
+          github.com/calbornozflores/poke-dojo/issues
+        </a>.
+        Describe what you expected, what happened, and any steps to reproduce it.
+        You can also reach out via the <a href="/contact">Contact</a> page.
+      </p>
+    </details>
+
+  </div>
+</div>
+{% endblock %}

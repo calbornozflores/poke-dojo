@@ -109,6 +109,16 @@ async def daily_challenge_page(request: Request):
     return templates.TemplateResponse(request=request, name="daily_challenge.html")
 
 
+@app.get("/faq")
+async def faq_page(request: Request):
+    return templates.TemplateResponse(request=request, name="faq.html")
+
+
+@app.get("/contact")
+async def contact_page(request: Request):
+    return templates.TemplateResponse(request=request, name="contact.html")
+
+
 @app.get("/auth/callback")
 async def auth_callback_page(request: Request):
     return templates.TemplateResponse(request=request, name="auth_callback.html")

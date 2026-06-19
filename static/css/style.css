@@ -2089,3 +2089,60 @@ a:hover { color: var(--accent-hover); }
   margin-bottom: 1.25rem;
   line-height: 1.5;
 }
+
+/* FAQ page */
+.faq-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.faq-item {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0.9rem 1.1rem;
+  transition: border-color 0.15s;
+}
+.faq-item[open] { border-color: var(--accent); }
+.faq-question {
+  font-weight: 700; font-size: 0.95rem; cursor: pointer; list-style: none;
+  display: flex; justify-content: space-between; align-items: center;
+  user-select: none;
+}
+.faq-question::-webkit-details-marker { display: none; }
+.faq-question::after { content: '▾'; color: var(--text-muted); font-size: 0.8rem; margin-left: 0.5rem; flex-shrink: 0; }
+.faq-item[open] .faq-question::after { content: '▴'; }
+.faq-answer {
+  font-size: 0.88rem; color: var(--text-muted); line-height: 1.7;
+  margin-top: 0.7rem; padding-top: 0.7rem; border-top: 1px solid var(--border);
+}
+.faq-answer a { color: var(--accent); }
+.faq-answer a:hover { color: var(--accent-hover); }
+
+/* Contact page */
+.contact-links { display: flex; flex-direction: column; gap: 0.75rem; }
+.contact-link {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 1.1rem 1.2rem; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--text); text-decoration: none; transition: border-color 0.15s;
+}
+.contact-link:hover { border-color: var(--accent); color: var(--text); }
+.contact-link-icon { font-size: 1.4rem; flex-shrink: 0; }
+.contact-link-sprite { width: 56px; height: 56px; image-rendering: pixelated; flex-shrink: 0; }
+.contact-link-title { font-weight: 700; font-size: 0.9rem; }
+.contact-link-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
+.contact-body-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 2rem;
+}
+
+/* Shared FAQ/Contact page header */
+.faq-page-header { text-align: center; margin-bottom: 2rem; }
+.faq-page-title {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0.5rem; margin-bottom: 0.5rem;
+}
+.faq-page-title h1 { font-size: 1.8rem; font-weight: 800; margin: 0; }
+.faq-page-subtitle { color: var(--text-muted); font-size: 0.88rem; margin: 0; }
+
+/* FAQ: accent left-border + question color when open */
+.faq-item[open] {
+  border-left-width: 3px;
+  padding-left: calc(1.1rem - 2px);
+}
+.faq-item[open] .faq-question { color: var(--accent); }
