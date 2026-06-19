@@ -11,6 +11,7 @@
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="solo">⚔ Solo Challenge</button>
     <button class="tab-btn" data-tab="vs">VS Mode</button>
+    <button class="tab-btn" data-tab="daily">📅 Daily</button>
     {% if supabase_configured %}
     <button class="tab-btn" data-tab="global">🌐 Global</button>
     {% endif %}
@@ -52,6 +53,25 @@
     <p id="global-empty" class="centered-msg hidden">No global scores yet — be the first!</p>
   </div>
   {% endif %}
+
+  <!-- Daily tab -->
+  <div id="tab-daily" class="tab-content hidden">
+    <div id="daily-lb-date-row" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem"></div>
+    <div id="daily-lb-loading" class="centered-msg">Loading…</div>
+    <table id="daily-lb-table" class="score-table hidden">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Trainer</th>
+          <th>Guesses</th>
+          <th>Result</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody id="daily-lb-tbody"></tbody>
+    </table>
+    <p id="daily-lb-empty" class="centered-msg hidden">No one has played today yet — be first!</p>
+  </div>
 
   <!-- VS tab -->
   <div id="tab-vs" class="tab-content hidden">
@@ -190,6 +210,51 @@
     loadLeaderboard();
   });
 
+  // Daily tab — lazy load
+  let _dailyLoaded = false;
+  async function loadDailyLeaderboard() {
+    try {
+      const res = await fetch("/daily/leaderboard");
+      const data = await res.json();
+      document.getElementById("daily-lb-loading").classList.add("hidden");
+      const today = new Date().toLocaleDateString("en-US", {month:"long", day:"numeric", year:"numeric"});
+      document.getElementById("daily-lb-date-row").textContent = `Today — ${today}`;
+      if (!data.length) {
+        document.getElementById("daily-lb-empty").classList.remove("hidden");
+        return;
+      }
+      const tbody = document.getElementById("daily-lb-tbody");
+      tbody.innerHTML = data.map(e => {
+        const rc = rankClass(e.rank - 1, data.length);
+        const hl = username && e.username === username ? "highlight-row" : "";
+        const result = e.solved
+          ? `<span style="color:var(--green);font-weight:700">✓ Solved</span>`
+          : `<span style="color:var(--text-muted)">✗ DNF</span>`;
+        const ts = new Date(e.timestamp).toLocaleTimeString("en-US", {hour:"2-digit", minute:"2-digit"});
+        return `<tr class="${rc} ${hl}">
+          <td>${e.rank}</td>
+          <td><strong>${e.username}</strong></td>
+          <td class="best">${e.guesses}</td>
+          <td>${result}</td>
+          <td style="color:var(--text-muted)">${ts}</td>
+        </tr>`;
+      }).join("");
+      document.getElementById("daily-lb-table").classList.remove("hidden");
+    } catch {
+      document.getElementById("daily-lb-loading").classList.add("hidden");
+      document.getElementById("daily-lb-empty").classList.remove("hidden");
+    }
+  }
+
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.tab === "daily" && !_dailyLoaded) {
+        _dailyLoaded = true;
+        loadDailyLeaderboard();
+      }
+    });
+  });
+
   // Load global tab on first click
   {% if supabase_configured %}
   let _globalLoaded = false;
@@ -202,6 +267,13 @@
     });
   });
   {% endif %}
+
+  // Deep-link: /arena-leaderboard?tab=daily
+  const _initTab = new URLSearchParams(location.search).get("tab");
+  if (_initTab) {
+    const btn = document.querySelector(`.tab-btn[data-tab="${_initTab}"]`);
+    if (btn) btn.click();
+  }
 
   loadLeaderboard();
 </script>
