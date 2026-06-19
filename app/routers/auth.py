@@ -1,4 +1,5 @@
 from __future__ import annotations
+import re
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -40,6 +41,10 @@ def claim_username(req: ClaimRequest):
         raise HTTPException(400, f"Username must be {_USERNAME_MIN}–{_USERNAME_MAX} characters")
     if not all(c.isalnum() or c in "-_" for c in name):
         raise HTTPException(400, "Only letters, numbers, hyphens, and underscores allowed")
+    if name.isdigit():
+        raise HTTPException(400, "Username must contain at least one letter")
+    if re.search(r'\d{7,}', name):
+        raise HTTPException(400, "Avoid phone numbers or long digit sequences in your username")
     if is_banned(name):
         raise HTTPException(400, "That name is not allowed")
 

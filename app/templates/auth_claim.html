@@ -10,6 +10,11 @@
       It's permanent — choose wisely!
     </p>
 
+    <div class="privacy-notice">
+      🔒 Use a fun trainer nickname — avoid your real name, phone number,
+      or any personal information. This name is public on the leaderboard.
+    </div>
+
     <div class="username-form" id="claim-form">
       <div class="input-row">
         <input
@@ -22,7 +27,7 @@
         <button id="claim-btn" class="btn btn-primary">Claim Name</button>
       </div>
       <p class="hint" id="claim-hint">
-        3–20 characters · letters, numbers, hyphens, underscores · no offensive words
+        3–20 characters · letters, numbers, hyphens, underscores · no real names or phone numbers
       </p>
     </div>
   </div>
@@ -53,6 +58,16 @@ claimBtn.addEventListener("click", async () => {
   const name = claimInput.value.trim();
   if (!name) {
     claimHint.textContent = "Please enter a name.";
+    claimHint.className = "hint error";
+    return;
+  }
+  if (/^\d+$/.test(name)) {
+    claimHint.textContent = "Username must contain at least one letter.";
+    claimHint.className = "hint error";
+    return;
+  }
+  if (/\d{7,}/.test(name)) {
+    claimHint.textContent = "Avoid phone numbers or long digit sequences.";
     claimHint.className = "hint error";
     return;
   }
