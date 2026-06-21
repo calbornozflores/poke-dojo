@@ -156,11 +156,21 @@ a:hover { color: var(--accent-hover); }
   border-radius: 8px;
 }
 
+.game-preview-wrap { margin-top: 2rem; }
+.game-section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+  margin-top: 1.4rem;
+}
+.game-section-label:first-child { margin-top: 0; }
 .game-preview {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
-  margin-top: 2rem;
 }
 .game-card {
   background: var(--surface2);
