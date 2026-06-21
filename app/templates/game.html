@@ -258,8 +258,8 @@
 
   let currentGame = "name_guess";
   let currentPokemon = null;
-  let sessionScores = [];
-  let streak = 0;
+  let sessionScores = JSON.parse(sessionStorage.getItem("poke_session_scores") || "[]");
+  let streak = parseInt(sessionStorage.getItem("poke_streak") || "0");
   let selectedTypes = [];
 
   // Timer state
@@ -288,6 +288,13 @@
   const subHard        = document.getElementById("submode-hard");
   const roundTimerEl   = document.getElementById("round-timer");
   const timerValueEl   = document.getElementById("timer-value");
+
+  // Restore session stats display on page load
+  if (sessionScores.length > 0) {
+    const avg = sessionScores.reduce((a, b) => a + b, 0) / sessionScores.length;
+    document.getElementById("stat-accuracy").textContent = avg.toFixed(1) + " pts";
+    document.getElementById("stat-streak").textContent = streak;
+  }
 
   // ── Timer ─────────────────────────────────────────────────────────────────
   function startTimer() {
@@ -449,6 +456,7 @@
       currentPokemon = data;
       updateProfessorOakUI(data);
       showGame(data);
+      document.getElementById("stat-games").textContent = data.games_played ?? 0;
     } catch {
       showNoData();
     }
@@ -603,6 +611,7 @@
       b.disabled = true;
       if (b.dataset.name === selectedName) b.classList.add("selected");
     });
+    const accessToken = await _getAccessToken();
     const res = await fetch("/game/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -612,6 +621,7 @@
         game_type: "name_easy",
         guess: selectedName,
         time_used: timeUsed,
+        access_token: accessToken,
       }),
     });
     const data = await res.json();
@@ -723,9 +733,11 @@
   function updateStats(data) {
     document.getElementById("stat-games").textContent = data.games_played;
     sessionScores.push(data.final_score !== undefined ? data.final_score : data.accuracy);
+    sessionStorage.setItem("poke_session_scores", JSON.stringify(sessionScores));
     const avg = sessionScores.reduce((a, b) => a + b, 0) / sessionScores.length;
     document.getElementById("stat-accuracy").textContent = avg.toFixed(1) + " pts";
     streak = data.accuracy >= 80 ? streak + 1 : 0;
+    sessionStorage.setItem("poke_streak", streak.toString());
     document.getElementById("stat-streak").textContent = streak;
   }
 

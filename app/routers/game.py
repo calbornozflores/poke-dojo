@@ -1,5 +1,7 @@
 import random
 from collections import defaultdict
+from dataclasses import dataclass
+from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import func
@@ -11,6 +13,23 @@ from app.services.string_match import name_accuracy
 from app.services.pokemon_data import get_random_pokemon, number_accuracy
 from app.services import xgboost_model
 from app.services.supabase_client import is_authenticated_user
+
+
+@dataclass(frozen=True)
+class _PkmnCache:
+    id: int
+    name: str
+    type1: Optional[str]
+    type2: Optional[str]
+
+_pkmn: dict[int, _PkmnCache] = {}
+
+def _cached_pokemon(pokemon_id: int, db: Session) -> Optional[_PkmnCache]:
+    if pokemon_id not in _pkmn:
+        p = db.query(Pokemon).get(pokemon_id)
+        if p:
+            _pkmn[pokemon_id] = _PkmnCache(p.id, p.name, p.type1, p.type2)
+    return _pkmn.get(pokemon_id)
 
 router = APIRouter(prefix="/game", tags=["game"])
 
@@ -313,7 +332,7 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
 def submit_answer(req: SubmitRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     is_auth = is_authenticated_user(req.username, req.access_token)
 
-    pokemon = db.query(Pokemon).get(req.pokemon_id)
+    pokemon = _cached_pokemon(req.pokemon_id, db)
     if not pokemon:
         raise HTTPException(status_code=404, detail="Pokémon not found")
 
@@ -380,7 +399,6 @@ def submit_answer(req: SubmitRequest, background_tasks: BackgroundTasks, db: Ses
             was_challenge=was_challenge,
         )
         db.add(result)
-        db.commit()
 
         # Update EVO score history
         adjusted = min(100.0, final_score * 1.15) if was_challenge else final_score
@@ -440,7 +458,7 @@ def submit_answer(req: SubmitRequest, background_tasks: BackgroundTasks, db: Ses
 
         db.commit()
 
-        games_played = _game_count(user.id, req.game_type, db)
+        games_played = games_before + 1
         challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
         evo_score = round(new_combined, 1)
 
