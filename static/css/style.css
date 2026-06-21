@@ -392,6 +392,8 @@ a:hover { color: var(--accent-hover); }
 }
 .tab-btn:hover { color: var(--text); }
 .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-sprite { height: 22px; width: 22px; image-rendering: pixelated; vertical-align: middle; margin: 0 2px; }
+.tab-sprite-flip { display: inline-block; transform: scaleX(-1); }
 
 .score-table {
   width: 100%;
