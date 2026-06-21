@@ -1,6 +1,6 @@
 # Poke-Dojo <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/107.png" height="32" align="absmiddle">
 
-A local Pokémon quiz app with five Dojo game modes, a timed scoring system, a leaderboard, a personal profile with AI-powered breakdown, and a **Trainer Journey** page to track your EVO score over time. After 20 games, **Professor Oak Analysis** activates automatically — using machine learning to serve the Pokémon most likely to stump you. Plus a **Battle Arena** with VS Mode (2 players, same keyboard) and Solo Challenge (endless, custom keys, tightening timer, and a personal Shadow that learns your response times). Sign in with Google to claim a unique trainer name and compete on the **Global Leaderboard** — your Solo Challenge best score is synced to a shared cloud ranking visible to all players worldwide.
+A local Pokémon quiz app with five Dojo game modes, a timed scoring system, a leaderboard, a personal profile with AI-powered breakdown, and a **Trainer Journey** page to track your EVO score over time. After 20 games, **Professor Oak Analysis** activates automatically — using machine learning to serve the Pokémon most likely to stump you. Plus a **Battle Arena** with VS Mode (2 players, same keyboard), Solo Challenge (endless, custom keys, tightening timer, and a personal Shadow that learns your response times), and a **Daily Challenge** — one mystery Pokémon per day, shared with every trainer worldwide. Sign in with Google to claim a unique trainer name and compete on the **Global Leaderboard** — your Solo Challenge best score is synced to a shared cloud ranking visible to all players worldwide.
 
 ---
 
@@ -105,7 +105,7 @@ Trophy, winner, final scores, and a round-by-round recap. Rematch starts a fresh
 ![Match End](screenshots/20_battle_arena_match_end.png)
 
 ### Battle Arena — Leaderboard
-Solo Challenge and VS Mode rankings in a shared leaderboard. A **🌐 Global** tab appears when Supabase is configured — showing the worldwide Solo Challenge ranking (one best score per Google account). Accessible from the Leaderboard nav dropdown.
+Three tabs — **Solo Challenge** (Mewtwo), **VS Mode** (Metapod × 2), **Daily Challenge** (Ditto) — each with a pixel sprite on the tab label. The Solo tab shows the Supabase global ranking (authenticated players only) when configured, or local scores otherwise. Guest scores never appear on the Solo leaderboard. Accessible from the Leaderboard nav dropdown.
 
 ![Arena Leaderboard](screenshots/21_arena_leaderboard.png)
 
@@ -224,6 +224,15 @@ Accuracy breakdown by generation ("Gen I • Kanto"), evolution stage, and type.
 ### Trainer Journey
 A smooth SVG chart of your EVO score history. Filter by game mode with the tabs at the top. Defaults to **All Modes** on first visit and remembers your last selected tab for the rest of the session.
 
+### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/132.png" height="22" align="absmiddle"> Daily Challenge
+Every day at midnight a new mystery Pokémon is chosen — the same one for every trainer worldwide. Guess any Pokémon name and receive a **distance score** that tells you how close you are. The lower, the warmer.
+
+- 🟩 ≤ 0.2 — Very close
+- 🟨 0.2–0.5 — Getting warmer
+- 🟥 > 0.5 — Far away
+
+Guesses are sorted closest-first. Solve it, share your result, and come back tomorrow. Previous guesses are restored if you return to the page mid-challenge. The challenge resets at midnight.
+
 ### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/249.png" height="22" align="absmiddle"> Battle Arena
 
 #### VS Mode
@@ -239,8 +248,8 @@ Once a player answers, a green ✓ appears next to their name in the scoreboard 
 #### Solo Challenge
 Assign any 3 keys to the options (Enter, Escape and Space are reserved). Endless rounds with 3 Luvdisc lives — a wrong answer, timeout, or being slower than **Your Shadow** removes one. Timer starts at 10s and tightens by 1s every 10 rounds (floor 5s at round 50). Your Shadow learns your average response time per Pokémon and grows faster as you improve.
 
-#### Global Leaderboard
-Sign in with Google once, claim a unique trainer name, and your best Solo Challenge run is automatically synced to a shared global ranking. Only your personal best score is kept — the leaderboard always reflects your peak performance. Trainer names are moderated to block offensive words (English and Chilean Spanish) including leet-speak substitutions (e.g. `p3rr4`).
+#### Global Solo Leaderboard
+Sign in with Google once, claim a unique trainer name, and your best Solo Challenge run is automatically synced to a shared global ranking (visible on the **Solo Challenge** tab of the Arena Leaderboard). Only your personal best score is kept. Guest scores are never submitted. Trainer names are moderated to block offensive words (English and Chilean Spanish) including leet-speak substitutions (e.g. `p3rr4`). A privacy notice on the sign-in screen reminds players to use a fun trainer nickname rather than real personal information.
 
 > **Optional — self-hosting with global features:** set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_KEY` in a `.env` file (see `.env.example`). Without these variables the app runs fully offline with no Google auth.
 
@@ -261,6 +270,8 @@ poke-dojo/
 │   │   ├── journey.py        # /journey/history (EVO score chart data)
 │   │   ├── battle_arena.py   # /battle/match/*, /battle/round/*, /battle/leaderboard,
 │   │   │                     #   /battle/submit-global-score, /battle/global-leaderboard
+│   │   ├── daily_challenge.py# /daily/today, /daily/guess, /daily/status,
+│   │   │                     #   /daily/guesses, /daily/leaderboard
 │   │   ├── auth.py           # /auth/claim-username, /auth/verify (Google OAuth)
 │   │   └── challenge.py      # /challenge/train (legacy)
 │   ├── services/
@@ -273,6 +284,7 @@ poke-dojo/
 │   │   └── username_filter.py# Profanity filter (English + Chilean, leet-speak aware)
 │   └── templates/            # Jinja2 HTML (base, index, game, scores, profile,
 │                             #   trainer_journey, battle_arena, arena_leaderboard,
+│                             #   daily_challenge, faq, contact,
 │                             #   auth_callback, auth_claim)
 ├── data/
 │   ├── fetch_data.py         # Manual pre-fetch script
