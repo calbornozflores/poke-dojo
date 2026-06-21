@@ -1,6 +1,8 @@
 # Poke-Dojo <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/107.png" height="32" align="absmiddle">
 
-A local Pokémon quiz app with five Dojo game modes, a timed scoring system, a leaderboard, a personal profile with AI-powered breakdown, and a **Trainer Journey** page to track your EVO score over time. After 20 games, **Professor Oak Analysis** activates automatically — using machine learning to serve the Pokémon most likely to stump you. Plus a **Battle Arena** with VS Mode (2 players, same keyboard), Solo Challenge (endless, custom keys, tightening timer, and a personal Shadow that learns your response times), and a **Daily Challenge** — one mystery Pokémon per day, shared with every trainer worldwide. Sign in with Google to claim a unique trainer name and compete on the **Global Leaderboard** — your Solo Challenge best score is synced to a shared cloud ranking visible to all players worldwide.
+A Pokémon quiz app with five Dojo game modes, a timed scoring system, a leaderboard, a personal profile with AI-powered breakdown, and a **Trainer Journey** page to track your EVO score over time. After 20 games, **Professor Oak Analysis** activates automatically — using machine learning to serve the Pokémon most likely to stump you. Plus a **Battle Arena** with VS Mode (2 players, same keyboard), Solo Challenge (endless, custom keys, tightening timer, and a personal Shadow that learns your response times), and a **Daily Challenge** — one mystery Pokémon per day, shared with every trainer worldwide. Sign in with Google to claim a unique trainer name and compete on the **Global Leaderboard** — your Solo Challenge best score is synced to a shared cloud ranking visible to all players worldwide.
+
+Runs locally with SQLite out of the box. Set `DATABASE_URL` to a Supabase PostgreSQL instance and the app switches to global mode — game results are persisted to the cloud, leaderboards are shared across all players, and guests play without saving data.
 
 ---
 
@@ -269,7 +271,10 @@ Assign any 3 keys to the options (Enter, Escape and Space are reserved). Endless
 #### Global Solo Leaderboard
 Sign in with Google once, claim a unique trainer name, and your best Solo Challenge run is automatically synced to a shared global ranking (visible on the **Solo Challenge** tab of the Arena Leaderboard). Only your personal best score is kept. Guest scores are never submitted. Trainer names are moderated to block offensive words (English and Chilean Spanish) including leet-speak substitutions (e.g. `p3rr4`). A privacy notice on the sign-in screen reminds players to use a fun trainer nickname rather than real personal information.
 
-> **Optional — self-hosting with global features:** set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_KEY` in a `.env` file (see `.env.example`). Without these variables the app runs fully offline with no Google auth.
+> **Self-hosting:**
+> - **Local mode (default):** no `.env` needed — runs entirely offline with SQLite, no Google auth, no global leaderboard.
+> - **Global mode:** create a `.env` from `.env.example` and fill in `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`, and `DATABASE_URL` (session-pooler PostgreSQL connection string from your Supabase project). On first startup all tables are created automatically. Set `MAX_PLAYERS` to cap new sign-ups before hitting Supabase free-tier storage limits (default: `500`).
+> - **Guest behavior in global mode:** guests can play all Dojo modes and the Daily Challenge and see their session scores, but results are not saved and their names never appear on any leaderboard.
 
 ---
 
@@ -306,7 +311,7 @@ poke-dojo/
 │                             #   auth_callback, auth_claim)
 ├── data/
 │   ├── fetch_data.py         # Manual pre-fetch script
-│   └── pokemon.db            # SQLite database (git-ignored)
+│   └── pokemon.db            # SQLite database (local mode only, git-ignored)
 ├── .env.example              # Supabase env var template + SQL setup instructions
 ├── screenshots/              # README screenshots
 └── static/
@@ -320,7 +325,7 @@ poke-dojo/
 | Component | Technology |
 |---|---|
 | Backend | FastAPI + Uvicorn |
-| Database | SQLite via SQLAlchemy ORM |
+| Database | SQLite (local) / Supabase PostgreSQL (global) via SQLAlchemy ORM |
 | String matching | rapidfuzz |
 | ML (Professor Oak + Profile) | XGBoost (native SHAP) |
 | Global leaderboard + Auth | Supabase (PostgreSQL + Google OAuth) |
