@@ -604,47 +604,6 @@ a:hover { color: var(--accent-hover); }
 .profile-page-header h1 { font-size: 1.6rem; margin-bottom: 0.3rem; }
 .profile-page-subtitle { color: var(--text-muted); font-size: 0.88rem; }
 
-.profile-game-tabs {
-  display: flex;
-  gap: 0.55rem;
-  flex-wrap: wrap;
-  margin-bottom: 1.75rem;
-}
-.profile-game-tab {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.5rem 1rem 0.5rem 0.6rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color .15s, background .15s, color .15s, box-shadow .15s;
-}
-.profile-game-tab img {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  image-rendering: pixelated;
-  filter: saturate(0.6) brightness(0.85);
-  transition: filter .15s;
-}
-.profile-game-tab:hover:not(.active) {
-  border-color: var(--accent);
-  color: var(--text);
-}
-.profile-game-tab:hover:not(.active) img { filter: saturate(1) brightness(1); }
-.profile-game-tab.active {
-  border-color: var(--accent);
-  background: rgba(108,99,255,0.15);
-  color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent), 0 4px 14px rgba(108,99,255,0.2);
-}
-.profile-game-tab.active img { filter: saturate(1.1) brightness(1.05); }
-
 /* Loading panel */
 .profile-loading-panel {
   text-align: center;
