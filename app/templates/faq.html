@@ -19,9 +19,10 @@
     <details class="faq-item" open>
       <summary class="faq-question">What is Poke-Dojo?</summary>
       <p class="faq-answer">
-        Poke-Dojo is a local Pokémon quiz game covering all 1025 Pokémon. It features five Dojo
-        training modes, a Battle Arena with VS Mode and Solo Challenge, and a Daily Challenge —
-        all with score tracking, a personal profile with AI analysis, and a Trainer Journey chart.
+        Poke-Dojo is your personal Pokémon training ground — a quiz app that covers all 1025 Pokémon.
+        Test your knowledge across five Dojo training modes, battle a friend or your own Shadow in the
+        Arena, and face the same mystery Pokémon as trainers worldwide in the Daily Challenge.
+        Your progress is tracked, your strengths and weaknesses revealed, and your journey charted over time.
       </p>
     </details>
 
@@ -29,48 +30,46 @@
       <summary class="faq-question">What game modes are available?</summary>
       <p class="faq-answer">
         <strong>Dojo (5 modes):</strong><br>
-        · <strong>Name It — Easy</strong>: full artwork shown, type the Pokémon name (fuzzy matching)<br>
-        · <strong>Name It — Medium</strong>: same as Easy but stricter scoring<br>
-        · <strong>Name It — Hard</strong>: silhouette only — identify from the outline<br>
-        · <strong>Guess the Number</strong>: name + artwork shown, enter the Pokédex number<br>
-        · <strong>Guess the Type — Easy</strong>: pick primary type from 4 choices<br>
-        · <strong>Guess the Type — Hard</strong>: toggle all correct types from 18 options<br><br>
+        · <strong>Name It — Easy</strong>: see the full artwork, type the Pokémon name<br>
+        · <strong>Name It — Medium</strong>: same challenge, higher bar to earn full marks<br>
+        · <strong>Name It — Hard</strong>: only the silhouette — identify it from the shadows<br>
+        · <strong>Guess the Number</strong>: name and artwork shown, enter its place in the Pokédex<br>
+        · <strong>Guess the Type — Easy</strong>: pick its primary type from a handful of choices<br>
+        · <strong>Guess the Type — Hard</strong>: uncover every type it carries<br><br>
         <strong>Battle Arena:</strong><br>
-        · <strong>VS Mode</strong>: 2 players, same keyboard — silhouette reveals over 10 seconds<br>
-        · <strong>Solo Challenge</strong>: endless rounds, 3 lives, tightening timer — your AI Shadow competes against you<br>
-        · <strong>Daily Challenge</strong>: Wordle-style — guess today's mystery Pokémon
+        · <strong>VS Mode</strong>: two trainers, one keyboard — a silhouette slowly reveals itself<br>
+        · <strong>Solo Challenge</strong>: survive endless rounds against a tightening clock and your own Shadow<br>
+        · <strong>Daily Challenge</strong>: one mystery Pokémon per day, shared with every trainer on the planet
       </p>
     </details>
 
     <details class="faq-item">
       <summary class="faq-question">What is the EVO score?</summary>
       <p class="faq-answer">
-        The EVO score is an exponential moving average of your final scores across all game sessions.
-        It rises as you improve and is charted over time on the Trainer Journey page, giving you a
-        single number that reflects your overall performance trend.
+        Your EVO score is a living measure of your overall trainer level — it rises as you improve
+        and dips when you slack off. Play any mode, finish a session, and watch it shift.
+        The Trainer Journey page charts its path over time so you can see how far you've come.
       </p>
     </details>
 
     <details class="faq-item">
       <summary class="faq-question">What is the Professor Oak Analysis?</summary>
       <p class="faq-answer">
-        After completing 20 games in a mode, the Professor Oak Analysis unlocks on your Profile page.
-        An XGBoost model trained on your answers uses SHAP values to identify which Pokémon categories
-        (by type, generation, or evolution stage) you find hardest. The app then preferentially
-        selects those Pokémon for you 80% of the time, so you train where you need it most.
+        After enough sessions in a mode, Professor Oak studies your training history and reveals
+        your blind spots — the types, generations, or stages of evolution that still elude you.
+        Once unlocked, the Dojo quietly steers more of those tricky Pokémon your way,
+        so you sharpen exactly where it counts. Check your Profile page to see the verdict.
       </p>
     </details>
 
     <details class="faq-item">
       <summary class="faq-question">How does the Daily Challenge work?</summary>
       <p class="faq-answer">
-        Every day a new mystery Pokémon is chosen — the same one for all players worldwide.
-        Type any Pokémon name into the autocomplete input and press Enter. After each guess you
-        see a distance score:<br><br>
-        · <strong>Distance = name similarity (50%) + Pokédex proximity (50%)</strong><br>
-        · 0.000 = exact match · 1.000 = as far as possible<br><br>
-        🟩 ≤ 0.2 — Very close &nbsp; 🟨 0.2–0.5 — Warmer &nbsp; 🟥 &gt; 0.5 — Far away<br><br>
-        Guesses are sorted closest-first. The Pokémon resets at midnight each day.
+        Every day at midnight a new mystery Pokémon is chosen — the same one for every trainer worldwide.
+        Guess any Pokémon name and you'll receive a distance score that tells you how close you are.
+        The lower the score, the warmer you're getting.<br><br>
+        🟩 Very close &nbsp; 🟨 Getting warmer &nbsp; 🟥 Far away<br><br>
+        Your guesses are sorted closest-first. Find it before the day ends — tomorrow brings a new mystery.
       </p>
     </details>
 
@@ -86,10 +85,9 @@
     <details class="faq-item">
       <summary class="faq-question">Is my data private?</summary>
       <p class="faq-answer">
-        Game results are stored in a local SQLite database on the server. Your chosen trainer
-        nickname is public on the leaderboard — that is the only piece of information other
-        players can see. No email address, real name, or Google account details are ever
-        displayed or accessible to other users.
+        Your trainer nickname is the only thing other players ever see — it appears on the leaderboard
+        and Arena rankings. No email address, real name, or account details are displayed or shared anywhere.
+        Your game history lives on the server, quietly powering your profile and journey chart.
       </p>
     </details>
 
