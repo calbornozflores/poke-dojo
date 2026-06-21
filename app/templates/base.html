@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Poke-Dojo{% endblock %}</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=20260623" />
+  <link rel="stylesheet" href="/static/css/style.css?v=20260622" />
   {% if supabase_configured %}
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -38,6 +38,7 @@
         </div>
       </div>
       <span id="nav-user" class="nav-user"></span>
+      <span id="nav-streak" class="nav-streak hidden"></span>
     </nav>
   </header>
 
@@ -64,6 +65,22 @@
       document.querySelectorAll(".nav-dropdown-menu").forEach(m => m.classList.add("hidden"));
     });
 
+    async function _loadStreak(username) {
+      try {
+        const res = await fetch(`/daily/streak?username=${encodeURIComponent(username)}`);
+        const data = await res.json();
+        const streak = data.current_streak || 0;
+        if (streak >= 1) {
+          const id = streak >= 30 ? 609 : streak >= 7 ? 608 : 607;
+          const el = document.getElementById("nav-streak");
+          el.innerHTML =
+            `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png">` +
+            `<span>${streak}</span>`;
+          el.classList.remove("hidden");
+        }
+      } catch (_) {}
+    }
+
     {% if supabase_configured %}
     // Keep nav username in sync with Google session
     (async () => {
@@ -80,6 +97,7 @@
         if (info.authenticated && info.username) {
           localStorage.setItem("poke_username", info.username);
           document.getElementById("nav-user").textContent = "🌐 " + info.username;
+          _loadStreak(info.username);
         } else if (info.authenticated && !info.username) {
           if (!window.location.pathname.startsWith("/auth/")) {
             window.location.href = "/auth/claim";

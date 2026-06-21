@@ -117,7 +117,7 @@
     <div id="game-screen" class="hidden">
       <div class="pokemon-card">
         <div id="round-timer" class="round-timer hidden timer-green">
-          <span id="timer-value">60</span>
+          <span id="timer-value">30</span>
         </div>
         <div class="sprite-wrapper">
           <img id="pokemon-sprite" src="" alt="Pokémon sprite" class="pokemon-sprite" />
@@ -217,37 +217,37 @@
     name_easy: {
       title: "Name It — Easy",
       desc: "A Pokémon appears with its artwork fully visible. Pick its name from three options!",
-      scoring: "Score = 100 × Time Bonus if correct, 0 if wrong. Timer counts down from 60 s.",
+      scoring: "Score = 100 × Time Bonus if correct, 0 if wrong. Timer counts down from 30 s. Counts toward Trainer Journey — Easy level cap: 30.",
       controls: "Click the correct name button, or press Q / W / E for the three options.",
     },
     name_guess: {
       title: "Name It — Medium",
       desc: "A Pokémon appears with its artwork fully visible. Type its name as quickly as you can!",
-      scoring: "Score = Accuracy × Time Bonus. Perfect answer at the start = 100 pts. Timer counts down from 60 s.",
+      scoring: "Score = Accuracy × Time Bonus. Perfect answer at the start = 100 pts. Timer counts down from 30 s. Counts toward Trainer Journey — Medium level cap: 60.",
       controls: "Type the Pokémon name and press Enter or click Submit.",
     },
     name_hard: {
       title: "Name It — Hard",
       desc: "Only the silhouette is shown. Can you identify the Pokémon from its outline alone?",
-      scoring: "Score = Accuracy × Time Bonus. Perfect answer at the start = 100 pts. Timer counts down from 60 s.",
+      scoring: "Score = Accuracy × Time Bonus. Perfect answer at the start = 100 pts. Timer counts down from 30 s. Counts toward Trainer Journey — Hard: no level cap (reach up to 100).",
       controls: "Type the Pokémon name and press Enter or click Submit.",
     },
     number_guess: {
       title: "Guess the Number",
       desc: "The Pokémon's name and artwork are shown. Enter its Pokédex number — the closer the better!",
-      scoring: "Score = Closeness × Time Bonus. Exact match at the start = 100 pts. Timer counts down from 60 s.",
+      scoring: "Score = Closeness × Time Bonus. Exact match at the start = 100 pts. Timer counts down from 30 s. Counts toward Trainer Journey — no level cap (reach up to 100).",
       controls: "Type a number from 1 to 1025 and press Enter or click Submit.",
     },
     type_easy: {
       title: "Guess the Type — Easy",
       desc: "A Pokémon appears. Select its primary type from four choices.",
-      scoring: "Score = 100 × Time Bonus if correct, 0 if wrong. Timer counts down from 60 s.",
+      scoring: "Score = 100 × Time Bonus if correct, 0 if wrong. Timer counts down from 30 s. Counts toward Trainer Journey — Easy level cap: 30.",
       controls: "Click the correct type button — it submits instantly.",
     },
     type_hard: {
       title: "Guess the Type — Hard",
       desc: "Select ALL types this Pokémon has — it may be single or dual type.",
-      scoring: "Score = Type Accuracy × Time Bonus. Timer counts down from 60 s.",
+      scoring: "Score = Type Accuracy × Time Bonus. Timer counts down from 30 s. Counts toward Trainer Journey — Hard: no level cap (reach up to 100).",
       controls: "Toggle type buttons (max 2), then click Submit.",
     },
   };
@@ -263,7 +263,7 @@
   let selectedTypes = [];
 
   // Timer state
-  const ROUND_DURATION = 60;
+  const ROUND_DURATION = 30;
   let roundStartTime = null;
   let timerInterval = null;
 
@@ -300,11 +300,11 @@
       timerValueEl.textContent = Math.ceil(remaining);
 
       roundTimerEl.className = "round-timer";
-      if (remaining > 30)       roundTimerEl.classList.add("timer-green");
-      else if (remaining > 15)  roundTimerEl.classList.add("timer-amber");
+      if (remaining > 15)      roundTimerEl.classList.add("timer-green");
+      else if (remaining > 7)  roundTimerEl.classList.add("timer-amber");
       else {
         roundTimerEl.classList.add("timer-red");
-        if (remaining <= 10)    roundTimerEl.classList.add("timer-pulse");
+        if (remaining <= 5)    roundTimerEl.classList.add("timer-pulse");
       }
 
       if (remaining <= 0) {

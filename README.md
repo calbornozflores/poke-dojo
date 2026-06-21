@@ -186,20 +186,18 @@ Artwork and name shown. Enter the Pokédex number (1–1025). The closer, the be
 - **Hard** — toggle all types from 18 options, then submit.
 
 ### Scoring
-Every round has a **60-second countdown timer**.
+Every round has a **30-second countdown timer**.
 
 ```
-FinalScore = (Accuracy / 100) × max(0, 100 − (TimeUsed / 60) × 100)
+FinalScore = (Accuracy / 100) × max(0, 100 − (TimeUsed / 30) × 100)
 ```
 
 | Time used | Time bonus | Perfect name score |
 |---|---|---|
 | 0 s | 100 | 100 pts |
-| 15 s | 75 | 75 pts |
-| 30 s | 50 | 50 pts |
-| 60 s | 0 | 0 pts |
-
-A score ≥ 80 accuracy counts toward your streak.
+| 7 s | 77 | 77 pts |
+| 15 s | 50 | 50 pts |
+| 30 s | 0 | 0 pts |
 
 ### Professor Oak Analysis
 Unlocks automatically per mode after **20 games**. No checkbox — it's always on once unlocked. The XGBoost model trained on your history picks the Pokémon it predicts you'll find hardest:
@@ -207,22 +205,31 @@ Unlocks automatically per mode after **20 games**. No checkbox — it's always o
 - **20%** of rounds: completely random, for variety
 
 ### EVO Score
-An exponential moving average of your final scores, tracked across all games:
+A **combined, difficulty-capped** exponential moving average per game family, tracked in the Trainer Journey. Each game family (Name It, Guess Number, Guess the Type) has one EVO track. Difficulty determines how high you can climb:
+
+| Difficulty | Level cap |
+|---|---|
+| Easy | 30 |
+| Medium | 60 |
+| Hard | 100 |
+
+The session score is first scaled to the difficulty's range before the EMA is applied:
 
 ```
-EVOₜ = min(100, 0.12 × adjusted + 0.88 × EVOₜ₋₁)
+EffectiveScore = FinalScore × (cap / 100)
+EVOₜ = min(cap, 0.12 × EffectiveScore + 0.88 × EVOₜ₋₁)
 ```
 
-Where `adjusted = min(100, FinalScore × 1.15)` when Professor Oak is active (challenge bonus), else `adjusted = FinalScore`. Starts at your first game score, approaches 100 as you improve.
+If your EVO is already at or above the difficulty cap, that session has no effect (neither up nor down). To keep progressing past 30, you must play Medium; past 60, you must play Hard. Where `adjusted = min(100, FinalScore × 1.15)` when Professor Oak is active (challenge bonus), else `adjusted = FinalScore`.
 
 ### My Profile
-Accuracy breakdown by generation ("Gen I • Kanto"), evolution stage, and type. Categories with fewer than 5 games are hidden. After 20 games, AI (SHAP) bars appear and **become the primary sort key**:
+Accuracy breakdown by generation ("Gen I • Kanto"), evolution stage, and type. Navigate with top-level game tabs (Name It / Guess Number / Guess the Type) and difficulty sub-switches. Categories with fewer than 5 games are hidden. After 20 games, AI (SHAP) bars appear and **become the primary sort key**:
 - **Orange bar (HARD ↑)** — Professor Oak predicts this category will stay hard for you; floats to the top
 - **Blue bar (EASY ↓)** — Professor Oak predicts this category will be easy; sinks to the bottom
 - Before 20 games, categories are sorted by accuracy (lowest first)
 
 ### Trainer Journey
-A smooth SVG chart of your EVO score history. Filter by game mode with the tabs at the top. Defaults to **All Modes** on first visit and remembers your last selected tab for the rest of the session.
+A smooth SVG chart of your combined EVO score per game family. Four tabs — **All Modes** (Snorlax), **Name It** (Pikachu), **Guess Number** (Arceus), **Guess the Type** (Eevee) — each showing one unified line that reflects all difficulty levels played. Defaults to **All Modes** on first visit and remembers your last selected tab.
 
 ### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/132.png" height="22" align="absmiddle"> Daily Challenge
 Every day at midnight a new mystery Pokémon is chosen — the same one for every trainer worldwide. Guess any Pokémon name and receive a **distance score** that tells you how close you are. The lower, the warmer.
@@ -232,6 +239,17 @@ Every day at midnight a new mystery Pokémon is chosen — the same one for ever
 - 🟥 > 0.5 — Far away
 
 Guesses are sorted closest-first. Solve it, share your result, and come back tomorrow. Previous guesses are restored if you return to the page mid-challenge. The challenge resets at midnight.
+
+#### Daily Streak <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/607.png" height="22" align="absmiddle"> <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/608.png" height="22" align="absmiddle"> <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/609.png" height="22" align="absmiddle">
+Authenticated (Google-signed-in) players who complete the Daily Challenge on consecutive days build a flame streak visible in the navbar. The flame evolves as your streak grows:
+
+| Streak | Flame |
+|---|---|
+| 1–6 days | Litwick |
+| 7–29 days | Lampent |
+| 30+ days | Chandelure |
+
+Miss a day and the flame resets to 1. Guest players do not accumulate a visible streak.
 
 ### <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/249.png" height="22" align="absmiddle"> Battle Arena
 
@@ -271,7 +289,7 @@ poke-dojo/
 │   │   ├── battle_arena.py   # /battle/match/*, /battle/round/*, /battle/leaderboard,
 │   │   │                     #   /battle/submit-global-score, /battle/global-leaderboard
 │   │   ├── daily_challenge.py# /daily/today, /daily/guess, /daily/status,
-│   │   │                     #   /daily/guesses, /daily/leaderboard
+│   │   │                     #   /daily/guesses, /daily/leaderboard, /daily/streak
 │   │   ├── auth.py           # /auth/claim-username, /auth/verify (Google OAuth)
 │   │   └── challenge.py      # /challenge/train (legacy)
 │   ├── services/

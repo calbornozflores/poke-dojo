@@ -4,8 +4,10 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from rapidfuzz import fuzz
 
+from datetime import timedelta
+
 from app.database import get_db
-from app.models import Pokemon, DailyPokemon, DailyChallengeResult, DailyChallengeGuess
+from app.models import Pokemon, DailyPokemon, DailyChallengeResult, DailyChallengeGuess, User
 
 router = APIRouter(prefix="/daily", tags=["daily"])
 
@@ -188,6 +190,20 @@ def submit_guess(req: GuessRequest, db: Session = Depends(get_db)):
 
     db.commit()
 
+    if is_correct:
+        user = db.query(User).filter(User.username == req.username).first()
+        if user:
+            today_str = today.isoformat()
+            yesterday_str = (today - timedelta(days=1)).isoformat()
+            if user.last_challenge_date == yesterday_str:
+                user.current_streak = (user.current_streak or 0) + 1
+            elif user.last_challenge_date == today_str:
+                pass
+            else:
+                user.current_streak = 1
+            user.last_challenge_date = today_str
+            db.commit()
+
     return GuessResponse(
         distance=distance,
         is_correct=is_correct,
@@ -306,3 +322,11 @@ def get_guesses(username: str = Query(...), db: Session = Depends(get_db)):
         )
         for g, p in rows
     ]
+
+
+@router.get("/streak")
+def get_streak(username: str = Query(...), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        return {"current_streak": 0}
+    return {"current_streak": user.current_streak or 0}
