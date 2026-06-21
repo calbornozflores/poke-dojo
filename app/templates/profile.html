@@ -8,32 +8,36 @@
     <p class="profile-page-subtitle">Your performance breakdown by generation, evolution stage, and type.</p>
   </div>
 
-  <!-- Game type selector -->
-  <div class="profile-game-tabs">
-    <button class="profile-game-tab active" data-game="name_easy">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/172.png" alt="">
-      Name Easy
+  <!-- Top-level game tabs -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="nameit">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png"
+           alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">
+      Name It
     </button>
-    <button class="profile-game-tab" data-game="name_guess">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="">
-      Name Medium
-    </button>
-    <button class="profile-game-tab" data-game="name_hard">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" style="filter:brightness(0) invert(1)">
-      Name Hard
-    </button>
-    <button class="profile-game-tab" data-game="number_guess">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" alt="">
+    <button class="tab-btn" data-tab="number">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png"
+           alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">
       Guess Number
     </button>
-    <button class="profile-game-tab" data-game="type_easy">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" alt="">
-      Type Easy
+    <button class="tab-btn" data-tab="type">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png"
+           alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">
+      Guess the Type
     </button>
-    <button class="profile-game-tab" data-game="type_hard">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png" alt="">
-      Type Hard
-    </button>
+  </div>
+
+  <!-- Name It difficulty sub-switch -->
+  <div id="subtabs-nameit" class="type-sub-switch">
+    <button class="type-sub-btn active" data-game="name_easy">Easy</button>
+    <button class="type-sub-btn" data-game="name_guess">Medium</button>
+    <button class="type-sub-btn" data-game="name_hard">Hard</button>
+  </div>
+
+  <!-- Guess the Type difficulty sub-switch (hidden until Type tab active) -->
+  <div id="subtabs-type" class="type-sub-switch hidden">
+    <button class="type-sub-btn active" data-game="type_easy">Easy</button>
+    <button class="type-sub-btn" data-game="type_hard">Hard</button>
   </div>
 
   <!-- Loading state -->
@@ -98,9 +102,13 @@
   const username = localStorage.getItem("poke_username");
   if (!username) window.location.href = "/";
 
-  let activeGame       = sessionStorage.getItem("profile_tab") || "name_easy";
-  let progressTimer    = null;
-  let cachedBreakdown  = null;
+  // Restore session state
+  let activeTab    = sessionStorage.getItem("profile_game")   || "nameit";
+  let nameItSub    = sessionStorage.getItem("profile_sub_nameit") || "name_easy";
+  let typeSub      = sessionStorage.getItem("profile_sub_type")   || "type_easy";
+
+  let progressTimer   = null;
+  let cachedBreakdown = null;
 
   const SECTION_META = {
     gen:   { containerId: "breakdown-gen",   hasIcon: false, dataKey: "by_generation" },
@@ -114,6 +122,34 @@
   const progressFill = document.getElementById("profile-progress-fill");
   const gamesLabel   = document.getElementById("profile-games-label");
   const gamesInfo    = document.getElementById("profile-games-info");
+
+  function activeGameType() {
+    if (activeTab === "nameit")  return nameItSub;
+    if (activeTab === "number")  return "number_guess";
+    if (activeTab === "type")    return typeSub;
+  }
+
+  // ── UI helpers ────────────────────────────────────────────────────────────
+
+  function applyTabState() {
+    // Top-level tabs
+    document.querySelectorAll(".tab-btn").forEach(b =>
+      b.classList.toggle("active", b.dataset.tab === activeTab));
+
+    // Sub-switch visibility
+    document.getElementById("subtabs-nameit").classList.toggle("hidden", activeTab !== "nameit");
+    document.getElementById("subtabs-type").classList.toggle("hidden", activeTab !== "type");
+
+    // Sub-switch active button — Name It
+    document.querySelectorAll("#subtabs-nameit .type-sub-btn").forEach(b =>
+      b.classList.toggle("active", b.dataset.game === nameItSub));
+
+    // Sub-switch active button — Type
+    document.querySelectorAll("#subtabs-type .type-sub-btn").forEach(b =>
+      b.classList.toggle("active", b.dataset.game === typeSub));
+  }
+
+  // ── Loading / rendering (unchanged from original) ─────────────────────────
 
   function showLoading() {
     loadingPanel.classList.remove("hidden");
@@ -137,23 +173,14 @@
     setTimeout(cb, 350);
   }
 
-  function accuracyColor(pct) {
-    if (pct >= 70) return "#4ade80";
-    if (pct >= 50) return "#fbbf24";
-    return "#f87171";
-  }
-
   function makeLine(tag, valueText, fillPct, color, isShap) {
     const line = document.createElement("div");
     line.className = "breakdown-bar-line" + (isShap ? " shap-line" : "");
-
     const tagEl = document.createElement("span");
     tagEl.className = "bar-line-tag" + (isShap ? " shap-tag" : "");
     tagEl.textContent = tag;
-
     const track = document.createElement("div");
     track.className = "breakdown-track" + (isShap ? " shap-track" : "");
-
     const fill = document.createElement("div");
     fill.className = "breakdown-fill";
     fill.style.background = isShap
@@ -163,12 +190,10 @@
     fill.dataset.w   = fillPct + "%";
     fill.style.width = "0%";
     track.appendChild(fill);
-
     const val = document.createElement("span");
     val.className   = "bar-line-val" + (isShap ? " shap-verdict" : "");
     val.style.color = color;
     val.textContent = valueText;
-
     line.appendChild(tagEl);
     line.appendChild(track);
     line.appendChild(val);
@@ -178,23 +203,18 @@
   function makeRows(items, containerId, hasIcon) {
     const el = document.getElementById(containerId);
     el.innerHTML = "";
-
     if (!items || !items.length) {
       el.innerHTML = '<p class="breakdown-empty">Not enough data — keep playing!</p>';
       return;
     }
-
     const hasShap    = items.some(it => it.shap != null);
     const maxAbsShap = hasShap
       ? (Math.max(...items.filter(it => it.shap != null).map(it => Math.abs(it.shap))) || 1)
       : 1;
-
     const fills = [];
-
     items.forEach((item, i) => {
       const row = document.createElement("div");
       row.className = "breakdown-row";
-
       const labelEl = document.createElement("div");
       labelEl.className = "breakdown-label";
       if (hasIcon && item.icon) {
@@ -204,10 +224,8 @@
         labelEl.appendChild(img);
       }
       labelEl.appendChild(Object.assign(document.createElement("span"), { textContent: item.label }));
-
       const barGroup = document.createElement("div");
       barGroup.className = "breakdown-bar-group";
-
       if (hasShap && item.shap != null) {
         const hard      = item.shap > 0;
         const shapColor = hard ? "#fb923c" : "#60a5fa";
@@ -216,17 +234,14 @@
         barGroup.appendChild(shapLine.el);
         fills.push({ fill: shapLine.fill, delay: 80 + i * 55 + 70 });
       }
-
       const nEl = Object.assign(document.createElement("div"), {
         className: "breakdown-n", textContent: "n=" + item.n
       });
-
       row.appendChild(labelEl);
       row.appendChild(barGroup);
       row.appendChild(nEl);
       el.appendChild(row);
     });
-
     fills.forEach(({ fill, delay }) => {
       setTimeout(() => { fill.style.width = fill.dataset.w; }, delay);
     });
@@ -237,10 +252,8 @@
     const items = [...cachedBreakdown.breakdown[meta.dataKey]];
     const hasShap = items.some(it => it.shap != null);
     if (hasShap) {
-      // Sort by AI prediction: most "hard" (highest positive SHAP) first
       items.sort((a, b) => (b.shap ?? -Infinity) - (a.shap ?? -Infinity));
     } else {
-      // Fallback: sort hardest-first by accuracy (lowest first)
       items.sort((a, b) => a.avg - b.avg);
     }
     makeRows(items, meta.containerId, meta.hasIcon);
@@ -258,10 +271,8 @@
         `/game/profile/breakdown?username=${encodeURIComponent(username)}&game_type=${encodeURIComponent(gameType)}`
       );
       const data = await res.json();
-
       finishProgress(() => {
         loadingPanel.classList.add("hidden");
-
         if (!data.has_data) {
           const n = data.total_games || 0;
           gamesInfo.textContent = n
@@ -270,7 +281,6 @@
           lockedPanel.classList.remove("hidden");
           return;
         }
-
         gamesLabel.textContent = `Based on ${data.total_games} game${data.total_games !== 1 ? "s" : ""} in this mode`;
         renderBreakdown(data);
         resultPanel.classList.remove("hidden");
@@ -284,22 +294,37 @@
     }
   }
 
-  document.querySelectorAll(".profile-game-tab").forEach(btn => {
+  // ── Event listeners ───────────────────────────────────────────────────────
+
+  document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".profile-game-tab").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      activeGame = btn.dataset.game;
-      sessionStorage.setItem("profile_tab", activeGame);
-      loadProfile(activeGame);
+      activeTab = btn.dataset.tab;
+      sessionStorage.setItem("profile_game", activeTab);
+      applyTabState();
+      loadProfile(activeGameType());
     });
   });
 
-  // Apply remembered or default tab
-  const savedTab = document.querySelector(`.profile-game-tab[data-game="${activeGame}"]`);
-  if (savedTab) {
-    document.querySelectorAll(".profile-game-tab").forEach(b => b.classList.remove("active"));
-    savedTab.classList.add("active");
-  }
-  loadProfile(activeGame);
+  document.querySelectorAll("#subtabs-nameit .type-sub-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      nameItSub = btn.dataset.game;
+      sessionStorage.setItem("profile_sub_nameit", nameItSub);
+      applyTabState();
+      loadProfile(nameItSub);
+    });
+  });
+
+  document.querySelectorAll("#subtabs-type .type-sub-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      typeSub = btn.dataset.game;
+      sessionStorage.setItem("profile_sub_type", typeSub);
+      applyTabState();
+      loadProfile(typeSub);
+    });
+  });
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  applyTabState();
+  loadProfile(activeGameType());
 </script>
 {% endblock %}

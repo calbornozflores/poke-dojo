@@ -18,9 +18,13 @@ def journey_history(
     if not user:
         return {"has_data": False, "current_score": 0, "history": []}
 
+    _COMBINED_TYPES = ("name_it", "number_guess", "guess_type")
+
     q = db.query(EvoScoreHistory).filter(EvoScoreHistory.user_id == user.id)
     if game_type:
         q = q.filter(EvoScoreHistory.game_type == game_type)
+    else:
+        q = q.filter(EvoScoreHistory.game_type.in_(_COMBINED_TYPES))
     history = q.order_by(EvoScoreHistory.timestamp.asc()).all()
 
     return {

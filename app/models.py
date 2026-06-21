@@ -32,6 +32,8 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    current_streak: Mapped[int] = mapped_column(Integer, default=0)
+    last_challenge_date: Mapped[str | None] = mapped_column(String, nullable=True)
 
     results: Mapped[list["GameResult"]] = relationship(back_populates="user")
     evo_history: Mapped[list["EvoScoreHistory"]] = relationship(back_populates="user")

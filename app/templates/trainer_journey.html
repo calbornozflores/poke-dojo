@@ -8,34 +8,26 @@
     <p class="journey-subtitle">Your EVO score tracks skill growth across all your games. It rises with every strong performance.</p>
   </div>
 
-  <div class="journey-game-tabs">
-    <button class="journey-tab active" data-game="">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png" alt="">
+  <div class="tab-bar">
+    <button class="tab-btn active" data-game="">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png"
+           alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">
       All Modes
     </button>
-    <button class="journey-tab" data-game="name_easy">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/172.png" alt="">
-      Name Easy
+    <button class="tab-btn" data-game="name_it">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png"
+           alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">
+      Name It
     </button>
-    <button class="journey-tab" data-game="name_guess">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="">
-      Name Medium
-    </button>
-    <button class="journey-tab" data-game="name_hard">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" style="filter:brightness(0) invert(1)">
-      Name Hard
-    </button>
-    <button class="journey-tab" data-game="number_guess">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" alt="">
+    <button class="tab-btn" data-game="number_guess">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png"
+           alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">
       Guess Number
     </button>
-    <button class="journey-tab" data-game="type_easy">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" alt="">
-      Type Easy
-    </button>
-    <button class="journey-tab" data-game="type_hard">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png" alt="">
-      Type Hard
+    <button class="tab-btn" data-game="guess_type">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png"
+           alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">
+      Guess the Type
     </button>
   </div>
 
@@ -250,9 +242,9 @@
     }
   }
 
-  document.querySelectorAll(".journey-tab").forEach(btn => {
+  document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".journey-tab").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       activeGameType = btn.dataset.game;
       sessionStorage.setItem("journey_tab", activeGameType);
@@ -261,9 +253,9 @@
   });
 
   // Apply remembered or default tab
-  const savedJourneyTab = document.querySelector(`.journey-tab[data-game="${activeGameType}"]`);
+  const savedJourneyTab = document.querySelector(`.tab-btn[data-game="${activeGameType}"]`);
   if (savedJourneyTab) {
-    document.querySelectorAll(".journey-tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
     savedJourneyTab.classList.add("active");
   }
   loadJourney(activeGameType);

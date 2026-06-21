@@ -53,6 +53,17 @@ def run_migrations():
         except Exception:
             pass
 
+        # Phase 5: daily challenge streak tracking on users
+        for col, ddl in [
+            ("current_streak",      "INTEGER DEFAULT 0"),
+            ("last_challenge_date", "TEXT DEFAULT NULL"),
+        ]:
+            try:
+                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
+                conn.commit()
+            except Exception:
+                pass
+
 
 def get_db():
     db = SessionLocal()

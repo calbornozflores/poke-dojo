@@ -76,7 +76,7 @@ class SubmitRequest(BaseModel):
     pokemon_id: int
     game_type: str
     guess: str
-    time_used: float = 60.0
+    time_used: float = 30.0
     was_challenge: bool = False  # kept for API compat, now computed server-side
 
 
@@ -343,8 +343,8 @@ def submit_answer(req: SubmitRequest, background_tasks: BackgroundTasks, db: Ses
         raise HTTPException(status_code=422, detail="invalid game_type")
 
     # Compute final score: accuracy × time_score (both 0-100)
-    time_used = max(0.0, min(60.0, req.time_used))
-    time_score = max(0.0, 100.0 - (time_used / 60.0) * 100.0)
+    time_used = max(0.0, min(30.0, req.time_used))
+    time_score = max(0.0, 100.0 - (time_used / 30.0) * 100.0)
     final_score = round((accuracy / 100.0) * time_score, 1)
 
     # Determine if Professor Oak Analysis was active when this game was played
@@ -365,6 +365,8 @@ def submit_answer(req: SubmitRequest, background_tasks: BackgroundTasks, db: Ses
 
     # Update EVO score history
     adjusted = min(100.0, final_score * 1.15) if was_challenge else final_score
+
+    # Per-difficulty record (kept for backward compatibility / profile analysis)
     latest_evo = (
         db.query(EvoScoreHistory)
         .filter(EvoScoreHistory.user_id == user.id, EvoScoreHistory.game_type == req.game_type)
@@ -375,13 +377,48 @@ def submit_answer(req: SubmitRequest, background_tasks: BackgroundTasks, db: Ses
         new_evo = min(100.0, 0.12 * adjusted + 0.88 * latest_evo.evo_score)
     else:
         new_evo = min(100.0, adjusted)
-    evo_record = EvoScoreHistory(
+    db.add(EvoScoreHistory(
         user_id=user.id,
         game_type=req.game_type,
         evo_score=round(new_evo, 2),
         final_score=final_score,
+    ))
+
+    # Combined per-game EVO (used by Trainer Journey chart)
+    # Raw score is scaled to the difficulty's range [0, scale_max] for smooth evolution
+    _DIFFICULTY_SCALE = {
+        "name_easy":    ("name_it",      30),
+        "name_guess":   ("name_it",      60),
+        "name_hard":    ("name_it",     100),
+        "number_guess": ("number_guess", 100),
+        "type_easy":    ("guess_type",   30),
+        "type_hard":    ("guess_type",  100),
+    }
+    combined_key, scale_max = _DIFFICULTY_SCALE.get(req.game_type, (req.game_type, 100))
+    effective_score = adjusted * (scale_max / 100.0)
+
+    latest_combined = (
+        db.query(EvoScoreHistory)
+        .filter(EvoScoreHistory.user_id == user.id, EvoScoreHistory.game_type == combined_key)
+        .order_by(EvoScoreHistory.timestamp.desc())
+        .first()
     )
-    db.add(evo_record)
+    current_combined = latest_combined.evo_score if latest_combined else 0.0
+
+    if current_combined < scale_max:
+        if latest_combined:
+            new_combined = round(min(0.12 * effective_score + 0.88 * current_combined, scale_max), 2)
+        else:
+            new_combined = round(min(effective_score, scale_max), 2)
+        db.add(EvoScoreHistory(
+            user_id=user.id,
+            game_type=combined_key,
+            evo_score=new_combined,
+            final_score=final_score,
+        ))
+    else:
+        new_combined = current_combined
+
     db.commit()
 
     games_played = _game_count(user.id, req.game_type, db)
@@ -393,7 +430,7 @@ def submit_answer(req: SubmitRequest, background_tasks: BackgroundTasks, db: Ses
     return SubmitResponse(
         accuracy=round(accuracy, 1),
         final_score=final_score,
-        evo_score=round(new_evo, 1),
+        evo_score=round(new_combined, 1),
         correct_name=pokemon.name,
         correct_number=pokemon.id,
         distance=distance,

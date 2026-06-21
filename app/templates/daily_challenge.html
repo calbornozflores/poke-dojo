@@ -10,7 +10,7 @@
   <div class="daily-screen hidden" id="screen-game">
     <div class="daily-header">
       <div>
-        <div class="daily-header-title">📅 Who's that Pokémon?</div>
+        <div class="daily-header-title"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/132.png" alt="Ditto" style="width:28px;height:28px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Who's that Pokémon?</div>
         <div class="daily-header-date" id="game-date-label"></div>
       </div>
       <div class="daily-header-right">
@@ -53,13 +53,16 @@
       </div>
 
     </div>
+    <div style="text-align:center;margin-top:1.5rem;">
+      <a href="/play" class="btn btn-ghost">← Back to Dojo</a>
+    </div>
   </div>
 
   <!-- ── Screen: Solved / Already played ───────────────────────────── -->
   <div class="daily-screen hidden" id="screen-solved">
     <div class="daily-header">
       <div>
-        <div class="daily-header-title">📅 Daily Challenge</div>
+        <div class="daily-header-title"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/132.png" alt="Ditto" style="width:28px;height:28px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Daily Challenge</div>
         <div class="daily-header-date" id="solved-date-label"></div>
       </div>
       <div class="daily-header-right">
@@ -81,6 +84,9 @@
     <div class="daily-solved-guesses">
       <p class="daily-guess-list-header" style="margin-bottom:0.5rem">All guesses</p>
       <div id="solved-guess-list"></div>
+    </div>
+    <div style="text-align:center;margin-top:1.5rem;">
+      <a href="/play" class="btn btn-ghost">← Back to Dojo</a>
     </div>
   </div>
 
@@ -378,6 +384,9 @@ async function showSolvedScreen(guessCount) {
 
   renderGuessList('solved-guess-list');
   showScreen('screen-solved');
+  if (typeof _loadStreak === 'function' && localStorage.getItem('poke_username')) {
+    _loadStreak(localStorage.getItem('poke_username'));
+  }
 }
 
 // ── Share ──────────────────────────────────────────────────────────────────
