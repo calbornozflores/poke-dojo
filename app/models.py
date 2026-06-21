@@ -1,5 +1,5 @@
-from datetime import datetime
-from sqlalchemy import Integer, String, Float, Boolean, DateTime, ForeignKey
+from datetime import datetime, date
+from sqlalchemy import Integer, String, Float, Boolean, DateTime, ForeignKey, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -102,3 +102,34 @@ class CompetitiveResult(Base):
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     match: Mapped["CompetitiveMatch"] = relationship(back_populates="competitive_results")
+
+
+class DailyPokemon(Base):
+    __tablename__ = "daily_pokemon"
+
+    date: Mapped[date] = mapped_column(Date, primary_key=True)
+    pokemon_id: Mapped[int] = mapped_column(Integer, ForeignKey("pokemon.id"), nullable=False)
+
+
+class DailyChallengeResult(Base):
+    __tablename__ = "daily_challenge_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    guesses: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    solved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    best_distance: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class DailyChallengeGuess(Base):
+    __tablename__ = "daily_challenge_guesses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String, nullable=False)
+    date: Mapped[date] = mapped_column(Date, nullable=False)
+    guess_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    pokemon_id: Mapped[int] = mapped_column(Integer, ForeignKey("pokemon.id"), nullable=False)
+    distance: Mapped[float] = mapped_column(Float, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

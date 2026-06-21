@@ -9,11 +9,19 @@
   </div>
 
   <div class="tab-bar">
-    <button class="tab-btn active" data-tab="solo">⚔ Solo Challenge</button>
-    <button class="tab-btn" data-tab="vs">VS Mode</button>
-    {% if supabase_configured %}
-    <button class="tab-btn" data-tab="global">🌐 Global</button>
-    {% endif %}
+    <button class="tab-btn active" data-tab="solo">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png"
+           alt="" class="tab-sprite"> Solo Challenge
+    </button>
+    <button class="tab-btn" data-tab="vs">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/11.png"
+           alt="" class="tab-sprite tab-sprite-flip"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/11.png"
+           alt="" class="tab-sprite"> VS Mode
+    </button>
+    <button class="tab-btn" data-tab="daily">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/132.png"
+           alt="" class="tab-sprite"> Daily Challenge
+    </button>
   </div>
 
   <!-- Solo tab -->
@@ -24,34 +32,26 @@
         <tr>
           <th>#</th>
           <th>Trainer</th>
+          {% if supabase_configured %}
+          <th>Best Score</th>
+          <th>Rounds</th>
+          <th>Shadow Wins</th>
+          {% else %}
           <th>Best Run Score</th>
           <th>Longest Streak</th>
+          {% endif %}
         </tr>
       </thead>
       <tbody id="solo-tbody"></tbody>
     </table>
-    <p id="solo-empty" class="centered-msg hidden">No solo runs yet. Be the first!</p>
+    <p id="solo-empty" class="centered-msg hidden">
+      {% if supabase_configured %}
+      Sign in with Google to appear on the Solo leaderboard!
+      {% else %}
+      No solo runs yet. Be the first!
+      {% endif %}
+    </p>
   </div>
-
-  {% if supabase_configured %}
-  <!-- Global tab -->
-  <div id="tab-global" class="tab-content hidden">
-    <div id="global-loading" class="centered-msg">Loading global leaderboard…</div>
-    <table id="global-table" class="score-table hidden">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Trainer</th>
-          <th>Best Score</th>
-          <th>Rounds</th>
-          <th>Shadow Wins</th>
-        </tr>
-      </thead>
-      <tbody id="global-tbody"></tbody>
-    </table>
-    <p id="global-empty" class="centered-msg hidden">No global scores yet — be the first!</p>
-  </div>
-  {% endif %}
 
   <!-- VS tab -->
   <div id="tab-vs" class="tab-content hidden">
@@ -70,6 +70,25 @@
     </table>
     <p id="vs-empty" class="centered-msg hidden">No VS matches yet. Challenge a friend!</p>
   </div>
+
+  <!-- Daily tab -->
+  <div id="tab-daily" class="tab-content hidden">
+    <div id="daily-lb-date-row" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem"></div>
+    <div id="daily-lb-loading" class="centered-msg">Loading…</div>
+    <table id="daily-lb-table" class="score-table hidden">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Trainer</th>
+          <th>Guesses</th>
+          <th>Result</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody id="daily-lb-tbody"></tbody>
+    </table>
+    <p id="daily-lb-empty" class="centered-msg hidden">No one has played today yet — be first!</p>
+  </div>
 </div>
 {% endblock %}
 
@@ -77,24 +96,6 @@
 <script>
   const username = localStorage.getItem("poke_username");
   let allData = [];
-
-  async function loadLeaderboard() {
-    try {
-      const res = await fetch("/battle/leaderboard");
-      allData = await res.json();
-      document.getElementById("solo-loading").classList.add("hidden");
-      if (!allData.length) {
-        document.getElementById("solo-empty").classList.remove("hidden");
-        document.getElementById("vs-empty").classList.remove("hidden");
-        return;
-      }
-      renderTab("solo");
-      renderTab("vs");
-    } catch {
-      document.getElementById("solo-loading").classList.add("hidden");
-      document.getElementById("solo-empty").classList.remove("hidden");
-    }
-  }
 
   function rankClass(i, n) {
     if (i === 0) return "rank-gold";
@@ -104,29 +105,32 @@
     return "";
   }
 
-  function renderTab(tab) {
-    const isSolo = tab === "solo";
-    const sorted = isSolo
-      ? [...allData].sort((a, b) => b.best_run_score - a.best_run_score)
-      : [...allData].sort((a, b) => b.best_vs_score - a.best_vs_score);
+  function highlightClass(e) {
+    return username && e.username === username ? "highlight-row" : "";
+  }
 
-    const tbody = document.getElementById(tab + "-tbody");
-    const table = document.getElementById(tab + "-table");
-    const empty = document.getElementById(tab + "-empty");
-
-    if (!sorted.length) { empty.classList.remove("hidden"); return; }
-
-    function highlightClass(e) {
-      return username && e.username === username ? "highlight-row" : "";
+  // VS leaderboard — local SQLite
+  async function loadLeaderboard() {
+    try {
+      const res = await fetch("/battle/leaderboard");
+      allData = await res.json();
+      if (!allData.length) {
+        document.getElementById("vs-empty").classList.remove("hidden");
+        return;
+      }
+      renderVs();
+    } catch {
+      document.getElementById("vs-empty").classList.remove("hidden");
     }
+  }
 
-    tbody.innerHTML = sorted.map((e, i) => isSolo ? `
-      <tr class="${rankClass(i, sorted.length)} ${highlightClass(e)}">
-        <td>${i + 1}</td>
-        <td><strong>${e.username}</strong></td>
-        <td class="best">${e.best_run_score} pts</td>
-        <td>${e.longest_streak}</td>
-      </tr>` : `
+  function renderVs() {
+    const sorted = [...allData].sort((a, b) => b.best_vs_score - a.best_vs_score);
+    const tbody = document.getElementById("vs-tbody");
+    const table = document.getElementById("vs-table");
+    const empty = document.getElementById("vs-empty");
+    if (!sorted.length) { empty.classList.remove("hidden"); return; }
+    tbody.innerHTML = sorted.map((e, i) => `
       <tr class="${rankClass(i, sorted.length)} ${highlightClass(e)}">
         <td>${i + 1}</td>
         <td><strong>${e.username}</strong></td>
@@ -134,30 +138,21 @@
         <td>${e.vs_win_rate !== null ? e.vs_win_rate + "%" : "—"}</td>
         <td>${e.vs_matches}</td>
       </tr>`).join("");
-
     table.classList.remove("hidden");
   }
 
-  document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      document.querySelectorAll(".tab-content").forEach(t => t.classList.add("hidden"));
-      document.getElementById("tab-" + btn.dataset.tab).classList.remove("hidden");
-    });
-  });
-
+  // Solo leaderboard
   {% if supabase_configured %}
-  async function loadGlobalLeaderboard() {
+  async function loadSoloLeaderboard() {
     try {
       const res = await fetch("/battle/global-leaderboard");
       const data = await res.json();
-      document.getElementById("global-loading").classList.add("hidden");
+      document.getElementById("solo-loading").classList.add("hidden");
       if (!data.length) {
-        document.getElementById("global-empty").classList.remove("hidden");
+        document.getElementById("solo-empty").classList.remove("hidden");
         return;
       }
-      const tbody = document.getElementById("global-tbody");
+      const tbody = document.getElementById("solo-tbody");
       tbody.innerHTML = data.map((e, i) => `
         <tr class="${rankClass(i, data.length)} ${username && e.username === username ? "highlight-row" : ""}">
           <td>${i + 1}</td>
@@ -166,43 +161,123 @@
           <td>${e.rounds}</td>
           <td>${e.shadow_won_rounds}</td>
         </tr>`).join("");
-      document.getElementById("global-table").classList.remove("hidden");
+      document.getElementById("solo-table").classList.remove("hidden");
     } catch {
-      document.getElementById("global-loading").classList.add("hidden");
-      document.getElementById("global-empty").classList.remove("hidden");
+      document.getElementById("solo-loading").classList.add("hidden");
+      document.getElementById("solo-empty").classList.remove("hidden");
+    }
+  }
+  {% else %}
+  // No Supabase — fall back to local SQLite solo data
+  async function loadSoloLeaderboard() {
+    try {
+      const res = await fetch("/battle/leaderboard");
+      const data = await res.json();
+      document.getElementById("solo-loading").classList.add("hidden");
+      if (!data.length) {
+        document.getElementById("solo-empty").classList.remove("hidden");
+        return;
+      }
+      const sorted = [...data].sort((a, b) => b.best_run_score - a.best_run_score);
+      const tbody = document.getElementById("solo-tbody");
+      tbody.innerHTML = sorted.map((e, i) => `
+        <tr class="${rankClass(i, sorted.length)} ${highlightClass(e)}">
+          <td>${i + 1}</td>
+          <td><strong>${e.username}</strong></td>
+          <td class="best">${e.best_run_score} pts</td>
+          <td>${e.longest_streak}</td>
+        </tr>`).join("");
+      document.getElementById("solo-table").classList.remove("hidden");
+    } catch {
+      document.getElementById("solo-loading").classList.add("hidden");
+      document.getElementById("solo-empty").classList.remove("hidden");
     }
   }
   {% endif %}
 
-  document.getElementById("refresh-btn").addEventListener("click", () => {
-    ["solo", "vs"].forEach(tab => {
-      document.getElementById(tab + "-loading").classList.remove("hidden");
-      document.getElementById(tab + "-table").classList.add("hidden");
-      document.getElementById(tab + "-empty").classList.add("hidden");
-    });
-    {% if supabase_configured %}
-    document.getElementById("global-loading").classList.remove("hidden");
-    document.getElementById("global-table").classList.add("hidden");
-    document.getElementById("global-empty").classList.add("hidden");
-    loadGlobalLeaderboard();
-    {% endif %}
-    allData = [];
-    loadLeaderboard();
-  });
+  // Daily leaderboard — lazy load
+  let _dailyLoaded = false;
+  async function loadDailyLeaderboard() {
+    try {
+      const res = await fetch("/daily/leaderboard");
+      const data = await res.json();
+      document.getElementById("daily-lb-loading").classList.add("hidden");
+      const today = new Date().toLocaleDateString("en-US", {month:"long", day:"numeric", year:"numeric"});
+      document.getElementById("daily-lb-date-row").textContent = `Today — ${today}`;
+      if (!data.length) {
+        document.getElementById("daily-lb-empty").classList.remove("hidden");
+        return;
+      }
+      const tbody = document.getElementById("daily-lb-tbody");
+      tbody.innerHTML = data.map(e => {
+        const rc = rankClass(e.rank - 1, data.length);
+        const hl = username && e.username === username ? "highlight-row" : "";
+        const result = e.solved
+          ? `<span style="color:var(--green);font-weight:700">✓ Solved</span>`
+          : `<span style="color:var(--text-muted)">✗ DNF</span>`;
+        const ts = new Date(e.timestamp).toLocaleTimeString("en-US", {hour:"2-digit", minute:"2-digit"});
+        return `<tr class="${rc} ${hl}">
+          <td>${e.rank}</td>
+          <td><strong>${e.username}</strong></td>
+          <td class="best">${e.guesses}</td>
+          <td>${result}</td>
+          <td style="color:var(--text-muted)">${ts}</td>
+        </tr>`;
+      }).join("");
+      document.getElementById("daily-lb-table").classList.remove("hidden");
+    } catch {
+      document.getElementById("daily-lb-loading").classList.add("hidden");
+      document.getElementById("daily-lb-empty").classList.remove("hidden");
+    }
+  }
 
-  // Load global tab on first click
-  {% if supabase_configured %}
-  let _globalLoaded = false;
+  // Tab switching
   document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      if (btn.dataset.tab === "global" && !_globalLoaded) {
-        _globalLoaded = true;
-        loadGlobalLeaderboard();
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".tab-content").forEach(t => t.classList.add("hidden"));
+      document.getElementById("tab-" + btn.dataset.tab).classList.remove("hidden");
+      if (btn.dataset.tab === "daily" && !_dailyLoaded) {
+        _dailyLoaded = true;
+        loadDailyLeaderboard();
       }
     });
   });
-  {% endif %}
 
+  // Refresh
+  document.getElementById("refresh-btn").addEventListener("click", () => {
+    // Reset solo
+    document.getElementById("solo-loading").classList.remove("hidden");
+    document.getElementById("solo-table").classList.add("hidden");
+    document.getElementById("solo-empty").classList.add("hidden");
+    // Reset vs
+    document.getElementById("vs-table").classList.add("hidden");
+    document.getElementById("vs-empty").classList.add("hidden");
+    // Reset daily
+    _dailyLoaded = false;
+    document.getElementById("daily-lb-loading").classList.remove("hidden");
+    document.getElementById("daily-lb-table").classList.add("hidden");
+    document.getElementById("daily-lb-empty").classList.add("hidden");
+
+    allData = [];
+    loadSoloLeaderboard();
+    loadLeaderboard();
+    const activeTab = document.querySelector(".tab-btn.active");
+    if (activeTab && activeTab.dataset.tab === "daily") {
+      _dailyLoaded = true;
+      loadDailyLeaderboard();
+    }
+  });
+
+  // Deep-link: /arena-leaderboard?tab=daily
+  const _initTab = new URLSearchParams(location.search).get("tab");
+  if (_initTab) {
+    const btn = document.querySelector(`.tab-btn[data-tab="${_initTab}"]`);
+    if (btn) btn.click();
+  }
+
+  loadSoloLeaderboard();
   loadLeaderboard();
 </script>
 {% endblock %}

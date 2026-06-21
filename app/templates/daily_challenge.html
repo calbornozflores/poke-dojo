@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+{% block title %}Daily Challenge — Poke-Dojo{% endblock %}
+
+{% block content %}
+<div class="daily-page">
+
+  <div id="daily-loading" class="centered-msg">Loading…</div>
+
+  <!-- ── Screen: Game ──────────────────────────────────────────────── -->
+  <div class="daily-screen hidden" id="screen-game">
+    <div class="daily-header">
+      <div>
+        <div class="daily-header-title">📅 Who's that Pokémon?</div>
+        <div class="daily-header-date" id="game-date-label"></div>
+      </div>
+      <div class="daily-header-right">
+        <div id="daily-player-count"></div>
+        <div class="daily-header-guess">Guess <span id="daily-guess-num">1</span></div>
+      </div>
+    </div>
+
+    <div class="daily-game-card">
+
+      <div class="daily-mystery-card">?</div>
+
+      <div class="daily-how-to-play">
+        <p class="daily-htp-title">How to play</p>
+        <p class="daily-htp-body">
+          Guess the mystery Pokémon — new every day, same for all trainers.<br>
+          Type a name, pick from autocomplete, see how close you are.
+        </p>
+        <p class="daily-htp-body" style="margin-top:0.35rem;font-size:0.72rem;color:var(--text-muted)">
+          Distance = name similarity (50%) + Pokédex proximity (50%)
+        </p>
+        <div class="daily-htp-legend">
+          <span class="daily-htp-chip green">🟩 ≤ 0.2 — Very close</span>
+          <span class="daily-htp-chip yellow">🟨 0.2–0.5 — Warmer</span>
+          <span class="daily-htp-chip red">🟥 &gt; 0.5 — Far away</span>
+        </div>
+      </div>
+
+      <div class="daily-input-section">
+        <div class="daily-input-wrap">
+          <input id="daily-guess-input" class="daily-guess-input" placeholder="Type a Pokémon name…" autocomplete="off" />
+          <div id="daily-autocomplete" class="daily-autocomplete-dropdown hidden"></div>
+        </div>
+        <p id="daily-input-error" class="daily-input-error"></p>
+      </div>
+
+      <div class="daily-guess-section">
+        <p class="daily-guess-list-header" id="guess-list-header" style="display:none">Guesses — closest first</p>
+        <div id="daily-guess-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Screen: Solved / Already played ───────────────────────────── -->
+  <div class="daily-screen hidden" id="screen-solved">
+    <div class="daily-header">
+      <div>
+        <div class="daily-header-title">📅 Daily Challenge</div>
+        <div class="daily-header-date" id="solved-date-label"></div>
+      </div>
+      <div class="daily-header-right">
+        <div id="solved-player-count"></div>
+      </div>
+    </div>
+
+    <div class="daily-solved-sprite-wrap">
+      <img id="solved-sprite" class="daily-solved-sprite" src="" alt="" />
+    </div>
+    <div id="solved-title" class="daily-solved-title"></div>
+    <div id="solved-sub" class="daily-solved-sub"></div>
+
+    <div class="daily-solved-actions">
+      <button id="btn-share" class="btn-primary btn">📋 Share result</button>
+      <a href="/arena-leaderboard?tab=daily" class="btn btn-ghost">Today's Leaderboard →</a>
+    </div>
+
+    <div class="daily-solved-guesses">
+      <p class="daily-guess-list-header" style="margin-bottom:0.5rem">All guesses</p>
+      <div id="solved-guess-list"></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const TYPE_COLORS = {
+  normal:'#A8A77A', fire:'#EE8130', water:'#6390F0', electric:'#F7D02C',
+  grass:'#7AC74C', ice:'#96D9D6', fighting:'#C22E28', poison:'#A33EA1',
+  ground:'#E2BF65', flying:'#A98FF3', psychic:'#F95587', bug:'#A6B91A',
+  rock:'#B6A136', ghost:'#735797', dragon:'#6F35FC', dark:'#705746',
+  steel:'#B7B7CE', fairy:'#D685AD',
+};
+function typeBadge(type) {
+  if (!type) return '';
+  return `<span class="type-badge" style="background:${TYPE_COLORS[type]||'#888'}">${type}</span>`;
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+let username = '';
+let todayDate = '';
+let guesses = [];   // {id, name, sprite_url, type1, type2, generation, distance, is_correct}
+let selectedPokemon = null;
+let guessedIds = new Set();
+let solved = false;
+let answerPokemonId = null;
+let acFocusIdx = -1;
+let acItems = [];
+let debounceTimer = null;
+
+// ── Screen helpers ─────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.getElementById('daily-loading').classList.add('hidden');
+  document.querySelectorAll('.daily-screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function setDateLabel(isoDate) {
+  const d = new Date(isoDate + 'T00:00:00');
+  const label = d.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'});
+  document.getElementById('game-date-label').textContent = label;
+  document.getElementById('solved-date-label').textContent = label;
+}
+
+function setPlayerCount(count, elId) {
+  document.getElementById(elId).textContent =
+    count === 0 ? 'Be the first trainer!' : `${count} trainer${count===1?'':'s'} played`;
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  username = localStorage.getItem('poke_username') || 'Guest';
+
+  const [todayRes, statusRes] = await Promise.all([
+    fetch('/daily/today'),
+    fetch(`/daily/status?username=${encodeURIComponent(username)}`),
+  ]);
+  const todayData = await todayRes.json();
+  const status = await statusRes.json();
+
+  todayDate = todayData.date;
+  setDateLabel(todayDate);
+  setPlayerCount(todayData.player_count, 'daily-player-count');
+
+  if (status.solved || status.played) {
+    const guessRes = await fetch(`/daily/guesses?username=${encodeURIComponent(username)}`);
+    const history = await guessRes.json();
+    guesses = history.map(g => ({
+      id: g.pokemon_id,
+      name: g.name,
+      sprite_url: g.sprite_url,
+      type1: g.type1,
+      type2: g.type2,
+      generation: g.generation,
+      distance: g.distance,
+      is_correct: g.is_correct,
+    }));
+    guesses.forEach(g => guessedIds.add(g.id));
+  }
+
+  if (status.solved) {
+    answerPokemonId = status.answer_pokemon_id;
+    solved = true;
+    renderGuessList('daily-guess-list');
+    renderGuessList('solved-guess-list');
+    document.getElementById('solved-sprite').src =
+      `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${answerPokemonId}.png`;
+    document.getElementById('solved-title').textContent =
+      `Solved in ${status.guesses} guess${status.guesses===1?'':'es'}!`;
+    document.getElementById('solved-sub').textContent = 'Come back tomorrow for a new Pokémon.';
+    setPlayerCount(todayData.player_count, 'solved-player-count');
+    showScreen('screen-solved');
+    return;
+  }
+
+  if (status.played) {
+    renderGuessList('daily-guess-list');
+    document.getElementById('daily-guess-num').textContent = status.guesses + 1;
+    if (guesses.length > 0) document.getElementById('guess-list-header').style.display = '';
+  }
+
+  showScreen('screen-game');
+  document.getElementById('daily-guess-input').focus();
+}
+
+// ── Autocomplete ───────────────────────────────────────────────────────────
+const input = document.getElementById('daily-guess-input');
+const dropdown = document.getElementById('daily-autocomplete');
+
+input.addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  selectedPokemon = null;
+  const q = input.value.trim();
+  if (!q) { closeDropdown(); return; }
+  debounceTimer = setTimeout(() => fetchSuggestions(q), 120);
+});
+
+input.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); moveFocus(1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); moveFocus(-1); }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (acFocusIdx >= 0 && acItems[acFocusIdx]) selectPokemon(acItems[acFocusIdx]);
+    else if (selectedPokemon) submitGuess();
+    else if (acItems.length === 1 && !guessedIds.has(acItems[0].id)) selectAndSubmit(acItems[0]);
+    else document.getElementById('daily-input-error').textContent = 'Select a Pokémon from the list first.';
+  }
+  else if (e.key === 'Escape') closeDropdown();
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.daily-input-wrap')) closeDropdown();
+});
+
+async function fetchSuggestions(q) {
+  const res = await fetch(`/daily/search?q=${encodeURIComponent(q)}`);
+  acItems = await res.json();
+  renderDropdown();
+}
+
+function renderDropdown() {
+  if (!acItems.length) { closeDropdown(); return; }
+  acFocusIdx = -1;
+  dropdown.innerHTML = acItems.map((p, i) => {
+    const gray = guessedIds.has(p.id) ? ' guessed' : '';
+    return `<div class="daily-ac-item${gray}" data-idx="${i}">
+      <img class="daily-ac-sprite" src="${p.sprite_url}" alt="" loading="lazy">
+      <span>${p.name}</span>
+    </div>`;
+  }).join('');
+  dropdown.querySelectorAll('.daily-ac-item:not(.guessed)').forEach(el => {
+    el.addEventListener('mousedown', e => {
+      e.preventDefault();
+      selectAndSubmit(acItems[parseInt(el.dataset.idx)]);
+    });
+  });
+  dropdown.classList.remove('hidden');
+}
+
+function moveFocus(dir) {
+  const items = dropdown.querySelectorAll('.daily-ac-item:not(.guessed)');
+  if (!items.length) return;
+  acFocusIdx = Math.max(0, Math.min(items.length - 1, acFocusIdx + dir));
+  items.forEach((el, i) => el.classList.toggle('focused', i === acFocusIdx));
+  const visibleItems = acItems.filter(p => !guessedIds.has(p.id));
+  if (visibleItems[acFocusIdx]) selectedPokemon = visibleItems[acFocusIdx];
+}
+
+function selectPokemon(p) {
+  selectedPokemon = p;
+  input.value = p.name;
+  closeDropdown();
+}
+
+function closeDropdown() {
+  dropdown.classList.add('hidden');
+  acFocusIdx = -1;
+}
+
+function selectAndSubmit(p) {
+  selectPokemon(p);
+  submitGuess();
+}
+
+// ── Guess submission ───────────────────────────────────────────────────────
+async function submitGuess() {
+  const errEl = document.getElementById('daily-input-error');
+  errEl.textContent = '';
+
+  if (!selectedPokemon) {
+    errEl.textContent = 'Select a Pokémon from the list first.';
+    return;
+  }
+  if (guessedIds.has(selectedPokemon.id)) {
+    errEl.textContent = 'You already guessed that one!';
+    selectedPokemon = null;
+    input.value = '';
+    return;
+  }
+
+  input.disabled = true;
+
+  const res = await fetch('/daily/guess', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({username, guess_pokemon_id: selectedPokemon.id}),
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    errEl.textContent = err.detail || 'Something went wrong.';
+    input.disabled = false;
+    return;
+  }
+
+  const data = await res.json();
+
+  guesses.push({
+    id: selectedPokemon.id,
+    name: selectedPokemon.name,
+    sprite_url: selectedPokemon.sprite_url,
+    type1: selectedPokemon.type1,
+    type2: selectedPokemon.type2,
+    generation: selectedPokemon.generation,
+    distance: data.distance,
+    is_correct: data.is_correct,
+  });
+  guessedIds.add(selectedPokemon.id);
+  selectedPokemon = null;
+  input.value = '';
+  input.disabled = false;
+
+  document.getElementById('guess-list-header').style.display = '';
+  renderGuessList('daily-guess-list');
+  document.getElementById('daily-guess-num').textContent = data.guess_number + 1;
+
+  if (data.is_correct) {
+    answerPokemonId = data.answer_pokemon_id;
+    solved = true;
+    await showSolvedScreen(data.guess_number);
+  } else {
+    input.focus();
+  }
+}
+
+// ── Guess list rendering ───────────────────────────────────────────────────
+function distColor(d) {
+  if (d <= 0.2) return 'var(--green)';
+  if (d <= 0.5) return 'var(--yellow)';
+  return 'var(--red)';
+}
+
+function renderGuessList(containerId) {
+  const sorted = [...guesses].sort((a, b) => a.distance - b.distance);
+  const container = document.getElementById(containerId);
+  container.innerHTML = sorted.map(g => {
+    const barWidth = Math.round((1 - g.distance) * 100);
+    const color = distColor(g.distance);
+    const correctChip = g.is_correct ? '<div class="daily-correct-chip">✓ Found it!</div>' : '';
+    const genLabel = `#${String(g.id).padStart(3,'0')} · Gen ${g.generation}`;
+    return `<div class="daily-guess-card${g.is_correct?' correct':''}">
+      <div class="daily-guess-card-top">
+        <img class="daily-guess-sprite" src="${g.sprite_url}" alt="${g.name}" loading="lazy">
+        <span class="daily-guess-name">${g.name}</span>
+        <span class="daily-guess-meta">${genLabel}</span>
+      </div>
+      <div class="daily-guess-types">${typeBadge(g.type1)}${typeBadge(g.type2)}</div>
+      <div class="daily-dist-row">
+        <div class="daily-dist-bar-track">
+          <div class="daily-dist-bar-fill" style="width:${barWidth}%;background:${color}"></div>
+        </div>
+        <span class="daily-dist-value">${g.distance.toFixed(3)}</span>
+      </div>
+      ${correctChip}
+    </div>`;
+  }).join('');
+}
+
+// ── Solved screen ──────────────────────────────────────────────────────────
+async function showSolvedScreen(guessCount) {
+  document.getElementById('solved-sprite').src =
+    `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${answerPokemonId}.png`;
+  document.getElementById('solved-title').textContent =
+    guessCount === 1 ? '🎉 First try!' : `Solved in ${guessCount} guess${guessCount===1?'':'es'}!`;
+  document.getElementById('solved-sub').textContent = 'Come back tomorrow for a new Pokémon.';
+
+  // Fetch updated player count for solved screen
+  const todayRes = await fetch('/daily/today');
+  const todayData = await todayRes.json();
+  setPlayerCount(todayData.player_count, 'solved-player-count');
+  document.getElementById('solved-date-label').textContent =
+    document.getElementById('game-date-label').textContent;
+
+  renderGuessList('solved-guess-list');
+  showScreen('screen-solved');
+}
+
+// ── Share ──────────────────────────────────────────────────────────────────
+document.getElementById('btn-share').addEventListener('click', () => {
+  const emojis = guesses.map(g => {
+    if (g.is_correct || g.distance <= 0.2) return '🟩';
+    if (g.distance <= 0.5) return '🟨';
+    return '🟥';
+  }).join('');
+  const text = `Pokédojo Daily ${todayDate}\nSolved in ${guesses.length} guess${guesses.length===1?'':'es'}\n${emojis}\nPlay at pokédojo.fly.dev/daily-challenge`;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-share');
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => { btn.textContent = '📋 Share result'; }, 2000);
+  });
+});
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+init();
+</script>
+{% endblock %}

@@ -156,11 +156,21 @@ a:hover { color: var(--accent-hover); }
   border-radius: 8px;
 }
 
+.game-preview-wrap { margin-top: 2rem; }
+.game-section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+  margin-top: 1.4rem;
+}
+.game-section-label:first-child { margin-top: 0; }
 .game-preview {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
-  margin-top: 2rem;
 }
 .game-card {
   background: var(--surface2);
@@ -168,7 +178,12 @@ a:hover { color: var(--accent-hover); }
   border-radius: var(--radius);
   padding: 1.25rem;
   text-align: center;
+  display: block;
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 0.15s, transform 0.15s;
 }
+.game-card:hover { border-color: var(--accent); color: var(--text); transform: translateY(-2px); }
 .game-icon { font-size: 2rem; margin-bottom: 0.5rem; display: flex; justify-content: center; }
 .game-card-sprite { width: 64px; height: 64px; image-rendering: pixelated; }
 .game-card h3 { font-size: 1rem; margin-bottom: 0.4rem; }
@@ -392,6 +407,8 @@ a:hover { color: var(--accent-hover); }
 }
 .tab-btn:hover { color: var(--text); }
 .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-sprite { height: 22px; width: 22px; image-rendering: pixelated; vertical-align: middle; margin: 0 2px; }
+.tab-sprite-flip { display: inline-block; transform: scaleX(-1); }
 
 .score-table {
   width: 100%;
@@ -1922,3 +1939,227 @@ a:hover { color: var(--accent-hover); }
   color: var(--text-muted);
   flex-shrink: 0;
 }
+
+/* ── Arena undefined vars fallback ──────────────────────────────── */
+:root {
+  --card-bg: #1a1a2e;
+  --input-bg: #0f0f1a;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DAILY CHALLENGE
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Battle Arena banner */
+.daily-arena-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 1.5rem; padding: 1rem 1.25rem;
+  background: rgba(108,99,255,0.08);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  gap: 1rem;
+}
+.daily-arena-banner-left { display: flex; align-items: center; gap: 0.75rem; }
+.daily-arena-banner-icon { font-size: 1.6rem; flex-shrink: 0; }
+.daily-arena-banner-title { font-weight: 700; font-size: 0.95rem; }
+.daily-arena-banner-sub { font-size: 0.75rem; color: var(--text-muted); }
+
+/* Page container */
+.daily-page { max-width: 680px; margin: 0 auto; padding: 1.5rem 1rem; min-height: 80vh; }
+.daily-screen { width: 100%; }
+
+/* Header bar */
+.daily-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding-bottom: 1rem; margin-bottom: 1.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.daily-header-title { font-size: 1.15rem; font-weight: 800; }
+.daily-header-date  { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem; }
+.daily-header-right { text-align: right; font-size: 0.78rem; color: var(--text-muted); }
+.daily-header-guess { font-size: 0.95rem; font-weight: 700; color: var(--text); margin-top: 0.15rem; }
+
+/* Mystery card */
+.daily-mystery-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); aspect-ratio: 1; max-width: 220px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 1.5rem;
+  font-size: 5rem; color: var(--border);
+  user-select: none;
+  box-shadow: 0 0 0 1px var(--border), 0 0 28px rgba(108,99,255,0.12);
+}
+
+/* Autocomplete */
+.daily-input-section { display: flex; flex-direction: column; align-items: center; margin-bottom: 1.5rem; }
+.daily-input-wrap { position: relative; width: 100%; max-width: 420px; }
+.daily-guess-input {
+  width: 100%; padding: 0.65rem 0.9rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 0.95rem;
+  outline: none; transition: border-color 0.15s;
+}
+.daily-guess-input:focus { border-color: var(--accent); }
+.daily-guess-input:disabled { opacity: 0.5; cursor: not-allowed; }
+.daily-autocomplete-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; z-index: 100; overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.daily-ac-item {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.5rem 0.75rem; cursor: pointer; font-size: 0.9rem;
+  text-transform: capitalize; transition: background 0.1s;
+}
+.daily-ac-item:hover, .daily-ac-item.focused { background: rgba(108,99,255,0.12); }
+.daily-ac-item.guessed { opacity: 0.4; cursor: default; pointer-events: none; }
+.daily-ac-sprite { width: 32px; height: 32px; image-rendering: pixelated; flex-shrink: 0; }
+.daily-input-error { font-size: 0.78rem; color: var(--red); margin-top: 0.4rem; min-height: 1.1em; text-align: center; }
+
+/* Guess section */
+.daily-guess-section { margin-top: 0.5rem; }
+.daily-guess-list-header {
+  font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.5rem;
+  font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+}
+.daily-guess-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0.75rem; margin-bottom: 0.5rem;
+  transition: border-color 0.25s;
+}
+.daily-guess-card.correct { border-color: var(--green); }
+.daily-guess-card-top { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem; }
+.daily-guess-sprite { width: 40px; height: 40px; image-rendering: pixelated; flex-shrink: 0; }
+.daily-guess-name { font-weight: 700; font-size: 0.92rem; text-transform: capitalize; }
+.daily-guess-meta { font-size: 0.72rem; color: var(--text-muted); margin-left: auto; flex-shrink: 0; }
+.daily-guess-types { display: flex; gap: 0.3rem; margin-bottom: 0.45rem; flex-wrap: wrap; }
+.daily-dist-row { display: flex; align-items: center; gap: 0.5rem; }
+.daily-dist-bar-track {
+  flex: 1; height: 6px; background: var(--border);
+  border-radius: 3px; overflow: hidden;
+}
+.daily-dist-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.daily-dist-value { font-size: 0.72rem; color: var(--text-muted); min-width: 3.2em; text-align: right; }
+.daily-correct-chip {
+  font-size: 0.72rem; font-weight: 700; color: var(--green);
+  margin-top: 0.3rem;
+}
+
+/* Solved screen */
+.daily-solved-sprite-wrap { display: flex; justify-content: center; margin-bottom: 1.25rem; }
+.daily-solved-sprite {
+  width: 200px; height: 200px; object-fit: contain;
+  filter: drop-shadow(0 4px 28px rgba(108,99,255,0.45));
+  animation: solved-entrance 0.4s ease-out;
+}
+@keyframes solved-entrance {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.daily-solved-title { font-size: 1.7rem; font-weight: 800; margin-bottom: 0.3rem; text-align: center; }
+.daily-solved-sub { font-size: 0.9rem; color: var(--text-muted); text-align: center; margin-bottom: 0.5rem; }
+.daily-solved-actions {
+  display: flex; gap: 1rem; justify-content: center;
+  flex-wrap: wrap; margin-top: 1.5rem; margin-bottom: 2rem;
+}
+.daily-solved-guesses { text-align: left; }
+
+/* Game card wrapper */
+.daily-game-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.75rem 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+/* How to play */
+.daily-how-to-play {
+  background: rgba(108,99,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.25rem;
+}
+.daily-htp-title {
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.09em; color: var(--text-muted); margin-bottom: 0.4rem;
+}
+.daily-htp-body { font-size: 0.82rem; color: var(--text); line-height: 1.5; }
+.daily-htp-legend { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
+.daily-htp-chip {
+  font-size: 0.72rem; padding: 0.2rem 0.5rem;
+  border-radius: 4px; font-weight: 600;
+}
+.daily-htp-chip.green  { background: rgba(34,197,94,0.12);  color: var(--green); }
+.daily-htp-chip.yellow { background: rgba(245,158,11,0.12); color: var(--yellow); }
+.daily-htp-chip.red    { background: rgba(239,68,68,0.12);  color: var(--red); }
+
+/* Privacy notice (auth claim page) */
+.privacy-notice {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  background: rgba(108,99,255,0.07);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.85rem;
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+/* FAQ page */
+.faq-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.faq-item {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0.9rem 1.1rem;
+  transition: border-color 0.15s;
+}
+.faq-item[open] { border-color: var(--accent); }
+.faq-question {
+  font-weight: 700; font-size: 0.95rem; cursor: pointer; list-style: none;
+  display: flex; justify-content: space-between; align-items: center;
+  user-select: none;
+}
+.faq-question::-webkit-details-marker { display: none; }
+.faq-question::after { content: '▾'; color: var(--text-muted); font-size: 0.8rem; margin-left: 0.5rem; flex-shrink: 0; }
+.faq-item[open] .faq-question::after { content: '▴'; }
+.faq-answer {
+  font-size: 0.88rem; color: var(--text-muted); line-height: 1.7;
+  margin-top: 0.7rem; padding-top: 0.7rem; border-top: 1px solid var(--border);
+}
+.faq-answer a { color: var(--accent); }
+.faq-answer a:hover { color: var(--accent-hover); }
+
+/* Contact page */
+.contact-links { display: flex; flex-direction: column; gap: 0.75rem; }
+.contact-link {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 1.1rem 1.2rem; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--text); text-decoration: none; transition: border-color 0.15s;
+}
+.contact-link:hover { border-color: var(--accent); color: var(--text); }
+.contact-link-icon { font-size: 1.4rem; flex-shrink: 0; }
+.contact-link-sprite { width: 56px; height: 56px; image-rendering: pixelated; flex-shrink: 0; }
+.contact-link-title { font-weight: 700; font-size: 0.9rem; }
+.contact-link-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
+.contact-body-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 2rem;
+}
+
+/* Shared FAQ/Contact page header */
+.faq-page-header { text-align: center; margin-bottom: 2rem; }
+.faq-page-title {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0.5rem; margin-bottom: 0.5rem;
+}
+.faq-page-title h1 { font-size: 1.8rem; font-weight: 800; margin: 0; }
+.faq-page-subtitle { color: var(--text-muted); font-size: 0.88rem; margin: 0; }
+
+/* FAQ: accent left-border + question color when open */
+.faq-item[open] {
+  border-left-width: 3px;
+  padding-left: calc(1.1rem - 2px);
+}
+.faq-item[open] .faq-question { color: var(--accent); }
