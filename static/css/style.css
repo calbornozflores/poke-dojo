@@ -178,7 +178,12 @@ a:hover { color: var(--accent-hover); }
   border-radius: var(--radius);
   padding: 1.25rem;
   text-align: center;
+  display: block;
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 0.15s, transform 0.15s;
 }
+.game-card:hover { border-color: var(--accent); color: var(--text); transform: translateY(-2px); }
 .game-icon { font-size: 2rem; margin-bottom: 0.5rem; display: flex; justify-content: center; }
 .game-card-sprite { width: 64px; height: 64px; image-rendering: pixelated; }
 .game-card h3 { font-size: 1rem; margin-bottom: 0.4rem; }
