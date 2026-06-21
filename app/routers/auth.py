@@ -1,10 +1,13 @@
 from __future__ import annotations
+import os
 import re
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.services import supabase_client
 from app.services.username_filter import is_banned
+
+MAX_PLAYERS = int(os.getenv("MAX_PLAYERS", "500"))
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -58,6 +61,11 @@ def claim_username(req: ClaimRequest):
     existing = client.table("players").select("username").eq("google_id", user["id"]).execute()
     if existing.data:
         return ClaimResponse(ok=True, username=existing.data[0]["username"])
+
+    # Enforce player cap — only blocks new registrations, never returning players
+    total = client.table("players").select("id", count="exact").execute()
+    if (total.count or 0) >= MAX_PLAYERS:
+        raise HTTPException(429, "The Dojo is at capacity — check back later")
 
     # Check availability
     taken = client.table("players").select("id").eq("username", name).execute()
