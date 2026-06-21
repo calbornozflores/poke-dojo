@@ -8,6 +8,7 @@ from datetime import timedelta
 
 from app.database import get_db
 from app.models import Pokemon, DailyPokemon, DailyChallengeResult, DailyChallengeGuess, User
+from app.services.supabase_client import is_authenticated_user
 
 router = APIRouter(prefix="/daily", tags=["daily"])
 
@@ -48,6 +49,7 @@ class TodayResponse(BaseModel):
 class GuessRequest(BaseModel):
     username: str
     guess_pokemon_id: int
+    access_token: str | None = None
 
 
 class GuessResponse(BaseModel):
@@ -120,6 +122,20 @@ def submit_guess(req: GuessRequest, db: Session = Depends(get_db)):
     if not guess_pokemon:
         raise HTTPException(status_code=404, detail="Pokémon not found")
 
+    is_auth = is_authenticated_user(req.username, req.access_token)
+
+    # Guest: compute result without any DB writes
+    if not is_auth:
+        distance = _compute_distance(guess_pokemon, answer)
+        is_correct = req.guess_pokemon_id == answer_id
+        return GuessResponse(
+            distance=distance,
+            is_correct=is_correct,
+            guess_number=0,  # frontend tracks count locally
+            answer_pokemon_id=answer_id if is_correct else None,
+        )
+
+    # Authenticated: full flow with persistence
     # Block already-solved sessions
     solved_row = (
         db.query(DailyChallengeResult)

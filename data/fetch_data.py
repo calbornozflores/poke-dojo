@@ -9,6 +9,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from app.database import engine
 from app.models import Base
 from app.services.data_loader import run_fetch_sync, _state, TOTAL

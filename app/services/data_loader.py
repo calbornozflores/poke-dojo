@@ -119,8 +119,11 @@ def run_fetch_sync() -> None:
                 continue
             data = _fetch_one(pokemon_id, http)
             if data:
-                db.add(Pokemon(**data))
-                db.commit()
+                try:
+                    db.add(Pokemon(**data))
+                    db.commit()
+                except Exception:
+                    db.rollback()  # skip on duplicate (concurrent fetch or re-run)
             _state["fetched"] += 1
             time.sleep(0.3)
     finally:

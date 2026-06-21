@@ -3,6 +3,31 @@ import os
 from typing import Optional
 
 
+def is_global_mode() -> bool:
+    """Returns True when running against Supabase PostgreSQL (DATABASE_URL set)."""
+    return bool(os.getenv("DATABASE_URL"))
+
+
+def is_authenticated_user(username: str, access_token: Optional[str]) -> bool:
+    """
+    In global PostgreSQL mode: verify the Supabase token and confirm the username
+    matches the players table. Only these users get their data persisted globally.
+    In local SQLite mode: always returns True (all users saved locally).
+    """
+    if not is_global_mode():
+        return True
+    if not access_token:
+        return False
+    if not is_configured():
+        return False
+    user = verify_token(access_token)
+    if not user:
+        return False
+    client = get_admin_client()
+    row = client.table("players").select("username").eq("google_id", user["id"]).execute()
+    return bool(row.data) and row.data[0]["username"] == username
+
+
 def _url() -> str:
     return os.getenv("SUPABASE_URL", "")
 

@@ -1,11 +1,22 @@
+import os
+import re
 from pathlib import Path
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
-DB_PATH = Path(__file__).parent.parent / "data" / "pokemon.db"
-DB_PATH.parent.mkdir(exist_ok=True)
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
+if DATABASE_URL:
+    # Normalize Supabase transaction-pooler URLs for psycopg2:
+    # strip ?pgbouncer=true and switch port 6543 → 5432 (session pooler)
+    _url = re.sub(r'[?&]pgbouncer=true', '', DATABASE_URL)
+    _url = re.sub(r':6543/', ':5432/', _url)
+    engine = create_engine(_url, pool_pre_ping=True)
+else:
+    DB_PATH = Path(__file__).parent.parent / "data" / "pokemon.db"
+    DB_PATH.parent.mkdir(exist_ok=True)
+    engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -14,7 +25,10 @@ class Base(DeclarativeBase):
 
 
 def run_migrations():
-    """Add any missing columns to existing tables without losing data."""
+    """Add any missing columns to existing SQLite databases. Skipped in PostgreSQL mode."""
+    if DATABASE_URL:
+        return  # Fresh PostgreSQL schema is managed by create_all()
+
     with engine.connect() as conn:
         for col, ddl in [("height", "INTEGER DEFAULT 0"), ("weight", "INTEGER DEFAULT 0")]:
             try:

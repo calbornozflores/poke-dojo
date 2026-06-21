@@ -438,10 +438,11 @@
     stopTimer();
     showLoading();
     try {
+      const accessToken = await _getAccessToken();
       const res = await fetch("/game/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, game_type: currentGame }),
+        body: JSON.stringify({ username, game_type: currentGame, access_token: accessToken }),
       });
       if (!res.ok) { showNoData(); return; }
       const data = await res.json();
@@ -453,12 +454,23 @@
     }
   }
 
+  async function _getAccessToken() {
+    try {
+      if (typeof _supabaseClient !== "undefined") {
+        const { data: { session } } = await _supabaseClient.auth.getSession();
+        return session ? session.access_token : null;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   async function doSubmit(guess) {
     if (!currentPokemon) return;
     const timeUsed = getTimeUsed();
     stopTimer();
     submitBtn.disabled = true;
     try {
+      const accessToken = await _getAccessToken();
       const res = await fetch("/game/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -468,6 +480,7 @@
           game_type: currentGame,
           guess: String(guess),
           time_used: timeUsed,
+          access_token: accessToken,
         }),
       });
       const data = await res.json();
@@ -501,6 +514,7 @@
       b.disabled = true;
       if (b.dataset.type === selectedType) b.classList.add("selected");
     });
+    const accessToken = await _getAccessToken();
     const res = await fetch("/game/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -510,6 +524,7 @@
         game_type: "type_easy",
         guess: selectedType,
         time_used: timeUsed,
+        access_token: accessToken,
       }),
     });
     const data = await res.json();

@@ -273,6 +273,16 @@ function selectAndSubmit(p) {
   submitGuess();
 }
 
+async function _getAccessToken() {
+  try {
+    if (typeof _supabaseClient !== 'undefined') {
+      const { data: { session } } = await _supabaseClient.auth.getSession();
+      return session ? session.access_token : null;
+    }
+  } catch (_) {}
+  return null;
+}
+
 // ── Guess submission ───────────────────────────────────────────────────────
 async function submitGuess() {
   const errEl = document.getElementById('daily-input-error');
@@ -290,11 +300,12 @@ async function submitGuess() {
   }
 
   input.disabled = true;
+  const accessToken = await _getAccessToken();
 
   const res = await fetch('/daily/guess', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({username, guess_pokemon_id: selectedPokemon.id}),
+    body: JSON.stringify({username, guess_pokemon_id: selectedPokemon.id, access_token: accessToken}),
   });
 
   if (!res.ok) {
@@ -323,7 +334,7 @@ async function submitGuess() {
 
   document.getElementById('guess-list-header').style.display = '';
   renderGuessList('daily-guess-list');
-  document.getElementById('daily-guess-num').textContent = data.guess_number + 1;
+  document.getElementById('daily-guess-num').textContent = guesses.length + 1;
 
   if (data.is_correct) {
     answerPokemonId = data.answer_pokemon_id;

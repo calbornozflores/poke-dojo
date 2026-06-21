@@ -10,6 +10,7 @@ from app.models import User, GameResult, Pokemon, EvoScoreHistory
 from app.services.string_match import name_accuracy
 from app.services.pokemon_data import get_random_pokemon, number_accuracy
 from app.services import xgboost_model
+from app.services.supabase_client import is_authenticated_user
 
 router = APIRouter(prefix="/game", tags=["game"])
 
@@ -58,6 +59,7 @@ class StartRequest(BaseModel):
     username: str
     game_type: str
     challenge_mode: bool = False
+    access_token: str | None = None
 
 
 class StartResponse(BaseModel):
@@ -78,6 +80,7 @@ class SubmitRequest(BaseModel):
     guess: str
     time_used: float = 30.0
     was_challenge: bool = False  # kept for API compat, now computed server-side
+    access_token: str | None = None
 
 
 class SubmitResponse(BaseModel):
@@ -229,9 +232,15 @@ def profile_breakdown(
 
 @router.post("/start", response_model=StartResponse)
 def start_game(req: StartRequest, db: Session = Depends(get_db)):
-    user = _upsert_user(req.username, db)
-    games_played = _game_count(user.id, req.game_type, db)
-    challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
+    is_auth = is_authenticated_user(req.username, req.access_token)
+
+    if is_auth:
+        user = _upsert_user(req.username, db)
+        games_played = _game_count(user.id, req.game_type, db)
+        challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
+    else:
+        games_played = 0
+        challenge_unlocked = False
 
     if challenge_unlocked:
         # Professor Oak Analysis auto-active: 80% XGBoost hardest, 20% random
@@ -253,14 +262,16 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
             pokemon_id = random.choice(candidates[:20])
         pokemon = db.query(Pokemon).get(pokemon_id)
     else:
-        recent_ids = [
-            r.pokemon_id
-            for r in db.query(GameResult)
-            .filter(GameResult.user_id == user.id)
-            .order_by(GameResult.timestamp.desc())
-            .limit(10)
-            .all()
-        ]
+        recent_ids = []
+        if is_auth:
+            recent_ids = [
+                r.pokemon_id
+                for r in db.query(GameResult)
+                .filter(GameResult.user_id == user.id)
+                .order_by(GameResult.timestamp.desc())
+                .limit(10)
+                .all()
+            ]
         pokemon = get_random_pokemon(db, exclude_ids=recent_ids)
 
     if not pokemon:
@@ -300,7 +311,8 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
 
 @router.post("/submit", response_model=SubmitResponse)
 def submit_answer(req: SubmitRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    user = _upsert_user(req.username, db)
+    is_auth = is_authenticated_user(req.username, req.access_token)
+
     pokemon = db.query(Pokemon).get(req.pokemon_id)
     if not pokemon:
         raise HTTPException(status_code=404, detail="Pokémon not found")
@@ -347,90 +359,98 @@ def submit_answer(req: SubmitRequest, background_tasks: BackgroundTasks, db: Ses
     time_score = max(0.0, 100.0 - (time_used / 30.0) * 100.0)
     final_score = round((accuracy / 100.0) * time_score, 1)
 
-    # Determine if Professor Oak Analysis was active when this game was played
-    games_before = _game_count(user.id, req.game_type, db)
-    was_challenge = games_before >= CHALLENGE_THRESHOLD
+    evo_score = None
+    games_played = 0
+    challenge_unlocked = False
 
-    result = GameResult(
-        user_id=user.id,
-        pokemon_id=pokemon.id,
-        game_type=req.game_type,
-        accuracy=accuracy,
-        time_used=time_used,
-        final_score=final_score,
-        was_challenge=was_challenge,
-    )
-    db.add(result)
-    db.commit()
+    if is_auth:
+        user = _upsert_user(req.username, db)
 
-    # Update EVO score history
-    adjusted = min(100.0, final_score * 1.15) if was_challenge else final_score
+        # Determine if Professor Oak Analysis was active when this game was played
+        games_before = _game_count(user.id, req.game_type, db)
+        was_challenge = games_before >= CHALLENGE_THRESHOLD
 
-    # Per-difficulty record (kept for backward compatibility / profile analysis)
-    latest_evo = (
-        db.query(EvoScoreHistory)
-        .filter(EvoScoreHistory.user_id == user.id, EvoScoreHistory.game_type == req.game_type)
-        .order_by(EvoScoreHistory.timestamp.desc())
-        .first()
-    )
-    if latest_evo:
-        new_evo = min(100.0, 0.12 * adjusted + 0.88 * latest_evo.evo_score)
-    else:
-        new_evo = min(100.0, adjusted)
-    db.add(EvoScoreHistory(
-        user_id=user.id,
-        game_type=req.game_type,
-        evo_score=round(new_evo, 2),
-        final_score=final_score,
-    ))
+        result = GameResult(
+            user_id=user.id,
+            pokemon_id=pokemon.id,
+            game_type=req.game_type,
+            accuracy=accuracy,
+            time_used=time_used,
+            final_score=final_score,
+            was_challenge=was_challenge,
+        )
+        db.add(result)
+        db.commit()
 
-    # Combined per-game EVO (used by Trainer Journey chart)
-    # Raw score is scaled to the difficulty's range [0, scale_max] for smooth evolution
-    _DIFFICULTY_SCALE = {
-        "name_easy":    ("name_it",      30),
-        "name_guess":   ("name_it",      60),
-        "name_hard":    ("name_it",     100),
-        "number_guess": ("number_guess", 100),
-        "type_easy":    ("guess_type",   30),
-        "type_hard":    ("guess_type",  100),
-    }
-    combined_key, scale_max = _DIFFICULTY_SCALE.get(req.game_type, (req.game_type, 100))
-    effective_score = adjusted * (scale_max / 100.0)
+        # Update EVO score history
+        adjusted = min(100.0, final_score * 1.15) if was_challenge else final_score
 
-    latest_combined = (
-        db.query(EvoScoreHistory)
-        .filter(EvoScoreHistory.user_id == user.id, EvoScoreHistory.game_type == combined_key)
-        .order_by(EvoScoreHistory.timestamp.desc())
-        .first()
-    )
-    current_combined = latest_combined.evo_score if latest_combined else 0.0
-
-    if current_combined < scale_max:
-        if latest_combined:
-            new_combined = round(min(0.12 * effective_score + 0.88 * current_combined, scale_max), 2)
+        # Per-difficulty record (kept for backward compatibility / profile analysis)
+        latest_evo = (
+            db.query(EvoScoreHistory)
+            .filter(EvoScoreHistory.user_id == user.id, EvoScoreHistory.game_type == req.game_type)
+            .order_by(EvoScoreHistory.timestamp.desc())
+            .first()
+        )
+        if latest_evo:
+            new_evo = min(100.0, 0.12 * adjusted + 0.88 * latest_evo.evo_score)
         else:
-            new_combined = round(min(effective_score, scale_max), 2)
+            new_evo = min(100.0, adjusted)
         db.add(EvoScoreHistory(
             user_id=user.id,
-            game_type=combined_key,
-            evo_score=new_combined,
+            game_type=req.game_type,
+            evo_score=round(new_evo, 2),
             final_score=final_score,
         ))
-    else:
-        new_combined = current_combined
 
-    db.commit()
+        # Combined per-game EVO (used by Trainer Journey chart)
+        # Raw score is scaled to the difficulty's range [0, scale_max] for smooth evolution
+        _DIFFICULTY_SCALE = {
+            "name_easy":    ("name_it",      30),
+            "name_guess":   ("name_it",      60),
+            "name_hard":    ("name_it",     100),
+            "number_guess": ("number_guess", 100),
+            "type_easy":    ("guess_type",   30),
+            "type_hard":    ("guess_type",  100),
+        }
+        combined_key, scale_max = _DIFFICULTY_SCALE.get(req.game_type, (req.game_type, 100))
+        effective_score = adjusted * (scale_max / 100.0)
 
-    games_played = _game_count(user.id, req.game_type, db)
-    challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
+        latest_combined = (
+            db.query(EvoScoreHistory)
+            .filter(EvoScoreHistory.user_id == user.id, EvoScoreHistory.game_type == combined_key)
+            .order_by(EvoScoreHistory.timestamp.desc())
+            .first()
+        )
+        current_combined = latest_combined.evo_score if latest_combined else 0.0
 
-    if challenge_unlocked:
-        background_tasks.add_task(_train_bg, user.id, req.game_type)
+        if current_combined < scale_max:
+            if latest_combined:
+                new_combined = round(min(0.12 * effective_score + 0.88 * current_combined, scale_max), 2)
+            else:
+                new_combined = round(min(effective_score, scale_max), 2)
+            db.add(EvoScoreHistory(
+                user_id=user.id,
+                game_type=combined_key,
+                evo_score=new_combined,
+                final_score=final_score,
+            ))
+        else:
+            new_combined = current_combined
+
+        db.commit()
+
+        games_played = _game_count(user.id, req.game_type, db)
+        challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
+        evo_score = round(new_combined, 1)
+
+        if challenge_unlocked:
+            background_tasks.add_task(_train_bg, user.id, req.game_type)
 
     return SubmitResponse(
         accuracy=round(accuracy, 1),
         final_score=final_score,
-        evo_score=round(new_combined, 1),
+        evo_score=evo_score,
         correct_name=pokemon.name,
         correct_number=pokemon.id,
         distance=distance,
