@@ -261,6 +261,7 @@
   let sessionScores = JSON.parse(sessionStorage.getItem("poke_session_scores") || "[]");
   let streak = parseInt(sessionStorage.getItem("poke_streak") || "0");
   let selectedTypes = [];
+  let _prefetched = null;
 
   // Timer state
   const ROUND_DURATION = 30;
@@ -349,6 +350,7 @@
 
   // ── Mode switching ────────────────────────────────────────────────────────
   function switchGame(type) {
+    _prefetched = null;
     currentGame = type;
     selectedTypes = [];
 
@@ -441,8 +443,37 @@
   });
 
   // ── API calls ─────────────────────────────────────────────────────────────
+  async function _prefetchNext() {
+    try {
+      const accessToken = await _getAccessToken();
+      const res = await fetch("/game/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, game_type: currentGame, access_token: accessToken }),
+      });
+      if (res.ok) return await res.json();
+    } catch {}
+    return null;
+  }
+
   async function loadNext() {
     stopTimer();
+    const prefetch = _prefetched;
+    _prefetched = null;
+
+    if (prefetch) {
+      try {
+        const data = await prefetch;
+        if (data) {
+          currentPokemon = data;
+          updateProfessorOakUI(data);
+          showGame(data);
+          document.getElementById("stat-games").textContent = data.games_played ?? 0;
+          return;
+        }
+      } catch {}
+    }
+
     showLoading();
     try {
       const accessToken = await _getAccessToken();
@@ -728,6 +759,8 @@
     } else {
       typesEl.innerHTML = "";
     }
+
+    _prefetched = _prefetchNext();
   }
 
   function updateStats(data) {
