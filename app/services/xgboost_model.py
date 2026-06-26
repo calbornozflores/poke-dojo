@@ -6,6 +6,7 @@ from Name It does not bleed into Guess Number rankings, etc.
 Model artifacts: data/challenge_model_{user_id}_{game_type}.json
 """
 from __future__ import annotations
+import shutil
 from collections import defaultdict
 from pathlib import Path
 import numpy as np
@@ -96,7 +97,10 @@ def train(user_id: int, game_type: str, db: Session) -> bool:
     model.fit(X, y)
 
     MODEL_DIR.mkdir(exist_ok=True)
-    model.save_model(str(_model_path(user_id, game_type)))
+    dest = _model_path(user_id, game_type)
+    tmp = dest.with_suffix(".tmp")
+    model.save_model(str(tmp))
+    shutil.move(str(tmp), str(dest))
     return True
 
 

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import shutil
 from pathlib import Path
 import pandas as pd
 import xgboost as xgb
@@ -90,7 +91,10 @@ def train(username: str, db: Session) -> bool:
     model.fit(X, y)
 
     MODEL_DIR.mkdir(exist_ok=True)
-    model.save_model(str(_model_path(username)))
+    dest = _model_path(username)
+    tmp = dest.with_suffix(".tmp")
+    model.save_model(str(tmp))
+    shutil.move(str(tmp), str(dest))
     return True
 
 

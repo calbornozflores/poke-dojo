@@ -41,6 +41,7 @@ def _cached_pokemon(pokemon_id: int, db: Session) -> Optional[_PkmnCache]:
 router = APIRouter(prefix="/game", tags=["game"])
 
 CHALLENGE_THRESHOLD = 20
+TRAIN_EVERY = 5  # retrain Professor Oak model every N games after unlock
 
 _DIFFICULTY_SCALE: dict[str, tuple[str, float]] = {
     "name_easy":    ("name_it",       30.0),
@@ -561,7 +562,7 @@ def submit_answer(req: SubmitRequest, background_tasks: BackgroundTasks, db: Ses
         challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
         evo_score = round(new_combined, 1)
 
-        if challenge_unlocked:
+        if challenge_unlocked and games_played % TRAIN_EVERY == 0:
             background_tasks.add_task(_train_bg, user_id, req.game_type)
 
     return SubmitResponse(
