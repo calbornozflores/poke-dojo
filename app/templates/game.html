@@ -262,6 +262,7 @@
   let streak = parseInt(sessionStorage.getItem("poke_streak") || "0");
   let selectedTypes = [];
   let _prefetched = null;
+  const sessionId = crypto.randomUUID();
 
   // Timer state
   const ROUND_DURATION = 30;
@@ -449,7 +450,7 @@
       const res = await fetch("/game/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, game_type: currentGame, access_token: accessToken }),
+        body: JSON.stringify({ username, game_type: currentGame, access_token: accessToken, session_id: sessionId }),
       });
       if (res.ok) return await res.json();
     } catch {}
@@ -480,7 +481,7 @@
       const res = await fetch("/game/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, game_type: currentGame, access_token: accessToken }),
+        body: JSON.stringify({ username, game_type: currentGame, access_token: accessToken, session_id: sessionId }),
       });
       if (!res.ok) { showNoData(); return; }
       const data = await res.json();
@@ -520,6 +521,7 @@
           guess: String(guess),
           time_used: timeUsed,
           access_token: accessToken,
+          session_id: sessionId,
         }),
       });
       const data = await res.json();
@@ -564,6 +566,7 @@
         guess: selectedType,
         time_used: timeUsed,
         access_token: accessToken,
+        session_id: sessionId,
       }),
     });
     const data = await res.json();
@@ -653,6 +656,7 @@
         guess: selectedName,
         time_used: timeUsed,
         access_token: accessToken,
+        session_id: sessionId,
       }),
     });
     const data = await res.json();
