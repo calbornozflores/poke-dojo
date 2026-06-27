@@ -87,11 +87,7 @@
     </div>
 
     <p class="breakdown-hint">
-      Sorted hardest-first. Only categories with ≥ 5 games shown. &nbsp;
-      <strong style="color:#a78bfa">AI</strong>:
-        <span style="color:#fb923c">■</span> model predicts hard &nbsp;
-        <span style="color:#60a5fa">■</span> model predicts easy
-        <em>(unlocks after 20 games)</em>
+      Sorted hardest-first by your accuracy. Only categories with ≥ 5 games shown.
     </p>
   </div>
 </div>
@@ -207,10 +203,6 @@
       el.innerHTML = '<p class="breakdown-empty">Not enough data — keep playing!</p>';
       return;
     }
-    const hasShap    = items.some(it => it.shap != null);
-    const maxAbsShap = hasShap
-      ? (Math.max(...items.filter(it => it.shap != null).map(it => Math.abs(it.shap))) || 1)
-      : 1;
     const fills = [];
     items.forEach((item, i) => {
       const row = document.createElement("div");
@@ -226,14 +218,11 @@
       labelEl.appendChild(Object.assign(document.createElement("span"), { textContent: item.label }));
       const barGroup = document.createElement("div");
       barGroup.className = "breakdown-bar-group";
-      if (hasShap && item.shap != null) {
-        const hard      = item.shap > 0;
-        const shapColor = hard ? "#fb923c" : "#60a5fa";
-        const shapPct   = (Math.abs(item.shap) / maxAbsShap * 100).toFixed(1);
-        const shapLine  = makeLine("AI", hard ? "HARD ↑" : "EASY ↓", shapPct, shapColor, true);
-        barGroup.appendChild(shapLine.el);
-        fills.push({ fill: shapLine.fill, delay: 80 + i * 55 + 70 });
-      }
+      const pct   = item.avg.toFixed(1);
+      const color = item.avg >= 70 ? "#4ade80" : item.avg >= 50 ? "#facc15" : "#f87171";
+      const accLine = makeLine(pct + "%", pct + "%", item.avg, color, false);
+      barGroup.appendChild(accLine.el);
+      fills.push({ fill: accLine.fill, delay: 80 + i * 55 });
       const nEl = Object.assign(document.createElement("div"), {
         className: "breakdown-n", textContent: "n=" + item.n
       });
@@ -250,12 +239,7 @@
   function renderSection(sectionKey) {
     const meta  = SECTION_META[sectionKey];
     const items = [...cachedBreakdown.breakdown[meta.dataKey]];
-    const hasShap = items.some(it => it.shap != null);
-    if (hasShap) {
-      items.sort((a, b) => (b.shap ?? -Infinity) - (a.shap ?? -Infinity));
-    } else {
-      items.sort((a, b) => a.avg - b.avg);
-    }
+    items.sort((a, b) => a.avg - b.avg);
     makeRows(items, meta.containerId, meta.hasIcon);
   }
 

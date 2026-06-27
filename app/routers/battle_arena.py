@@ -213,17 +213,6 @@ def submit_round(req: SubmitRoundRequest, db: Session = Depends(get_db)):
     round_shadow_level = 0.0
     if match.mode == "single":
         round_shadow_level = _compute_shadow_level(req.round_number)
-        if req.round_number == 1 and not shadow_model.model_exists(match.player1):
-            shadow_model.train(match.player1, db)
-        elif req.round_number == 1:
-            result_count = (
-                db.query(CompetitiveResult)
-                .join(CompetitiveMatch, CompetitiveResult.match_id == CompetitiveMatch.id)
-                .filter(CompetitiveMatch.player1 == match.player1, CompetitiveMatch.mode == "single")
-                .count()
-            )
-            if result_count % 50 == 0:
-                shadow_model.train(match.player1, db)
         if p1_correct and req.player1_response_ms is not None:
             shadow_predicted = shadow_model.predict(match.player1, req.pokemon_id, round_shadow_level, db)
             if shadow_predicted is not None:
@@ -247,10 +236,6 @@ def submit_round(req: SubmitRoundRequest, db: Session = Depends(get_db)):
     )
     db.add(result)
     db.commit()
-
-    # Eager training: build model as soon as 20+ results exist (not just round 1)
-    if match.mode == "single" and not shadow_model.model_exists(match.player1):
-        shadow_model.train(match.player1, db)
 
     return RoundResult(
         player1_was_correct=p1_correct,

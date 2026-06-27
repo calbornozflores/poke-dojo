@@ -1,6 +1,8 @@
 # Poke-Dojo <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/107.png" height="32" align="absmiddle">
 
-A Pokémon quiz app with five Dojo game modes, a timed scoring system, a leaderboard, a personal profile with AI-powered breakdown, and a **Trainer Journey** page to track your EVO score over time. After 20 games, **Professor Oak Analysis** activates automatically — using machine learning to serve the Pokémon most likely to stump you. Plus a **Battle Arena** with VS Mode (2 players, same keyboard), Solo Challenge (endless, custom keys, tightening timer, and a personal Shadow that learns your response times), and a **Daily Challenge** — one mystery Pokémon per day, shared with every trainer worldwide. Sign in with Google to claim a unique trainer name and compete on the **Global Leaderboard** — your Solo Challenge best score is synced to a shared cloud ranking visible to all players worldwide.
+A Pokémon quiz app with five Dojo game modes, a timed scoring system, a leaderboard, a personal profile with category breakdown, and a **Trainer Journey** page to track your EVO score over time. After 20 games, **Professor Oak Analysis** activates automatically — ranking Pokémon by your own accuracy history to serve the ones that stump you most. Plus a **Battle Arena** with VS Mode (2 players, same keyboard), Solo Challenge (endless, custom keys, tightening timer, and a personal Shadow that learns your response times), and a **Daily Challenge** — one mystery Pokémon per day, shared with every trainer worldwide. Sign in with Google to claim a unique trainer name and compete on the **Global Leaderboard** — your Solo Challenge best score is synced to a shared cloud ranking visible to all players worldwide.
+
+**Live at [poke-dojo.fly.dev](https://poke-dojo.fly.dev)**
 
 Runs locally with SQLite out of the box. Set `DATABASE_URL` to a Supabase PostgreSQL instance and the app switches to global mode — game results are persisted to the cloud, leaderboards are shared across all players, and guests play without saving data.
 
@@ -62,7 +64,7 @@ Toggle all types this Pokémon has (up to 2) from all 18 options, then submit.
 ![Leaderboard](screenshots/12_leaderboard.png)
 
 ### My Profile
-Categorical breakdown by generation, evolution stage, and type. Tabs are ordered Easy → Medium → Hard for Name It modes. The page defaults to **Name Easy** on first visit and remembers your last selected tab for the rest of the session. After 20 games, AI (SHAP) bars appear and become the sort key — orange bars (HARD ↑) rise to the top, blue bars (EASY ↓) sink to the bottom. Falls back to accuracy sort before the model trains.
+Categorical breakdown by generation, evolution stage, and type. Tabs are ordered Easy → Medium → Hard for Name It modes. The page defaults to **Name Easy** on first visit and remembers your last selected tab for the rest of the session. From 5 games onward, color-coded accuracy bars appear for each category — green (strong), yellow (room to improve), red (weak spots) — sorted hardest-first.
 
 ![My Profile](screenshots/13_profile.png)
 
@@ -128,21 +130,6 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-### OS-specific prerequisite
-
-**macOS** — XGBoost requires OpenMP, which Apple Clang does not include:
-```bash
-brew install libomp
-```
-
-**Linux (Debian / Ubuntu)** — most desktop installs already have this; only needed on minimal/server images:
-```bash
-sudo apt install libgomp1
-# Fedora / RHEL: sudo dnf install libgomp
-```
-
-**Windows** — no extra step needed. XGBoost ships pre-built wheels that bundle the runtime.
-
 ### Setup
 
 ```bash
@@ -202,8 +189,8 @@ FinalScore = (Accuracy / 100) × max(0, 100 − (TimeUsed / 30) × 100)
 | 30 s | 0 | 0 pts |
 
 ### Professor Oak Analysis
-Unlocks automatically per mode after **20 games**. No checkbox — it's always on once unlocked. The XGBoost model trained on your history picks the Pokémon it predicts you'll find hardest:
-- **80%** of rounds: hardest-predicted Pokémon from your weak spots
+Unlocks automatically per mode after **20 games**. No checkbox — it's always on once unlocked. Pokémon are ranked by your own accuracy history — lowest average accuracy = hardest for you — and served accordingly:
+- **80%** of rounds: hardest Pokémon from your weak spots (lowest average accuracy)
 - **20%** of rounds: completely random, for variety
 
 ### EVO Score
@@ -225,10 +212,12 @@ EVOₜ = min(cap, 0.12 × EffectiveScore + 0.88 × EVOₜ₋₁)
 If your EVO is already at or above the difficulty cap, that session has no effect (neither up nor down). To keep progressing past 30, you must play Medium; past 60, you must play Hard. Where `adjusted = min(100, FinalScore × 1.15)` when Professor Oak is active (challenge bonus), else `adjusted = FinalScore`.
 
 ### My Profile
-Accuracy breakdown by generation ("Gen I • Kanto"), evolution stage, and type. Navigate with top-level game tabs (Name It / Guess Number / Guess the Type) and difficulty sub-switches. Categories with fewer than 5 games are hidden. After 20 games, AI (SHAP) bars appear and **become the primary sort key**:
-- **Orange bar (HARD ↑)** — Professor Oak predicts this category will stay hard for you; floats to the top
-- **Blue bar (EASY ↓)** — Professor Oak predicts this category will be easy; sinks to the bottom
-- Before 20 games, categories are sorted by accuracy (lowest first)
+Accuracy breakdown by generation ("Gen I • Kanto"), evolution stage, and type. Navigate with top-level game tabs (Name It / Guess Number / Guess the Type) and difficulty sub-switches. Categories with fewer than 5 games are hidden. From 5 games onward, each category shows a color-coded accuracy bar:
+- **Green** (≥ 70%) — you're strong here
+- **Yellow** (50–70%) — room to improve
+- **Red** (< 50%) — your weak spots
+
+Categories are sorted hardest-first (lowest accuracy at the top).
 
 ### Trainer Journey
 A smooth SVG chart of your combined EVO score per game family. Four tabs — **All Modes** (Snorlax), **Name It** (Pikachu), **Guess Number** (Arceus), **Guess the Type** (Eevee) — each showing one unified line that reflects all difficulty levels played. Defaults to **All Modes** on first visit and remembers your last selected tab.
@@ -301,8 +290,8 @@ poke-dojo/
 │   │   ├── data_loader.py    # Background PokeAPI fetch with progress
 │   │   ├── string_match.py   # rapidfuzz accuracy for Name It
 │   │   ├── pokemon_data.py   # Random / Professor Oak Pokémon selection
-│   │   ├── shadow_model.py   # Per-user Shadow (response-time rolling average)
-│   │   ├── xgboost_model.py  # Per-user XGBoost + SHAP category analysis
+│   │   ├── shadow_model.py   # Per-user Shadow (response-time SQL averages)
+│   │   ├── xgboost_model.py  # Per-user difficulty analysis (SQL accuracy stats)
 │   │   ├── supabase_client.py# Supabase admin + anon client helpers
 │   │   └── username_filter.py# Profanity filter (English + Chilean, leet-speak aware)
 │   └── templates/            # Jinja2 HTML (base, index, game, scores, profile,
@@ -327,7 +316,7 @@ poke-dojo/
 | Backend | FastAPI + Uvicorn |
 | Database | SQLite (local) / Supabase PostgreSQL (global) via SQLAlchemy ORM |
 | String matching | rapidfuzz |
-| ML (Professor Oak + Profile) | XGBoost (native SHAP) |
+| Professor Oak + Shadow | Per-user SQL accuracy stats |
 | Global leaderboard + Auth | Supabase (PostgreSQL + Google OAuth) |
 | Profanity filter | better-profanity + custom Chilean wordlist |
 | Package manager | uv |

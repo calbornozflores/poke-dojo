@@ -3,11 +3,11 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Optional
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.database import get_db, SessionLocal
+from app.database import get_db
 from app.models import User, GameResult, Pokemon, EvoScoreHistory
 from app.services.string_match import name_accuracy
 from app.services.pokemon_data import number_accuracy
@@ -41,7 +41,6 @@ def _cached_pokemon(pokemon_id: int, db: Session) -> Optional[_PkmnCache]:
 router = APIRouter(prefix="/game", tags=["game"])
 
 CHALLENGE_THRESHOLD = 20
-TRAIN_EVERY = 5  # retrain Professor Oak model every N games after unlock
 
 _DIFFICULTY_SCALE: dict[str, tuple[str, float]] = {
     "name_easy":    ("name_it",       30.0),
@@ -91,14 +90,6 @@ def _upsert_user(username: str, db: Session) -> User:
         db.commit()
         db.refresh(user)
     return user
-
-
-def _train_bg(user_id: int, game_type: str) -> None:
-    db = SessionLocal()
-    try:
-        xgboost_model.train(user_id, game_type, db)
-    finally:
-        db.close()
 
 
 def _game_count(user_id: int, game_type: str, db: Session) -> int:
@@ -199,37 +190,6 @@ class SubmitResponse(BaseModel):
     user_types: list[str] = []
 
 
-@router.get("/profile")
-def game_profile(
-    username: str = Query(...),
-    game_type: str = Query(...),
-    db: Session = Depends(get_db),
-):
-    user = db.query(User).filter(User.username == username).first()
-    if not user:
-        return {"model_exists": False, "profile": None}
-    profile = xgboost_model.get_profile(user.id, game_type, db)
-    return {"model_exists": profile is not None, "profile": profile}
-
-
-@router.get("/profile/image")
-def profile_image(
-    username: str = Query(...),
-    game_type: str = Query(...),
-    db: Session = Depends(get_db),
-):
-    user = db.query(User).filter(User.username == username).first()
-    if not user:
-        return {"model_exists": False, "chart": None, "total_games": 0}
-    chart = xgboost_model.get_profile_chart_data(user.id, game_type, db)
-    total = (
-        db.query(GameResult)
-        .filter(GameResult.user_id == user.id, GameResult.game_type == game_type)
-        .count()
-    )
-    return {"model_exists": chart is not None, "chart": chart, "total_games": total}
-
-
 @router.get("/profile/breakdown")
 def profile_breakdown(
     username: str = Query(...),
@@ -302,25 +262,6 @@ def profile_breakdown(
         for t, accs in type_acc.items()
         if len(accs) >= MIN_N and t in _TYPE_IDS
     ], key=lambda x: x["avg"])
-
-    # Attach SHAP per-category if model is trained (20+ games)
-    shap = xgboost_model.get_category_shap(user.id, game_type, db)
-    if shap:
-        _rev_stage = {"Basic": "basic", "Stage 1": "stage_1", "Stage 2": "stage_2"}
-        _gen_num = {v: k for k, v in GEN_LABELS.items()}
-        for item in by_generation:
-            gen_num = _gen_num.get(item["label"])
-            s = shap["generation"].get(gen_num) if gen_num is not None else None
-            if s is not None:
-                item["shap"] = s
-        for item in by_stage:
-            s = shap["stage"].get(_rev_stage.get(item["label"], ""))
-            if s is not None:
-                item["shap"] = s
-        for item in by_type:
-            s = shap["type"].get(item["label"].lower())
-            if s is not None:
-                item["shap"] = s
 
     return {
         "has_data":    True,
@@ -412,7 +353,7 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/submit", response_model=SubmitResponse)
-def submit_answer(req: SubmitRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
     is_auth = is_authenticated_user(req.username, req.access_token)
 
     pokemon = _cached_pokemon(req.pokemon_id, db)
@@ -561,9 +502,6 @@ def submit_answer(req: SubmitRequest, background_tasks: BackgroundTasks, db: Ses
         games_played = games_before + 1
         challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
         evo_score = round(new_combined, 1)
-
-        if challenge_unlocked and games_played % TRAIN_EVERY == 0:
-            background_tasks.add_task(_train_bg, user_id, req.game_type)
 
     return SubmitResponse(
         accuracy=round(accuracy, 1),
