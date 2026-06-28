@@ -1308,8 +1308,7 @@ a:hover { color: var(--accent-hover); }
   /* ── Global ── */
   .container { padding: 1rem; }
   .navbar { padding: 0.75rem 1rem; flex-wrap: wrap; }
-  .navbar nav { gap: 0.5rem; overflow-x: auto; flex-wrap: nowrap; }
-  #nav-journey, #nav-lb-wrap, #nav-help-wrap { display: none; }
+  .navbar nav { display: none; }
 
   /* ── Hamburger button ── */
   .hamburger-btn { display: flex; align-items: center; }
