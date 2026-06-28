@@ -1398,6 +1398,12 @@ a:hover { color: var(--accent-hover); }
   .mode-btn { min-height: 48px; }
   .stats-box { width: 100%; }
 
+  /* ── Contact page ── */
+  .contact-link > div { min-width: 0; }
+  .contact-link-title { overflow-wrap: break-word; }
+  .contact-link-sub   { overflow-wrap: break-word; word-break: break-all; }
+  .contact-link-sprite { width: 40px; height: 40px; }
+
   /* ── Result zone ── */
   .accuracy-ring { width: 90px; height: 90px; }
   .accuracy-number { font-size: 1rem; }
