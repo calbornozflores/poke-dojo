@@ -1274,8 +1274,13 @@ a:hover { color: var(--accent-hover); }
   color: var(--text);
 }
 
+/* Mobile-only elements — hidden by default on desktop */
+.mobile-vs-warning { display: none; }
+.mobile-solo-rules { display: none; }
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
+  /* ── Existing rules ── */
   .game-layout { grid-template-columns: 1fr; }
   .sidebar { flex-direction: row; flex-wrap: wrap; }
   .game-selector { flex-direction: row; flex-wrap: wrap; }
@@ -1285,6 +1290,56 @@ a:hover { color: var(--accent-hover); }
   .intro-meta { grid-template-columns: 1fr; }
   .journey-chart-wrapper { flex-direction: column; }
   .journey-y-axis { flex-direction: row; height: auto; width: 100%; }
+
+  /* ── Global ── */
+  .container { padding: 1rem; }
+  .navbar { padding: 0.75rem 1rem; }
+  .navbar nav { gap: 0.5rem; overflow-x: auto; flex-wrap: nowrap; }
+  #nav-journey, #nav-lb-wrap, #nav-help-wrap { display: none; }
+
+  /* ── Home page ── */
+  .hero-card { padding: 1.75rem 1.25rem; }
+  .hero-card h1 { font-size: 1.6rem; }
+  .hero-actions { flex-wrap: wrap; }
+
+  /* ── Dojo game pages ── */
+  .game-layout { padding: 0.75rem; gap: 1rem; }
+  .pokemon-card { min-width: unset; width: 100%; padding: 1.25rem; }
+  .pokemon-sprite { width: 160px; height: 160px; }
+  .answer-zone { min-width: unset; width: 100%; }
+  .result-zone { min-width: unset; width: 100%; }
+  .name-choice-key { display: none; }
+  .type-hard-layout .type-grid { grid-template-columns: repeat(3, 1fr); }
+
+  /* ── Profile stats ── */
+  .profile-page { padding: 1rem; }
+  .breakdown-row { grid-template-columns: 100px 1fr; }
+  .breakdown-label { font-size: 0.78rem; }
+  .bar-line-val { width: 38px; font-size: 0.7rem; }
+  .breakdown-type-icon { width: 36px; }
+  .tab-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .type-sub-switch { flex-wrap: wrap; }
+
+  /* ── Leaderboard ── */
+  .scores-layout { padding: 0 0.5rem; }
+  .score-table { font-size: 0.8rem; }
+  .score-table th, .score-table td { padding: 0.5rem 0.4rem; }
+  .date-cell { display: none; }
+
+  /* ── Battle Arena — setup ── */
+  .arena-page { padding: 1rem; }
+  .arena-setup-card { padding: 1.5rem 1rem; }
+  .arena-key-hint { display: none; }
+  .mobile-vs-warning { display: block; }
+  .arena-key-assign { display: none; }
+  .mobile-solo-rules { display: block; }
+
+  /* ── Battle Arena — game round ── */
+  .opt-keys { display: none; }
+  .arena-round-info { display: none; }
+  .rr-bar-row { grid-template-columns: 80px 1fr 50px; }
+  .rr-bar-meta { display: none; }
+  .analytics-cats-grid { grid-template-columns: 1fr; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
