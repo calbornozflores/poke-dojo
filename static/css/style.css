@@ -1365,6 +1365,11 @@ a:hover { color: var(--accent-hover); }
   .name-choice-key { display: none; }
   .type-hard-layout .type-grid { grid-template-columns: repeat(3, 1fr); }
 
+  /* ── Play page sidebar ── */
+  .game-selector .game-section-label { width: 100%; }
+  .battle-btn-sub { display: none; }
+  .mode-btn { min-height: 48px; }
+
   /* ── Profile stats ── */
   .profile-page { padding: 1rem; }
   .breakdown-row { grid-template-columns: 100px 1fr; }

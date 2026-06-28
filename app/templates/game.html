@@ -384,6 +384,11 @@
     document.getElementById("game-screen").classList.toggle("type-hard-layout", type === "type_hard");
 
     showIntro(type);
+    if (window.matchMedia("(max-width: 768px)").matches) {
+      setTimeout(() => {
+        document.querySelector(".game-area").scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    }
   }
 
   function showIntro(type) {
