@@ -24,6 +24,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 a { color: var(--accent); text-decoration: none; }
@@ -385,7 +386,7 @@ a:hover { color: var(--accent-hover); }
   width: 120px;
   height: 120px;
 }
-.accuracy-ring svg { transform: rotate(-90deg); }
+.accuracy-ring svg { display: block; width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring-bg { fill: none; stroke: var(--border); stroke-width: 10; }
 .ring-fill {
   fill: none;
@@ -1274,8 +1275,26 @@ a:hover { color: var(--accent-hover); }
   color: var(--text);
 }
 
+/* Mobile-only elements — hidden by default on desktop */
+.mobile-vs-warning { display: none; }
+.mobile-solo-rules { display: none; }
+
+/* ── Hamburger menu ── */
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+}
+.mobile-nav-menu { display: none; }
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
+  /* ── Existing rules ── */
   .game-layout { grid-template-columns: 1fr; }
   .sidebar { flex-direction: row; flex-wrap: wrap; }
   .game-selector { flex-direction: row; flex-wrap: wrap; }
@@ -1283,8 +1302,143 @@ a:hover { color: var(--accent-hover); }
   .input-row { flex-direction: column; }
   .type-grid { grid-template-columns: repeat(3, 1fr); }
   .intro-meta { grid-template-columns: 1fr; }
-  .journey-chart-wrapper { flex-direction: column; }
-  .journey-y-axis { flex-direction: row; height: auto; width: 100%; }
+  .journey-chart-wrapper { flex-direction: row; align-items: flex-start; }
+  .journey-y-axis { flex-direction: column; height: 180px; width: auto; position: relative; overflow: visible; }
+  .journey-axis-sprite { display: block; width: 20px; height: 20px; position: absolute; }
+  .journey-axis-sprite:first-child { top: -10px; left: 50%; transform: translateX(-50%); }
+  .journey-axis-sprite:last-child  { bottom: -10px; left: 50%; transform: translateX(-50%); }
+  .journey-y-labels { height: 180px; padding: 7px 0; }
+  .journey-svg { height: 180px; }
+
+  /* ── Global ── */
+  .container { padding: 1rem; }
+  .navbar { padding: 0.75rem 1rem; flex-wrap: wrap; }
+  .navbar nav { display: none; }
+
+  /* ── Hamburger button ── */
+  .hamburger-btn { display: flex; align-items: center; }
+
+  /* ── Mobile nav panel ── */
+  .mobile-nav-menu:not(.hidden) {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    border-top: 1px solid var(--border);
+    padding: 0.5rem 0;
+    margin-top: 0.25rem;
+  }
+  .mobile-nav-link {
+    padding: 0.65rem 1rem;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    display: block;
+  }
+  .mobile-nav-link:hover { color: var(--text); }
+  .mobile-nav-group { display: flex; flex-direction: column; }
+  .mobile-nav-group-label {
+    padding: 0.5rem 1rem 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    opacity: 0.6;
+  }
+  .mobile-nav-sublink {
+    padding: 0.5rem 1.75rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    text-decoration: none;
+    display: block;
+  }
+  .mobile-nav-sublink:hover { color: var(--text); }
+
+  /* ── Home page ── */
+  .hero { min-height: unset; align-items: flex-start; padding: 1rem; }
+  .hero-card { padding: 1.75rem 1.25rem; }
+  .hero-card h1 { font-size: 1.6rem; }
+  .hero-actions { flex-wrap: wrap; }
+
+  /* ── Dojo game pages ── */
+  .game-layout { padding: 0.75rem; gap: 1rem; }
+  #game-screen {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  #game-screen .pokemon-card {
+    width: 120px;
+    min-width: 120px;
+    flex-shrink: 0;
+    padding: 0.6rem;
+    margin-bottom: 0;
+  }
+  .pokemon-sprite { width: 90px; height: 90px; }
+  #game-screen .pokemon-name-display { font-size: 0.8rem; }
+  #game-screen .answer-zone {
+    flex: 1;
+    min-width: 0;
+    padding: 0.75rem;
+  }
+  #game-screen .result-zone {
+    flex: 1;
+    min-width: 0;
+    padding: 0.75rem;
+  }
+  .name-choice-key { display: none; }
+  .type-hard-layout .type-grid { grid-template-columns: repeat(3, 1fr); }
+
+  /* ── Play page sidebar ── */
+  .game-selector .game-section-label { width: 100%; }
+  .battle-btn-sub { display: none; }
+  .mode-btn { min-height: 48px; }
+  .stats-box { width: 100%; }
+
+  /* ── Contact page ── */
+  .contact-link > div { min-width: 0; }
+  .contact-link-title { overflow-wrap: break-word; }
+  .contact-link-sub   { overflow-wrap: break-word; word-break: break-all; }
+  .contact-link-sprite { width: 40px; height: 40px; }
+
+  /* ── Result zone ── */
+  .accuracy-ring { width: 90px; height: 90px; }
+  .accuracy-number { font-size: 1rem; }
+  .final-score-display { font-size: 1.1rem; white-space: nowrap; }
+  .evo-score-result { white-space: nowrap; }
+
+  /* ── Profile stats ── */
+  .profile-page { padding: 1rem; }
+  .breakdown-row { grid-template-columns: 100px 1fr; }
+  .breakdown-label { font-size: 0.78rem; }
+  .bar-line-val { width: 38px; font-size: 0.7rem; }
+  .breakdown-type-icon { width: 36px; }
+  .tab-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .type-sub-switch { flex-wrap: wrap; }
+
+  /* ── Leaderboard ── */
+  .scores-layout { padding: 0 0.5rem; }
+  .score-table { font-size: 0.8rem; }
+  .score-table th, .score-table td { padding: 0.5rem 0.4rem; }
+  .date-cell { display: none; }
+
+  /* ── Battle Arena — setup ── */
+  .arena-page { padding: 1rem; }
+  .arena-setup-card { padding: 1.5rem 1rem; }
+  .arena-key-hint { display: none; }
+  .mobile-vs-warning { display: block; }
+  .arena-key-assign { display: none; }
+  .mobile-solo-rules { display: block; }
+
+  /* ── Battle Arena — game round ── */
+  .opt-keys { display: none; }
+  .arena-round-info { display: none; }
+  .rr-bar-row { grid-template-columns: 80px 1fr 50px; }
+  .rr-bar-meta { display: none; }
+  .analytics-cats-grid { grid-template-columns: 1fr; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════

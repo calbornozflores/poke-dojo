@@ -350,7 +350,7 @@
   }
 
   // ── Mode switching ────────────────────────────────────────────────────────
-  function switchGame(type) {
+  function switchGame(type, doScroll = false) {
     _prefetched = null;
     currentGame = type;
     selectedTypes = [];
@@ -384,6 +384,11 @@
     document.getElementById("game-screen").classList.toggle("type-hard-layout", type === "type_hard");
 
     showIntro(type);
+    if (doScroll && window.matchMedia("(max-width: 768px)").matches) {
+      setTimeout(() => {
+        document.querySelector(".game-area").scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    }
   }
 
   function showIntro(type) {
@@ -403,15 +408,15 @@
   btnGame1.addEventListener("click", () => {
     if (currentGame !== "name_guess" && currentGame !== "name_hard" && currentGame !== "name_easy") switchGame("name_guess");
   });
-  btnGame2.addEventListener("click", () => switchGame("number_guess"));
+  btnGame2.addEventListener("click", () => switchGame("number_guess", true));
   btnType.addEventListener("click",  () => {
     if (currentGame !== "type_easy" && currentGame !== "type_hard") switchGame("type_easy");
   });
-  subNameEasy.addEventListener("click",  () => { if (currentGame !== "name_easy")  switchGame("name_easy"); });
-  subMedium.addEventListener("click",   () => { if (currentGame !== "name_guess")  switchGame("name_guess"); });
-  subNameHard.addEventListener("click", () => { if (currentGame !== "name_hard")   switchGame("name_hard"); });
-  subEasy.addEventListener("click",     () => { if (currentGame !== "type_easy")   switchGame("type_easy"); });
-  subHard.addEventListener("click",     () => { if (currentGame !== "type_hard")   switchGame("type_hard"); });
+  subNameEasy.addEventListener("click",  () => { if (currentGame !== "name_easy")  switchGame("name_easy",  true); });
+  subMedium.addEventListener("click",   () => { if (currentGame !== "name_guess")  switchGame("name_guess", true); });
+  subNameHard.addEventListener("click", () => { if (currentGame !== "name_hard")   switchGame("name_hard",  true); });
+  subEasy.addEventListener("click",     () => { if (currentGame !== "type_easy")   switchGame("type_easy",  true); });
+  subHard.addEventListener("click",     () => { if (currentGame !== "type_hard")   switchGame("type_hard",  true); });
 
   document.getElementById("intro-start-btn").addEventListener("click", loadNext);
   submitBtn.addEventListener("click", submitAnswer);

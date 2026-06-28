@@ -28,6 +28,9 @@
       <div id="setup-vs" class="hidden">
         <h1 class="arena-title"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/11.png" class="arena-title-sprite" alt=""><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/11.png" class="arena-title-sprite arena-title-sprite-flip" alt=""> VS Mode</h1>
         <p class="arena-subtitle">2 players share the same keyboard. First to identify the Pokémon wins the round.</p>
+        <div class="mobile-vs-warning" style="background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.35);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:#fb923c;text-align:center;">
+          ⌨️ VS Mode is a desktop-only experience — it requires a physical keyboard (Q/W/E for P1, I/O/P for P2).
+        </div>
         <div class="arena-players-row">
           <div class="arena-player-block">
             <div class="arena-player-label">Player 1</div>
@@ -79,6 +82,10 @@
             </div>
           </div>
           <p id="key-assign-error" class="key-assign-error hidden"></p>
+        </div>
+        <div class="mobile-solo-rules" style="background:rgba(108,99,255,0.08);border:1px solid var(--border);border-radius:10px;padding:1rem;margin:1rem 0;font-size:0.85rem;color:var(--text-muted);line-height:1.6;">
+          <strong style="color:var(--text);display:block;margin-bottom:0.5rem;">How to play on mobile</strong>
+          A Pokémon silhouette appears — tap the correct name from the 3 options before the timer runs out. A wrong answer, timeout, or being beaten by your Shadow costs a Luvdisc life. Survive as long as you can.
         </div>
       </div>
 
@@ -205,6 +212,7 @@
 {% block scripts %}
 <script>
 // ── State ─────────────────────────────────────────────────────────────────
+const isMobile  = window.matchMedia("(max-width: 768px)").matches;
 const params    = new URLSearchParams(location.search);
 let MODE        = params.get("mode") || "vs";
 let matchId     = null;
@@ -312,9 +320,11 @@ document.getElementById("start-match-btn").addEventListener("click", async () =>
   } else {
     soloName = document.getElementById("solo-name").value.trim();
     if (!soloName) { errEl.textContent = "Enter your trainer name."; errEl.classList.remove("hidden"); return; }
-    if (soloKeySlots.some(k => k === null)) { errEl.textContent = "Assign all 3 keys first."; errEl.classList.remove("hidden"); return; }
-    SOLO_KEYS = {};
-    soloKeySlots.forEach((key, i) => { SOLO_KEYS[key] = i + 1; });
+    if (!isMobile && soloKeySlots.some(k => k === null)) { errEl.textContent = "Assign all 3 keys first."; errEl.classList.remove("hidden"); return; }
+    if (!isMobile) {
+      SOLO_KEYS = {};
+      soloKeySlots.forEach((key, i) => { SOLO_KEYS[key] = i + 1; });
+    }
   }
 
   const body = MODE === "vs"

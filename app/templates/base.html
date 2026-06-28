@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Poke-Dojo{% endblock %}</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=20260622" />
+  <link rel="stylesheet" href="/static/css/style.css?v=20260628j" />
   {% if supabase_configured %}
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -40,6 +40,23 @@
       <span id="nav-user" class="nav-user"></span>
       <span id="nav-streak" class="nav-streak hidden"></span>
     </nav>
+    <button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">&#9776;</button>
+    <div id="mobile-nav-menu" class="mobile-nav-menu hidden">
+      <a href="/play" class="mobile-nav-link">Play</a>
+      <a href="/daily-challenge" class="mobile-nav-link">Daily Challenge</a>
+      <div class="mobile-nav-group">
+        <div class="mobile-nav-group-label">Leaderboard</div>
+        <a href="/leaderboard" class="mobile-nav-sublink">Dojo</a>
+        <a href="/arena-leaderboard" class="mobile-nav-sublink">Arena</a>
+      </div>
+      <a href="/profile" class="mobile-nav-link">My Profile</a>
+      <a href="/journey" class="mobile-nav-link">Trainer Journey</a>
+      <div class="mobile-nav-group">
+        <div class="mobile-nav-group-label">Help</div>
+        <a href="/faq" class="mobile-nav-sublink">FAQ</a>
+        <a href="/contact" class="mobile-nav-sublink">Contact Us</a>
+      </div>
+    </div>
   </header>
 
   <main class="container">
@@ -63,6 +80,15 @@
     });
     document.addEventListener("click", () => {
       document.querySelectorAll(".nav-dropdown-menu").forEach(m => m.classList.add("hidden"));
+      document.getElementById("mobile-nav-menu").classList.add("hidden");
+    });
+
+    document.getElementById("hamburger-btn").addEventListener("click", e => {
+      e.stopPropagation();
+      document.getElementById("mobile-nav-menu").classList.toggle("hidden");
+    });
+    document.getElementById("mobile-nav-menu").addEventListener("click", e => {
+      if (e.target.tagName === "A") document.getElementById("mobile-nav-menu").classList.add("hidden");
     });
 
     async function _loadStreak(username) {
