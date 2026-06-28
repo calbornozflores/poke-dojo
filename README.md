@@ -1,4 +1,4 @@
-# Poke-Dojo <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/107.png" height="32" align="absmiddle">
+# Poke Dojo <img src="static/logo.png" height="40" align="absmiddle">
 
 A Pokémon quiz app with five Dojo game modes, a timed scoring system, a leaderboard, a personal profile with category breakdown, and a **Trainer Journey** page to track your EVO score over time. After 20 games, **Professor Oak Analysis** activates automatically — ranking Pokémon by your own accuracy history to serve the ones that stump you most. Plus a **Battle Arena** with VS Mode (2 players, same keyboard), Solo Challenge (endless, custom keys, tightening timer, and a personal Shadow that learns your response times), and a **Daily Challenge** — one mystery Pokémon per day, shared with every trainer worldwide. Sign in with Google to claim a unique trainer name and compete on the **Global Leaderboard** — your Solo Challenge best score is synced to a shared cloud ranking visible to all players worldwide.
 
