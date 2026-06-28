@@ -1391,6 +1391,7 @@ a:hover { color: var(--accent-hover); }
   .game-selector .game-section-label { width: 100%; }
   .battle-btn-sub { display: none; }
   .mode-btn { min-height: 48px; }
+  .stats-box { width: 100%; }
 
   /* ── Result zone ── */
   .accuracy-ring { width: 90px; height: 90px; }
