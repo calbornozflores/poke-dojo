@@ -1303,8 +1303,10 @@ a:hover { color: var(--accent-hover); }
   .type-grid { grid-template-columns: repeat(3, 1fr); }
   .intro-meta { grid-template-columns: 1fr; }
   .journey-chart-wrapper { flex-direction: row; align-items: flex-start; }
-  .journey-y-axis { flex-direction: column; height: 180px; width: auto; }
-  .journey-axis-sprite { display: none; }
+  .journey-y-axis { flex-direction: column; height: 180px; width: auto; position: relative; overflow: visible; }
+  .journey-axis-sprite { display: block; width: 20px; height: 20px; position: absolute; }
+  .journey-axis-sprite:first-child { top: -10px; left: 50%; transform: translateX(-50%); }
+  .journey-axis-sprite:last-child  { bottom: -10px; left: 50%; transform: translateX(-50%); }
   .journey-y-labels { height: 180px; padding: 7px 0; }
   .journey-svg { height: 180px; }
 
