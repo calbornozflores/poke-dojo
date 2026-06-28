@@ -1302,8 +1302,11 @@ a:hover { color: var(--accent-hover); }
   .input-row { flex-direction: column; }
   .type-grid { grid-template-columns: repeat(3, 1fr); }
   .intro-meta { grid-template-columns: 1fr; }
-  .journey-chart-wrapper { flex-direction: column; }
-  .journey-y-axis { flex-direction: row; height: auto; width: 100%; }
+  .journey-chart-wrapper { flex-direction: row; align-items: flex-start; }
+  .journey-y-axis { flex-direction: column; height: 180px; width: auto; }
+  .journey-axis-sprite { display: none; }
+  .journey-y-labels { height: 180px; padding: 7px 0; }
+  .journey-svg { height: 180px; }
 
   /* ── Global ── */
   .container { padding: 1rem; }
