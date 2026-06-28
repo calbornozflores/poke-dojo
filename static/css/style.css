@@ -1358,10 +1358,32 @@ a:hover { color: var(--accent-hover); }
 
   /* ── Dojo game pages ── */
   .game-layout { padding: 0.75rem; gap: 1rem; }
-  .pokemon-card { min-width: unset; width: 100%; padding: 1.25rem; }
-  .pokemon-sprite { width: 160px; height: 160px; }
-  .answer-zone { min-width: unset; width: 100%; }
-  .result-zone { min-width: unset; width: 100%; }
+  #game-screen {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  #game-screen .pokemon-card {
+    width: 120px;
+    min-width: 120px;
+    flex-shrink: 0;
+    padding: 0.6rem;
+    margin-bottom: 0;
+  }
+  .pokemon-sprite { width: 90px; height: 90px; }
+  #game-screen .pokemon-name-display { font-size: 0.8rem; }
+  #game-screen .answer-zone {
+    flex: 1;
+    min-width: 0;
+    padding: 0.75rem;
+  }
+  #game-screen .result-zone {
+    flex: 1;
+    min-width: 0;
+    padding: 0.75rem;
+  }
   .name-choice-key { display: none; }
   .type-hard-layout .type-grid { grid-template-columns: repeat(3, 1fr); }
 
