@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}Poke-Dojo{% endblock %}</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=20260628j" />
+  <title>{% block title %}Poke Dojo{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/style.css?v=20260628k" />
   {% if supabase_configured %}
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -17,7 +17,7 @@
 </head>
 <body>
   <header class="navbar">
-    <a href="/" class="logo"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/107.png" alt="" class="logo-sprite">Poke-Dojo</a>
+    <a href="/" class="logo"><img src="/static/logo.png" alt="Poke Dojo" class="logo-sprite">Poke Dojo</a>
     <nav>
       <a href="/play" id="nav-play">Play</a>
       <a href="/daily-challenge" id="nav-daily">Daily</a>
