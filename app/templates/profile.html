@@ -220,15 +220,11 @@
       barGroup.className = "breakdown-bar-group";
       const pct   = item.avg.toFixed(1);
       const color = item.avg >= 70 ? "#4ade80" : item.avg >= 50 ? "#facc15" : "#f87171";
-      const accLine = makeLine(pct + "%", pct + "%", item.avg, color, false);
+      const accLine = makeLine("", pct + "%", item.avg, color, false);
       barGroup.appendChild(accLine.el);
       fills.push({ fill: accLine.fill, delay: 80 + i * 55 });
-      const nEl = Object.assign(document.createElement("div"), {
-        className: "breakdown-n", textContent: "n=" + item.n
-      });
       row.appendChild(labelEl);
       row.appendChild(barGroup);
-      row.appendChild(nEl);
       el.appendChild(row);
     });
     fills.forEach(({ fill, delay }) => {
