@@ -118,6 +118,9 @@ def submit_guess(req: GuessRequest, db: Session = Depends(get_db)):
     if not answer:
         raise HTTPException(status_code=500, detail="Daily Pokémon not found in database")
 
+    if not (1 <= req.guess_pokemon_id <= 1025):
+        raise HTTPException(status_code=400, detail="Invalid Pokémon ID")
+
     guess_pokemon = db.get(Pokemon, req.guess_pokemon_id)
     if not guess_pokemon:
         raise HTTPException(status_code=404, detail="Pokémon not found")

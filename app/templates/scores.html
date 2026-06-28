@@ -78,6 +78,11 @@
 <script>
   const username = localStorage.getItem("poke_username");
 
+  function escapeHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   function fmtScore(val) {
     return val !== null && val !== undefined ? val.toFixed(1) + " pts" : "—";
   }
@@ -95,7 +100,7 @@
       return `
       <tr class="${rankCls} ${hlCls}">
         <td>${i + 1}</td>
-        <td><strong>${s.username}</strong></td>
+        <td><strong>${escapeHtml(s.username)}</strong></td>
         <td>${s.total_games}</td>
         <td class="acc-cell">${fmtScore(s.avg_score)}</td>
         <td class="best">${fmtScore(s.best_score)}</td>

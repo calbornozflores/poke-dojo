@@ -211,6 +211,11 @@
 
 {% block scripts %}
 <script>
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 // ── State ─────────────────────────────────────────────────────────────────
 const isMobile  = window.matchMedia("(max-width: 768px)").matches;
 const params    = new URLSearchParams(location.search);
@@ -750,9 +755,9 @@ function updateScoreboard() {
   const el = document.getElementById("arena-scoreboard");
   if (MODE === "vs") {
     el.innerHTML = `
-      <span class="sb-p1">${p1Name}: ${p1Score} <span id="sb-locked-p1" class="sb-locked hidden">✓</span></span>
+      <span class="sb-p1">${escapeHtml(p1Name)}: ${p1Score} <span id="sb-locked-p1" class="sb-locked hidden">✓</span></span>
       <span class="sb-sep">·</span>
-      <span class="sb-p2">${p2Name}: ${p2Score} <span id="sb-locked-p2" class="sb-locked hidden">✓</span></span>`;
+      <span class="sb-p2">${escapeHtml(p2Name)}: ${p2Score} <span id="sb-locked-p2" class="sb-locked hidden">✓</span></span>`;
   } else {
     el.innerHTML = `<span class="sb-solo">Score: ${soloScore}</span>`;
   }
@@ -777,8 +782,8 @@ function showMatchEnd(summary) {
     isDraw ? "It's a Draw!" : `${summary.winner} Wins!`;
 
   document.getElementById("match-final-scores").innerHTML = `
-    <div class="mfs-row"><span>${summary.player1}</span><span>${summary.player1_total} pts</span></div>
-    <div class="mfs-row"><span>${summary.player2 || ""}</span><span>${summary.player2_total ?? ""} pts</span></div>`;
+    <div class="mfs-row"><span>${escapeHtml(summary.player1)}</span><span>${summary.player1_total} pts</span></div>
+    <div class="mfs-row"><span>${escapeHtml(summary.player2 || "")}</span><span>${summary.player2_total ?? ""} pts</span></div>`;
 
   const recapEl = document.getElementById("match-round-recap");
   recapEl.innerHTML = "";
@@ -786,10 +791,10 @@ function showMatchEnd(summary) {
     const row = document.createElement("div");
     row.className = "recap-row";
     row.innerHTML = `
-      <img src="${officialArtwork(r.pokemon_id)}" class="recap-sprite" alt="${r.pokemon_name}">
-      <span class="recap-name">${r.pokemon_name}</span>
-      <span class="recap-p1 ${r.player1_correct ? "rcor" : "rwrong"}">${summary.player1}: ${r.player1_score}pts</span>
-      <span class="recap-p2 ${r.player2_correct ? "rcor" : "rwrong"}">${summary.player2 || ""}: ${r.player2_score}pts</span>`;
+      <img src="${officialArtwork(r.pokemon_id)}" class="recap-sprite" alt="${escapeHtml(r.pokemon_name)}">
+      <span class="recap-name">${escapeHtml(r.pokemon_name)}</span>
+      <span class="recap-p1 ${r.player1_correct ? "rcor" : "rwrong"}">${escapeHtml(summary.player1)}: ${r.player1_score}pts</span>
+      <span class="recap-p2 ${r.player2_correct ? "rcor" : "rwrong"}">${escapeHtml(summary.player2 || "")}: ${r.player2_score}pts</span>`;
     recapEl.appendChild(row);
   });
 

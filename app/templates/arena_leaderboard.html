@@ -97,6 +97,11 @@
   const username = localStorage.getItem("poke_username");
   let allData = [];
 
+  function escapeHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   function rankClass(i, n) {
     if (i === 0) return "rank-gold";
     if (i === 1) return "rank-silver";
@@ -133,7 +138,7 @@
     tbody.innerHTML = sorted.map((e, i) => `
       <tr class="${rankClass(i, sorted.length)} ${highlightClass(e)}">
         <td>${i + 1}</td>
-        <td><strong>${e.username}</strong></td>
+        <td><strong>${escapeHtml(e.username)}</strong></td>
         <td class="best">${e.best_vs_score} pts</td>
         <td>${e.vs_win_rate !== null ? e.vs_win_rate + "%" : "—"}</td>
         <td>${e.vs_matches}</td>
@@ -156,7 +161,7 @@
       tbody.innerHTML = data.map((e, i) => `
         <tr class="${rankClass(i, data.length)} ${username && e.username === username ? "highlight-row" : ""}">
           <td>${i + 1}</td>
-          <td><strong>${e.username}</strong></td>
+          <td><strong>${escapeHtml(e.username)}</strong></td>
           <td class="best">${e.score} pts</td>
           <td>${e.rounds}</td>
           <td>${e.shadow_won_rounds}</td>
@@ -183,7 +188,7 @@
       tbody.innerHTML = sorted.map((e, i) => `
         <tr class="${rankClass(i, sorted.length)} ${highlightClass(e)}">
           <td>${i + 1}</td>
-          <td><strong>${e.username}</strong></td>
+          <td><strong>${escapeHtml(e.username)}</strong></td>
           <td class="best">${e.best_run_score} pts</td>
           <td>${e.longest_streak}</td>
         </tr>`).join("");

@@ -2,7 +2,7 @@ import random
 import math
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 
@@ -74,8 +74,8 @@ def _pick_options(correct: Pokemon, db: Session) -> list[dict]:
 
 class StartMatchRequest(BaseModel):
     mode: str           # "vs" | "single"
-    player1: str
-    player2: str | None = None
+    player1: str = Field(..., min_length=1, max_length=20, pattern=r'^[a-zA-Z0-9 _-]+$')
+    player2: str | None = Field(None, min_length=1, max_length=20, pattern=r'^[a-zA-Z0-9 _-]+$')
     rounds: int = 5
 
 
