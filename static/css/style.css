@@ -386,7 +386,7 @@ a:hover { color: var(--accent-hover); }
   width: 120px;
   height: 120px;
 }
-.accuracy-ring svg { transform: rotate(-90deg); }
+.accuracy-ring svg { display: block; width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring-bg { fill: none; stroke: var(--border); stroke-width: 10; }
 .ring-fill {
   fill: none;
@@ -1391,6 +1391,12 @@ a:hover { color: var(--accent-hover); }
   .game-selector .game-section-label { width: 100%; }
   .battle-btn-sub { display: none; }
   .mode-btn { min-height: 48px; }
+
+  /* ── Result zone ── */
+  .accuracy-ring { width: 90px; height: 90px; }
+  .accuracy-number { font-size: 1rem; }
+  .final-score-display { font-size: 1.1rem; white-space: nowrap; }
+  .evo-score-result { white-space: nowrap; }
 
   /* ── Profile stats ── */
   .profile-page { padding: 1rem; }
