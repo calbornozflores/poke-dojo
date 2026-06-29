@@ -2344,10 +2344,10 @@ a:hover { color: var(--accent-hover); }
 
 /* Trainer level section (Trainer Journey page) */
 .trainer-level-section {
-  background: var(--surface2);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem 1.5rem;
+  padding: 1.5rem 1.5rem 1.25rem;
   margin-bottom: 1.25rem;
   text-align: center;
 }
@@ -2360,18 +2360,19 @@ a:hover { color: var(--accent-hover); }
   margin-bottom: 0.2rem;
 }
 .trainer-level-number {
-  font-size: 1.6rem;
+  font-size: 3rem;
   font-weight: 800;
   color: var(--text);
-  letter-spacing: -0.02em;
-  margin-bottom: 0.6rem;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 1rem;
 }
 .xp-bar-track {
   height: 10px;
-  background: var(--surface);
+  background: var(--surface2);
   border-radius: 999px;
   overflow: hidden;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
   border: 1px solid var(--border);
 }
 .xp-bar-fill {
@@ -2385,4 +2386,5 @@ a:hover { color: var(--accent-hover); }
   font-size: 0.72rem;
   color: var(--text-muted);
   font-weight: 600;
+  letter-spacing: 0.02em;
 }
