@@ -21,6 +21,9 @@
     <button class="tab-btn" data-tab="type">
       <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Guess the Type
     </button>
+    <button class="tab-btn" data-tab="trainers">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png" alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Trainers
+    </button>
   </div>
 
   <!-- Global leaderboard -->
@@ -56,6 +59,16 @@
       <tbody id="guessnumber-body"></tbody>
     </table>
     <p id="guessnumber-empty" class="centered-msg hidden">No Guess Number scores yet.</p>
+  </div>
+
+  <!-- Trainers leaderboard (sorted by XP / level) -->
+  <div id="tab-trainers" class="tab-content hidden">
+    <div id="trainers-loading" class="centered-msg hidden">Loading...</div>
+    <table id="trainers-table" class="score-table hidden">
+      <thead><tr><th>#</th><th>Trainer</th><th>Level</th><th>Total XP</th></tr></thead>
+      <tbody id="trainers-body"></tbody>
+    </table>
+    <p id="trainers-empty" class="centered-msg hidden">No trainers yet. Earn XP in Name It!</p>
   </div>
 
   <!-- Guess the Type leaderboard (Easy / Hard sub-switch) -->
@@ -122,6 +135,7 @@
   let guessnumberLoaded = false;
   let typeLoaded = { type_easy: false, type_hard: false };
   let typeSubActive = "type_easy";
+  let trainersLoaded = false;
 
   const tabBtns = document.querySelectorAll(".tab-btn");
   tabBtns.forEach(btn => {
@@ -140,6 +154,9 @@
       }
       if (key === "type" && !typeLoaded[typeSubActive]) {
         loadTypeSubTab(typeSubActive);
+      }
+      if (key === "trainers" && !trainersLoaded) {
+        loadTrainersTab();
       }
     });
   });
@@ -190,12 +207,47 @@
     typeLoaded[gameType] = true;
   }
 
+  // ── Trainers tab ──────────────────────────────────────────────────────────
+  async function loadTrainersTab() {
+    document.getElementById("trainers-loading").classList.remove("hidden");
+    document.getElementById("trainers-table").classList.add("hidden");
+    document.getElementById("trainers-empty").classList.add("hidden");
+    try {
+      const res = await fetch("/scores/trainers");
+      const data = await res.json();
+      document.getElementById("trainers-loading").classList.add("hidden");
+      const trainers = data.trainers || [];
+      if (!trainers.length) {
+        document.getElementById("trainers-empty").classList.remove("hidden");
+        return;
+      }
+      const tbody = document.getElementById("trainers-body");
+      tbody.innerHTML = trainers.map(t => {
+        const hlCls = username && t.username === username ? "highlight-row" : "";
+        const rankCls = t.rank === 1 ? "rank-gold" : t.rank === trainers.length ? "rank-last" : "";
+        return `
+        <tr class="${rankCls} ${hlCls}">
+          <td>${t.rank}</td>
+          <td><strong>${escapeHtml(t.username)}</strong></td>
+          <td>Lv. ${t.player_level}</td>
+          <td>${t.total_xp.toFixed(1)} XP</td>
+        </tr>`;
+      }).join("");
+      document.getElementById("trainers-table").classList.remove("hidden");
+      trainersLoaded = true;
+    } catch (_) {
+      document.getElementById("trainers-loading").classList.add("hidden");
+      document.getElementById("trainers-empty").classList.remove("hidden");
+    }
+  }
+
   // ── Refresh ───────────────────────────────────────────────────────────────
   document.getElementById("refresh-btn").addEventListener("click", () => {
     nameitLoaded = { name_guess: false, name_hard: false };
     guessnumberLoaded = false;
     typeLoaded = { type_easy: false, type_hard: false };
-    ["global","nameit","guessnumber","type"].forEach(key => {
+    trainersLoaded = false;
+    ["global","nameit","guessnumber","type","trainers"].forEach(key => {
       const loadEl = document.getElementById(key + "-loading");
       if (loadEl) loadEl.classList.remove("hidden");
       const tableEl = document.getElementById(key + "-table");
@@ -208,6 +260,7 @@
     if (activeTab === "nameit") loadNameItSubTab(nameitSubActive);
     if (activeTab === "guessnumber") { loadTab("number_guess", "guessnumber").then(() => { guessnumberLoaded = true; }); }
     if (activeTab === "type") loadTypeSubTab(typeSubActive);
+    if (activeTab === "trainers") loadTrainersTab();
   });
 
   // Init: load global on page load

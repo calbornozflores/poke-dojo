@@ -13,6 +13,15 @@ from app.services.string_match import name_accuracy
 from app.services.pokemon_data import number_accuracy
 from app.services import xgboost_model
 from app.services.supabase_client import is_authenticated_user
+from app.services.level_system import (
+    level_from_xp,
+    xp_for_level,
+    is_mode_unlocked,
+    generate_pokemon_level,
+    calculate_xp_gain,
+    xp_progress_in_current_level,
+    UNLOCK_THRESHOLDS,
+)
 
 
 @dataclass(frozen=True)
@@ -66,6 +75,8 @@ class _GameSession:
     combined_key: str
     scale_max: float
     last_activity: float
+    total_xp: float = 0.0
+    player_level: int = 1
 
 _session_store: dict[str, _GameSession] = {}
 
@@ -107,7 +118,7 @@ def _evict_stale_sessions() -> None:
         del _session_store[k]
 
 
-def _load_session(session_id: str, user_id: int, game_type: str, db: Session) -> _GameSession:
+def _load_session(session_id: str, user_id: int, game_type: str, db: Session, *, total_xp: float = 0.0) -> _GameSession:
     games_played = _game_count(user_id, game_type, db)
     recent_ids = [
         r.pokemon_id
@@ -142,6 +153,8 @@ def _load_session(session_id: str, user_id: int, game_type: str, db: Session) ->
         combined_key=combined_key,
         scale_max=float(scale_max),
         last_activity=time.time(),
+        total_xp=total_xp,
+        player_level=level_from_xp(total_xp),
     )
     _session_store[f"{session_id}:{game_type}"] = session
     return session
@@ -164,6 +177,9 @@ class StartResponse(BaseModel):
     games_played: int
     type_choices: list[str] = []
     name_choices: list[str] = []
+    pokemon_level: int = 1
+    player_level: int = 1
+    mode_locked: bool = False
 
 
 class SubmitRequest(BaseModel):
@@ -175,6 +191,7 @@ class SubmitRequest(BaseModel):
     was_challenge: bool = False  # kept for API compat, now computed server-side
     access_token: str | None = None
     session_id: str | None = None
+    pokemon_level: int = 1  # echoed from StartResponse; fallback to 1 for old clients
 
 
 class SubmitResponse(BaseModel):
@@ -188,6 +205,12 @@ class SubmitResponse(BaseModel):
     challenge_unlocked: bool
     correct_types: list[str] = []
     user_types: list[str] = []
+    xp_gained: float = 0.0
+    total_xp: float = 0.0
+    player_level: int = 1
+    player_level_before: int = 1
+    leveled_up: bool = False
+    newly_unlocked_modes: list[str] = []
 
 
 @router.get("/profile/breakdown")
@@ -287,6 +310,9 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
     challenge_unlocked = False
     recent_ids: list[int] = []
 
+    player_level = 1
+    session = None
+
     if is_auth:
         sess_key = f"{req.session_id}:{req.game_type}" if req.session_id else None
         session = _session_store.get(sess_key) if sess_key else None
@@ -296,14 +322,27 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
             games_played = session.games_played
             challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
             recent_ids = list(session.recent_ids)
+            player_level = session.player_level
         else:
             _evict_stale_sessions()
             user = _upsert_user(req.username, db)
             user_id = user.id
-            session = _load_session(req.session_id or "", user_id, req.game_type, db)
+            session = _load_session(req.session_id or "", user_id, req.game_type, db, total_xp=user.total_xp)
             games_played = session.games_played
             challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
             recent_ids = list(session.recent_ids)
+            player_level = session.player_level
+
+    # Trainer level gating for Name It modes
+    pokemon_level = 1
+    if req.game_type in ("name_easy", "name_guess", "name_hard"):
+        if not is_mode_unlocked(req.game_type, player_level):
+            return StartResponse(
+                pokemon_id=0, sprite_url="", artwork_url="", name=None,
+                challenge_unlocked=False, games_played=games_played,
+                mode_locked=True, player_level=player_level,
+            )
+        pokemon_level = generate_pokemon_level(req.game_type, player_level)
 
     # Pokemon selection — pure in-memory, 0 DB reads
     if challenge_unlocked and user_id is not None:
@@ -349,6 +388,8 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
         games_played=games_played,
         type_choices=type_choices,
         name_choices=name_choices,
+        pokemon_level=pokemon_level,
+        player_level=player_level,
     )
 
 
@@ -405,6 +446,13 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
     evo_score = None
     games_played = 0
     challenge_unlocked = False
+
+    xp_gained = 0.0
+    total_xp_after = 0.0
+    player_level_before = 1
+    player_level_after = 1
+    leveled_up = False
+    newly_unlocked: list[str] = []
 
     if is_auth:
         # Session lookup — if hit, 0 DB reads for user_id, games_before, EVO values
@@ -464,7 +512,23 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
             new_combined = current_combined
             write_combined = False
 
-        # Single commit per round
+        # XP gain (Name It modes only)
+        if req.game_type in ("name_easy", "name_guess", "name_hard"):
+            current_xp = (
+                session.total_xp if session
+                else (db.query(User.total_xp).filter(User.id == user_id).scalar() or 0.0)
+            )
+            player_level_before = level_from_xp(current_xp)
+            xp_gained = calculate_xp_gain(req.pokemon_level, final_score)
+            total_xp_after = current_xp + xp_gained
+            player_level_after = level_from_xp(total_xp_after)
+            leveled_up = player_level_after > player_level_before
+            newly_unlocked = [
+                mode for mode, threshold in UNLOCK_THRESHOLDS.items()
+                if player_level_before < threshold <= player_level_after
+            ]
+
+        # Single commit per round (includes XP atomic update for name modes)
         db.add(GameResult(
             user_id=user_id,
             pokemon_id=pokemon.id,
@@ -487,6 +551,12 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
                 evo_score=new_combined,
                 final_score=final_score,
             ))
+        if xp_gained > 0:
+            from sqlalchemy import text as _text
+            db.execute(
+                _text("UPDATE users SET total_xp = total_xp + :delta WHERE id = :uid"),
+                {"delta": xp_gained, "uid": user_id},
+            )
         db.commit()
 
         # Update session in-place
@@ -498,6 +568,9 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
             session.has_evo_per_difficulty = True
             session.has_evo_combined = True
             session.last_activity = time.time()
+            if xp_gained > 0:
+                session.total_xp = total_xp_after
+                session.player_level = player_level_after
 
         games_played = games_before + 1
         challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
@@ -514,4 +587,34 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
         challenge_unlocked=challenge_unlocked,
         correct_types=correct_types,
         user_types=user_types,
+        xp_gained=round(xp_gained, 1),
+        total_xp=round(total_xp_after, 1),
+        player_level=player_level_after,
+        player_level_before=player_level_before,
+        leveled_up=leveled_up,
+        newly_unlocked_modes=newly_unlocked,
     )
+
+
+@router.get("/player/level")
+def player_level_status(username: str = Query(...), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        xp_needed = round(xp_for_level(2) - xp_for_level(1), 1)
+        return {
+            "player_level": 1,
+            "total_xp": 0.0,
+            "xp_current": 0.0,
+            "xp_needed": xp_needed,
+            "unlocked_modes": ["name_easy"],
+        }
+    lvl = level_from_xp(user.total_xp)
+    xp_cur, xp_needed = xp_progress_in_current_level(user.total_xp)
+    unlocked = [m for m, t in UNLOCK_THRESHOLDS.items() if lvl >= t]
+    return {
+        "player_level": lvl,
+        "total_xp": round(user.total_xp, 1),
+        "xp_current": xp_cur,
+        "xp_needed": xp_needed,
+        "unlocked_modes": unlocked,
+    }

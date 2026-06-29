@@ -8,6 +8,15 @@
     <p class="journey-subtitle">Your EVO score tracks skill growth across all your games. It rises with every strong performance.</p>
   </div>
 
+  <div id="trainer-level-section" class="trainer-level-section">
+    <div class="trainer-level-label">Trainer Level</div>
+    <div class="trainer-level-number" id="trainer-level-number">Lv. 1</div>
+    <div class="xp-bar-track">
+      <div class="xp-bar-fill" id="xp-bar-fill"></div>
+    </div>
+    <div class="xp-bar-label" id="xp-bar-label">0 / — XP</div>
+  </div>
+
   <div class="tab-bar">
     <button class="tab-btn active" data-game="">
       <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png"
@@ -218,6 +227,15 @@
       const data = await res.json();
 
       document.getElementById("journey-loading").classList.add("hidden");
+
+      // Always update trainer level bar regardless of history
+      if (data.player_level !== undefined) {
+        document.getElementById("trainer-level-number").textContent = `Lv. ${data.player_level}`;
+        const pct = data.xp_needed > 0 ? Math.min(100, (data.xp_current / data.xp_needed) * 100) : 0;
+        document.getElementById("xp-bar-fill").style.width = pct.toFixed(1) + "%";
+        document.getElementById("xp-bar-label").textContent =
+          `${data.xp_current.toFixed(1)} / ${data.xp_needed.toFixed(1)} XP`;
+      }
 
       if (!data.has_data || !data.history.length) {
         document.getElementById("journey-empty").classList.remove("hidden");

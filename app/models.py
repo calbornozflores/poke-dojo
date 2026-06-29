@@ -34,6 +34,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     current_streak: Mapped[int] = mapped_column(Integer, default=0)
     last_challenge_date: Mapped[str | None] = mapped_column(String, nullable=True)
+    total_xp: Mapped[float] = mapped_column(Float, default=0.0)
 
     results: Mapped[list["GameResult"]] = relationship(back_populates="user")
     evo_history: Mapped[list["EvoScoreHistory"]] = relationship(back_populates="user")
