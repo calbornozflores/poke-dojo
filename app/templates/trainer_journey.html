@@ -49,11 +49,6 @@
   </div>
 
   <div id="journey-chart-area" class="journey-chart-area hidden">
-    <div class="journey-current-score">
-      <div class="journey-evo-label">Current EVO Score</div>
-      <div class="journey-evo-value" id="journey-evo-value">0</div>
-    </div>
-
     <div class="journey-chart-wrapper">
       <div class="journey-y-axis">
         <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png"
@@ -107,8 +102,8 @@
         <div class="journey-stat-value" id="journey-peak-evo">0</div>
       </div>
       <div class="journey-stat">
-        <div class="journey-stat-label">Avg Score</div>
-        <div class="journey-stat-value" id="journey-avg-score">—</div>
+        <div class="journey-stat-label">Current EVO</div>
+        <div class="journey-stat-value" id="journey-evo-value">—</div>
       </div>
     </div>
   </div>
@@ -237,15 +232,12 @@
         return;
       }
 
-      document.getElementById("journey-evo-value").textContent = data.current_score.toFixed(1);
-
       const history = data.history;
       const peak    = Math.max(...history.map(h => h.evo_score));
-      const avgScore = history.reduce((s, h) => s + h.final_score, 0) / history.length;
 
       document.getElementById("journey-total-games").textContent = history.length;
       document.getElementById("journey-peak-evo").textContent   = peak.toFixed(1);
-      document.getElementById("journey-avg-score").textContent  = avgScore.toFixed(1) + " pts";
+      document.getElementById("journey-evo-value").textContent  = data.current_score.toFixed(1);
 
       document.getElementById("journey-chart-area").classList.remove("hidden");
       renderChart(history);
