@@ -9,8 +9,8 @@
   </div>
 
   <div class="tab-bar">
-    <button class="tab-btn active" data-tab="global">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png" alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">All Modes
+    <button class="tab-btn active" data-tab="trainers">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png" alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Trainers
     </button>
     <button class="tab-btn" data-tab="nameit">
       <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Name It
@@ -21,19 +21,16 @@
     <button class="tab-btn" data-tab="type">
       <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Guess the Type
     </button>
-    <button class="tab-btn" data-tab="trainers">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png" alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Trainers
-    </button>
   </div>
 
-  <!-- Global leaderboard -->
-  <div id="tab-global" class="tab-content">
-    <div id="global-loading" class="centered-msg">Loading...</div>
-    <table id="global-table" class="score-table hidden">
-      <thead><tr><th>#</th><th>Trainer</th><th>Games</th><th>Avg Score</th><th>Best</th><th>Worst</th></tr></thead>
-      <tbody id="global-body"></tbody>
+  <!-- Trainers leaderboard (sorted by XP / level) -->
+  <div id="tab-trainers" class="tab-content">
+    <div id="trainers-loading" class="centered-msg">Loading...</div>
+    <table id="trainers-table" class="score-table hidden">
+      <thead><tr><th>#</th><th>Trainer</th><th>Level</th><th>Total XP</th></tr></thead>
+      <tbody id="trainers-body"></tbody>
     </table>
-    <p id="global-empty" class="centered-msg hidden">No scores yet. Go play some games!</p>
+    <p id="trainers-empty" class="centered-msg hidden">No trainers yet. Earn XP in Name It!</p>
   </div>
 
   <!-- Name It leaderboard -->
@@ -59,16 +56,6 @@
       <tbody id="guessnumber-body"></tbody>
     </table>
     <p id="guessnumber-empty" class="centered-msg hidden">No Guess Number scores yet.</p>
-  </div>
-
-  <!-- Trainers leaderboard (sorted by XP / level) -->
-  <div id="tab-trainers" class="tab-content hidden">
-    <div id="trainers-loading" class="centered-msg hidden">Loading...</div>
-    <table id="trainers-table" class="score-table hidden">
-      <thead><tr><th>#</th><th>Trainer</th><th>Level</th><th>Total XP</th></tr></thead>
-      <tbody id="trainers-body"></tbody>
-    </table>
-    <p id="trainers-empty" class="centered-msg hidden">No trainers yet. Earn XP in Name It!</p>
   </div>
 
   <!-- Guess the Type leaderboard (Easy / Hard sub-switch) -->
@@ -145,6 +132,9 @@
       document.querySelectorAll(".tab-content").forEach(t => t.classList.add("hidden"));
       const key = btn.dataset.tab;
       document.getElementById("tab-" + key).classList.remove("hidden");
+      if (key === "trainers" && !trainersLoaded) {
+        loadTrainersTab();
+      }
       if (key === "nameit" && !nameitLoaded[nameitSubActive]) {
         loadNameItSubTab(nameitSubActive);
       }
@@ -154,9 +144,6 @@
       }
       if (key === "type" && !typeLoaded[typeSubActive]) {
         loadTypeSubTab(typeSubActive);
-      }
-      if (key === "trainers" && !trainersLoaded) {
-        loadTrainersTab();
       }
     });
   });
@@ -243,11 +230,11 @@
 
   // ── Refresh ───────────────────────────────────────────────────────────────
   document.getElementById("refresh-btn").addEventListener("click", () => {
-    nameitLoaded = { name_guess: false, name_hard: false };
+    nameitLoaded = { name_easy: false, name_guess: false, name_hard: false };
     guessnumberLoaded = false;
     typeLoaded = { type_easy: false, type_hard: false };
     trainersLoaded = false;
-    ["global","nameit","guessnumber","type","trainers"].forEach(key => {
+    ["nameit","guessnumber","type","trainers"].forEach(key => {
       const loadEl = document.getElementById(key + "-loading");
       if (loadEl) loadEl.classList.remove("hidden");
       const tableEl = document.getElementById(key + "-table");
@@ -255,16 +242,14 @@
       const emptyEl = document.getElementById(key + "-empty");
       if (emptyEl) emptyEl.classList.add("hidden");
     });
-    loadTab(null, "global");
     const activeTab = document.querySelector(".tab-btn.active")?.dataset.tab;
+    if (activeTab === "trainers") loadTrainersTab();
     if (activeTab === "nameit") loadNameItSubTab(nameitSubActive);
     if (activeTab === "guessnumber") { loadTab("number_guess", "guessnumber").then(() => { guessnumberLoaded = true; }); }
     if (activeTab === "type") loadTypeSubTab(typeSubActive);
-    if (activeTab === "trainers") loadTrainersTab();
   });
 
-  // Init: load global on page load
-  document.getElementById("global-loading").classList.remove("hidden");
-  loadTab(null, "global");
+  // Init: load trainers on page load
+  loadTrainersTab();
 </script>
 {% endblock %}
