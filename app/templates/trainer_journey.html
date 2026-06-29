@@ -18,12 +18,7 @@
   </div>
 
   <div class="tab-bar">
-    <button class="tab-btn active" data-game="">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png"
-           alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">
-      All Modes
-    </button>
-    <button class="tab-btn" data-game="name_it">
+    <button class="tab-btn active" data-game="name_it">
       <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png"
            alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">
       Name It
@@ -125,7 +120,7 @@
   const username = localStorage.getItem("poke_username");
   if (!username) window.location.href = "/";
 
-  let activeGameType = sessionStorage.getItem("journey_tab") ?? "";
+  let activeGameType = sessionStorage.getItem("journey_tab") ?? "name_it";
   const SVG_W = 760, SVG_H = 260;
   const PAD_L = 10, PAD_R = 20, PAD_T = 10, PAD_B = 10;
   const CHART_W = SVG_W - PAD_L - PAD_R;
