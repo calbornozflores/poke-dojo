@@ -6,6 +6,7 @@ LEVEL_CURVE_EXP = 3
 XP_CONST = 1.5
 POKEMON_LEVEL_RARITY_K = 2.5
 RELATIVE_LEVEL_CAP_OFFSET = 10
+RELATIVE_LEVEL_FLOOR_OFFSET = 5
 MAX_TRAINER_LEVEL = 100
 
 DIFFICULTY_CAPS: dict[str, int] = {
@@ -61,10 +62,12 @@ def is_mode_unlocked(game_type: str, player_level: int) -> bool:
 
 def generate_pokemon_level(game_type: str, player_level: int, rng=_random) -> int:
     difficulty_cap = DIFFICULTY_CAPS.get(game_type, 100)
-    limit = min(difficulty_cap, player_level + RELATIVE_LEVEL_CAP_OFFSET)
-    limit = max(limit, 1)
+    ceiling = min(difficulty_cap, player_level + RELATIVE_LEVEL_CAP_OFFSET)
+    floor = max(1, player_level - RELATIVE_LEVEL_FLOOR_OFFSET)
+    floor = min(floor, ceiling)  # guard: floor never exceeds ceiling
     r = rng.random() ** POKEMON_LEVEL_RARITY_K
-    return 1 + math.floor((limit - 1) * r)
+    span = ceiling - floor
+    return floor + math.floor(span * r)
 
 
 def calculate_xp_gain(pokemon_level: int, final_score: float) -> float:
