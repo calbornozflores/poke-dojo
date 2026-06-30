@@ -31,6 +31,7 @@ class _PkmnCache:
     type1: Optional[str]
     type2: Optional[str]
     sprite_url: str
+    generation: int
 
 _pkmn: dict[int, _PkmnCache] = {}
 
@@ -38,13 +39,13 @@ def _ensure_pkmn_loaded(db: Session) -> None:
     if _pkmn:
         return
     for p in db.query(Pokemon).all():
-        _pkmn[p.id] = _PkmnCache(p.id, p.name, p.type1, p.type2, p.sprite_url)
+        _pkmn[p.id] = _PkmnCache(p.id, p.name, p.type1, p.type2, p.sprite_url, p.generation)
 
 def _cached_pokemon(pokemon_id: int, db: Session) -> Optional[_PkmnCache]:
     if pokemon_id not in _pkmn:
         p = db.query(Pokemon).get(pokemon_id)
         if p:
-            _pkmn[pokemon_id] = _PkmnCache(p.id, p.name, p.type1, p.type2, p.sprite_url)
+            _pkmn[pokemon_id] = _PkmnCache(p.id, p.name, p.type1, p.type2, p.sprite_url, p.generation)
     return _pkmn.get(pokemon_id)
 
 router = APIRouter(prefix="/game", tags=["game"])
@@ -52,13 +53,20 @@ router = APIRouter(prefix="/game", tags=["game"])
 CHALLENGE_THRESHOLD = 20
 
 _DIFFICULTY_SCALE: dict[str, tuple[str, float]] = {
-    "name_easy":    ("name_it",       30.0),
-    "name_guess":   ("name_it",       60.0),
-    "name_hard":    ("name_it",      100.0),
-    "number_guess": ("number_guess", 100.0),
-    "type_easy":    ("guess_type",    30.0),
-    "type_hard":    ("guess_type",   100.0),
+    "name_easy":     ("name_it",       30.0),
+    "name_guess":    ("name_it",       60.0),
+    "name_hard":     ("name_it",      100.0),
+    "number_easy":   ("number_guess",  30.0),
+    "number_medium": ("number_guess",  60.0),
+    "number_guess":  ("number_guess", 100.0),
+    "type_easy":     ("guess_type",    30.0),
+    "type_hard":     ("guess_type",   100.0),
 }
+
+_GEN_RANGES: list[tuple[int, int]] = [
+    (1, 151), (152, 251), (252, 386), (387, 493),
+    (494, 649), (650, 721), (722, 809), (810, 905), (906, 1025),
+]
 
 SESSION_TTL = 3600  # 60 minutes of inactivity before eviction
 
@@ -180,6 +188,7 @@ class StartResponse(BaseModel):
     pokemon_level: int = 1
     player_level: int = 1
     mode_locked: bool = False
+    number_range_hint: str | None = None
 
 
 class SubmitRequest(BaseModel):
@@ -333,8 +342,11 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
             recent_ids = list(session.recent_ids)
             player_level = session.player_level
 
-    # Trainer level gating for Name It modes
+    # Trainer level gating + Pokémon level for Name It and Guess Number modes
     pokemon_level = 1
+    number_range_hint: str | None = None
+    _NUMBER_MODES = ("number_easy", "number_medium", "number_guess")
+
     if req.game_type in ("name_easy", "name_guess", "name_hard"):
         if not is_mode_unlocked(req.game_type, player_level):
             return StartResponse(
@@ -359,6 +371,26 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
 
     pokemon = _pkmn[pokemon_id]
 
+    # Trainer level gating + hint for Guess Number modes
+    if req.game_type in _NUMBER_MODES:
+        if not is_mode_unlocked(req.game_type, player_level):
+            return StartResponse(
+                pokemon_id=0, sprite_url="", artwork_url="", name=None,
+                challenge_unlocked=False, games_played=games_played,
+                mode_locked=True, player_level=player_level,
+            )
+        pokemon_level = generate_pokemon_level(req.game_type, player_level)
+        if req.game_type == "number_easy":
+            r = random.randint(0, 19)
+            start = max(1, pokemon.id - r)
+            end = min(1025, start + 19)
+            number_range_hint = f"{start} – {end}"
+        elif req.game_type == "number_medium":
+            lo, hi = next(
+                (lo, hi) for lo, hi in _GEN_RANGES if lo <= pokemon.id <= hi
+            )
+            number_range_hint = f"{lo} – {hi}"
+
     # Build type/name choices
     type_choices: list[str] = []
     name_choices: list[str] = []
@@ -377,7 +409,7 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
         random.shuffle(choices)
         name_choices = choices
 
-    show_name = req.game_type in ("number_guess", "type_easy")
+    show_name = req.game_type in (*_NUMBER_MODES, "type_easy")
 
     return StartResponse(
         pokemon_id=pokemon.id,
@@ -390,6 +422,7 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
         name_choices=name_choices,
         pokemon_level=pokemon_level,
         player_level=player_level,
+        number_range_hint=number_range_hint,
     )
 
 
@@ -408,11 +441,11 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
     if req.game_type in ("name_guess", "name_hard"):
         accuracy = name_accuracy(req.guess, pokemon.name)
 
-    elif req.game_type == "number_guess":
+    elif req.game_type in ("number_easy", "number_medium", "number_guess"):
         try:
             guess_num = int(req.guess) if req.guess.strip() else 0
         except ValueError:
-            raise HTTPException(status_code=422, detail="guess must be an integer for number_guess")
+            raise HTTPException(status_code=422, detail="guess must be an integer for number modes")
         distance = abs(guess_num - pokemon.id)
         accuracy = number_accuracy(guess_num, pokemon.id)
 
@@ -512,8 +545,9 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
             new_combined = current_combined
             write_combined = False
 
-        # XP gain (Name It modes only)
-        if req.game_type in ("name_easy", "name_guess", "name_hard"):
+        # XP gain (Name It and Guess Number modes)
+        if req.game_type in ("name_easy", "name_guess", "name_hard",
+                             "number_easy", "number_medium", "number_guess"):
             current_xp = (
                 session.total_xp if session
                 else (db.query(User.total_xp).filter(User.id == user_id).scalar() or 0.0)
@@ -606,7 +640,7 @@ def player_level_status(username: str = Query(...), db: Session = Depends(get_db
             "total_xp": 0.0,
             "xp_current": 0.0,
             "xp_needed": xp_needed,
-            "unlocked_modes": ["name_easy"],
+            "unlocked_modes": [m for m, t in UNLOCK_THRESHOLDS.items() if t == 0],
         }
     lvl = level_from_xp(user.total_xp)
     xp_cur, xp_needed = xp_progress_in_current_level(user.total_xp)

@@ -50,7 +50,12 @@
 
   <!-- Guess Number leaderboard -->
   <div id="tab-guessnumber" class="tab-content hidden">
-    <div id="guessnumber-loading" class="centered-msg">Loading...</div>
+    <div class="type-sub-switch">
+      <button class="type-sub-btn" data-ng="number_easy">Easy</button>
+      <button class="type-sub-btn" data-ng="number_medium">Medium</button>
+      <button class="type-sub-btn active" data-ng="number_guess">Hard</button>
+    </div>
+    <div id="guessnumber-loading" class="centered-msg hidden">Loading...</div>
     <table id="guessnumber-table" class="score-table hidden">
       <thead><tr><th>#</th><th>Trainer</th><th>Games</th><th>Avg Score</th><th>Best</th><th>Worst</th></tr></thead>
       <tbody id="guessnumber-body"></tbody>
@@ -119,7 +124,8 @@
   // ── Tab switching ─────────────────────────────────────────────────────────
   let nameitLoaded = { name_easy: false, name_guess: false, name_hard: false };
   let nameitSubActive = "name_guess";
-  let guessnumberLoaded = false;
+  let guessnumberLoaded = { number_easy: false, number_medium: false, number_guess: false };
+  let guessnumberSubActive = "number_guess";
   let typeLoaded = { type_easy: false, type_hard: false };
   let typeSubActive = "type_easy";
   let trainersLoaded = false;
@@ -138,9 +144,8 @@
       if (key === "nameit" && !nameitLoaded[nameitSubActive]) {
         loadNameItSubTab(nameitSubActive);
       }
-      if (key === "guessnumber" && !guessnumberLoaded) {
-        document.getElementById("guessnumber-loading").classList.remove("hidden");
-        loadTab("number_guess", "guessnumber").then(() => { guessnumberLoaded = true; });
+      if (key === "guessnumber" && !guessnumberLoaded[guessnumberSubActive]) {
+        loadGuessnumberSubTab(guessnumberSubActive);
       }
       if (key === "type" && !typeLoaded[typeSubActive]) {
         loadTypeSubTab(typeSubActive);
@@ -169,6 +174,29 @@
     document.getElementById("nameit-empty").classList.add("hidden");
     await loadTab(gameType, "nameit");
     nameitLoaded[gameType] = true;
+  }
+
+  // ── Guess Number sub-switch ───────────────────────────────────────────────
+  document.querySelectorAll("[data-ng]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("[data-ng]").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      guessnumberSubActive = btn.dataset.ng;
+      if (!guessnumberLoaded[guessnumberSubActive]) {
+        loadGuessnumberSubTab(guessnumberSubActive);
+      } else {
+        guessnumberLoaded[guessnumberSubActive] = false;
+        loadGuessnumberSubTab(guessnumberSubActive);
+      }
+    });
+  });
+
+  async function loadGuessnumberSubTab(gameType) {
+    document.getElementById("guessnumber-loading").classList.remove("hidden");
+    document.getElementById("guessnumber-table").classList.add("hidden");
+    document.getElementById("guessnumber-empty").classList.add("hidden");
+    await loadTab(gameType, "guessnumber");
+    guessnumberLoaded[gameType] = true;
   }
 
   // ── Type sub-switch ───────────────────────────────────────────────────────
@@ -231,7 +259,7 @@
   // ── Refresh ───────────────────────────────────────────────────────────────
   document.getElementById("refresh-btn").addEventListener("click", () => {
     nameitLoaded = { name_easy: false, name_guess: false, name_hard: false };
-    guessnumberLoaded = false;
+    guessnumberLoaded = { number_easy: false, number_medium: false, number_guess: false };
     typeLoaded = { type_easy: false, type_hard: false };
     trainersLoaded = false;
     ["nameit","guessnumber","type","trainers"].forEach(key => {
@@ -245,7 +273,7 @@
     const activeTab = document.querySelector(".tab-btn.active")?.dataset.tab;
     if (activeTab === "trainers") loadTrainersTab();
     if (activeTab === "nameit") loadNameItSubTab(nameitSubActive);
-    if (activeTab === "guessnumber") { loadTab("number_guess", "guessnumber").then(() => { guessnumberLoaded = true; }); }
+    if (activeTab === "guessnumber") loadGuessnumberSubTab(guessnumberSubActive);
     if (activeTab === "type") loadTypeSubTab(typeSubActive);
   });
 

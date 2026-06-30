@@ -23,6 +23,11 @@
       <button class="mode-btn" id="btn-game2" data-game="number_guess">
         <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" alt="" class="mode-sprite">Guess Number
       </button>
+      <div id="number-submode" class="type-submode hidden">
+        <button class="submode-pill active" id="submode-number-easy">Easy</button>
+        <button class="submode-pill" id="submode-number-medium">Medium</button>
+        <button class="submode-pill" id="submode-number-hard">Hard</button>
+      </div>
 
       <button class="mode-btn" id="btn-type">
         <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" alt="" class="mode-sprite">Guess the Type
@@ -227,8 +232,8 @@
   }
 
   // ── Trainer level — unlock thresholds (mirrors backend UNLOCK_THRESHOLDS) ─
-  const UNLOCK_THRESHOLDS = { name_easy: 0, name_guess: 10, name_hard: 40 };
-  const MODE_LABELS = { name_easy: "Easy", name_guess: "Medium", name_hard: "Hard" };
+  const UNLOCK_THRESHOLDS = { name_easy: 0, name_guess: 10, name_hard: 40, number_easy: 0, number_medium: 10, number_guess: 40 };
+  const MODE_LABELS = { name_easy: "Easy", name_guess: "Medium", name_hard: "Hard", number_easy: "Easy", number_medium: "Medium", number_guess: "Hard" };
   let playerLevel = 1;
 
   async function loadPlayerLevel() {
@@ -244,9 +249,12 @@
 
   function updateLockedPills() {
     const pills = [
-      { el: document.getElementById("submode-name-easy"),  game: "name_easy"  },
-      { el: document.getElementById("submode-medium"),     game: "name_guess" },
-      { el: document.getElementById("submode-name-hard"),  game: "name_hard"  },
+      { el: document.getElementById("submode-name-easy"),     game: "name_easy"     },
+      { el: document.getElementById("submode-medium"),        game: "name_guess"    },
+      { el: document.getElementById("submode-name-hard"),     game: "name_hard"     },
+      { el: document.getElementById("submode-number-easy"),   game: "number_easy"   },
+      { el: document.getElementById("submode-number-medium"), game: "number_medium" },
+      { el: document.getElementById("submode-number-hard"),   game: "number_guess"  },
     ];
     for (const { el, game } of pills) {
       if (!el) continue;
@@ -284,10 +292,22 @@
       scoring: "Score = Accuracy × Time Bonus. Perfect answer at the start = 100 pts. Timer counts down from 30 s. Counts toward Trainer Journey — Hard: no level cap (reach up to 100).",
       controls: "Type the Pokémon name and press Enter or click Submit.",
     },
+    number_easy: {
+      title: "Guess the Number — Easy",
+      desc: "The Pokémon's name and artwork are shown. A hint range of 20 numbers contains the answer — enter the exact Pokédex number!",
+      scoring: "Score = Closeness × Time Bonus. Exact match at the start = 100 pts. Timer counts down from 30 s. Counts toward Trainer Journey — Easy level cap: 30.",
+      controls: "Type a number within the hint range and press Enter or click Submit.",
+    },
+    number_medium: {
+      title: "Guess the Number — Medium",
+      desc: "The Pokémon's name and artwork are shown. Hint: its generation range. Guess the exact Pokédex number!",
+      scoring: "Score = Closeness × Time Bonus. Exact match at the start = 100 pts. Timer counts down from 30 s. Counts toward Trainer Journey — Medium level cap: 60.",
+      controls: "Type a number within the generation range and press Enter or click Submit.",
+    },
     number_guess: {
-      title: "Guess the Number",
-      desc: "The Pokémon's name and artwork are shown. Enter its Pokédex number — the closer the better!",
-      scoring: "Score = Closeness × Time Bonus. Exact match at the start = 100 pts. Timer counts down from 30 s. Counts toward Trainer Journey — no level cap (reach up to 100).",
+      title: "Guess the Number — Hard",
+      desc: "The Pokémon's name and artwork are shown. No hints — enter its exact Pokédex number from 1 to 1025!",
+      scoring: "Score = Closeness × Time Bonus. Exact match at the start = 100 pts. Timer counts down from 30 s. Counts toward Trainer Journey — Hard: no level cap (reach up to 100).",
       controls: "Type a number from 1 to 1025 and press Enter or click Submit.",
     },
     type_easy: {
@@ -337,6 +357,10 @@
   const subNameEasy    = document.getElementById("submode-name-easy");
   const subMedium      = document.getElementById("submode-medium");
   const subNameHard    = document.getElementById("submode-name-hard");
+  const numberSubmode  = document.getElementById("number-submode");
+  const subNumberEasy  = document.getElementById("submode-number-easy");
+  const subNumberMed   = document.getElementById("submode-number-medium");
+  const subNumberHard  = document.getElementById("submode-number-hard");
   const typeSubmode    = document.getElementById("type-submode");
   const subEasy        = document.getElementById("submode-easy");
   const subHard        = document.getElementById("submode-hard");
@@ -392,7 +416,7 @@
       doSubmit(document.getElementById("name-input").value || "");
     } else if (currentGame === "name_easy") {
       submitNameEasy("");
-    } else if (currentGame === "number_guess") {
+    } else if (currentGame === "number_easy" || currentGame === "number_medium" || currentGame === "number_guess") {
       doSubmit(document.getElementById("number-input").value || "0");
     } else if (currentGame === "type_hard") {
       doSubmit(selectedTypes.join(","));
@@ -407,30 +431,35 @@
     currentGame = type;
     selectedTypes = [];
 
-    const isNameMode = type === "name_guess" || type === "name_hard" || type === "name_easy";
-    const isNameText = type === "name_guess" || type === "name_hard";
-    const isType     = type === "type_easy"  || type === "type_hard";
+    const isNameMode   = type === "name_guess" || type === "name_hard" || type === "name_easy";
+    const isNameText   = type === "name_guess" || type === "name_hard";
+    const isNumberMode = type === "number_easy" || type === "number_medium" || type === "number_guess";
+    const isType       = type === "type_easy"  || type === "type_hard";
 
     btnGame1.classList.toggle("active", isNameMode);
-    btnGame2.classList.toggle("active", type === "number_guess");
+    btnGame2.classList.toggle("active", isNumberMode);
     btnType.classList.toggle("active",  isType);
 
     nameSubmode.classList.toggle("hidden", !isNameMode);
     subNameEasy.classList.toggle("active",  type === "name_easy");
     subMedium.classList.toggle("active",    type === "name_guess");
     subNameHard.classList.toggle("active",  type === "name_hard");
+    numberSubmode.classList.toggle("hidden", !isNumberMode);
+    subNumberEasy.classList.toggle("active",  type === "number_easy");
+    subNumberMed.classList.toggle("active",   type === "number_medium");
+    subNumberHard.classList.toggle("active",  type === "number_guess");
     typeSubmode.classList.toggle("hidden", !isType);
     subEasy.classList.toggle("active", type === "type_easy");
     subHard.classList.toggle("active", type === "type_hard");
 
     document.getElementById("name-easy-area").classList.toggle("hidden",   type !== "name_easy");
     document.getElementById("game1-input-area").classList.toggle("hidden", !isNameText);
-    document.getElementById("game2-input-area").classList.toggle("hidden", type !== "number_guess");
+    document.getElementById("game2-input-area").classList.toggle("hidden", !isNumberMode);
     document.getElementById("type-easy-area").classList.toggle("hidden",   type !== "type_easy");
     document.getElementById("type-hard-area").classList.toggle("hidden",   type !== "type_hard");
 
     document.getElementById("game2-name").classList.toggle("hidden",
-      type !== "number_guess" && type !== "type_easy");
+      !isNumberMode && type !== "type_easy");
 
     submitBtn.classList.toggle("hidden", type === "type_easy" || type === "name_easy");
     document.getElementById("game-screen").classList.toggle("type-hard-layout", type === "type_hard");
@@ -461,7 +490,9 @@
   btnGame1.addEventListener("click", () => {
     if (currentGame !== "name_guess" && currentGame !== "name_hard" && currentGame !== "name_easy") switchGame("name_guess");
   });
-  btnGame2.addEventListener("click", () => switchGame("number_guess", true));
+  btnGame2.addEventListener("click", () => {
+    if (!["number_easy","number_medium","number_guess"].includes(currentGame)) switchGame("number_easy");
+  });
   btnType.addEventListener("click",  () => {
     if (currentGame !== "type_easy" && currentGame !== "type_hard") switchGame("type_easy");
   });
@@ -471,9 +502,12 @@
     const pills = document.querySelectorAll(".submode-pill");
     let pill = null;
     for (const p of pills) {
-      if ((p.id === "submode-name-easy" && game === "name_easy") ||
-          (p.id === "submode-medium" && game === "name_guess") ||
-          (p.id === "submode-name-hard" && game === "name_hard")) {
+      if ((p.id === "submode-name-easy"    && game === "name_easy")    ||
+          (p.id === "submode-medium"        && game === "name_guess")   ||
+          (p.id === "submode-name-hard"     && game === "name_hard")    ||
+          (p.id === "submode-number-easy"   && game === "number_easy")  ||
+          (p.id === "submode-number-medium" && game === "number_medium")||
+          (p.id === "submode-number-hard"   && game === "number_guess")) {
         pill = p;
         break;
       }
@@ -496,9 +530,12 @@
     lockedScreen.classList.remove("hidden");
   }
 
-  subNameEasy.addEventListener("click",  () => trySubmode("name_easy",  true));
-  subMedium.addEventListener("click",   () => trySubmode("name_guess", true));
-  subNameHard.addEventListener("click", () => trySubmode("name_hard",  true));
+  subNameEasy.addEventListener("click",   () => trySubmode("name_easy",    true));
+  subMedium.addEventListener("click",    () => trySubmode("name_guess",   true));
+  subNameHard.addEventListener("click",  () => trySubmode("name_hard",    true));
+  subNumberEasy.addEventListener("click",() => trySubmode("number_easy",  true));
+  subNumberMed.addEventListener("click", () => trySubmode("number_medium",true));
+  subNumberHard.addEventListener("click",() => trySubmode("number_guess", true));
   subEasy.addEventListener("click",     () => { if (currentGame !== "type_easy")   switchGame("type_easy",  true); });
   subHard.addEventListener("click",     () => { if (currentGame !== "type_hard")   switchGame("type_hard",  true); });
 
@@ -642,7 +679,7 @@
     if (currentGame === "name_guess" || currentGame === "name_hard") {
       guess = document.getElementById("name-input").value;
       if (!guess.trim()) return;
-    } else if (currentGame === "number_guess") {
+    } else if (currentGame === "number_easy" || currentGame === "number_medium" || currentGame === "number_guess") {
       guess = document.getElementById("number-input").value;
       if (!guess.trim()) return;
     } else if (currentGame === "type_hard") {
@@ -711,10 +748,11 @@
     document.getElementById("number-input").value = "";
     selectedTypes = [];
 
-    // Pokémon level badge (Name It modes only)
-    const lvlBadge = document.getElementById("pokemon-level-badge");
-    const isNameMode = currentGame === "name_easy" || currentGame === "name_guess" || currentGame === "name_hard";
-    if (isNameMode && data.pokemon_level) {
+    // Pokémon level badge (Name It and Guess Number modes)
+    const lvlBadge    = document.getElementById("pokemon-level-badge");
+    const isNameMode   = currentGame === "name_easy" || currentGame === "name_guess" || currentGame === "name_hard";
+    const isNumberMode = currentGame === "number_easy" || currentGame === "number_medium" || currentGame === "number_guess";
+    if ((isNameMode || isNumberMode) && data.pokemon_level) {
       lvlBadge.textContent = `lvl ${data.pokemon_level}`;
       lvlBadge.classList.remove("hidden");
     } else {
@@ -723,8 +761,9 @@
 
     if (currentGame === "name_easy") {
       renderNameChoices(data.name_choices || []);
-    } else if (currentGame === "number_guess") {
+    } else if (isNumberMode) {
       document.getElementById("game2-name").textContent = data.name;
+      document.getElementById("number-input").placeholder = data.number_range_hint ?? "1 – 1025";
     } else if (currentGame === "type_easy") {
       document.getElementById("game2-name").textContent = data.name;
       renderTypeChoices(data.type_choices || []);
@@ -735,7 +774,7 @@
     setTimeout(() => {
       if (currentGame === "name_guess" || currentGame === "name_hard")
         document.getElementById("name-input").focus();
-      else if (currentGame === "number_guess")
+      else if (isNumberMode)
         document.getElementById("number-input").focus();
     }, 50);
 
@@ -879,10 +918,11 @@
       unlockBanner.classList.add("hidden");
     }
 
+    const isNumberResult = currentGame === "number_easy" || currentGame === "number_medium" || currentGame === "number_guess";
     document.getElementById("result-name-text").textContent =
       (currentGame === "name_guess" || currentGame === "name_hard" || currentGame === "name_easy") ? `Correct name: ${data.correct_name}` : "";
     document.getElementById("result-number-text").textContent =
-      currentGame === "number_guess" ? `Pokédex #${data.correct_number}` : "";
+      isNumberResult ? `Pokédex #${data.correct_number}` : "";
     document.getElementById("result-distance-text").textContent =
       (data.distance !== null && data.distance !== undefined) ? `You were off by ${data.distance}` : "";
 

@@ -9,15 +9,21 @@ RELATIVE_LEVEL_CAP_OFFSET = 10
 MAX_TRAINER_LEVEL = 100
 
 DIFFICULTY_CAPS: dict[str, int] = {
-    "name_easy":  30,
-    "name_guess": 60,
-    "name_hard":  100,
+    "name_easy":     30,
+    "name_guess":    60,
+    "name_hard":    100,
+    "number_easy":   30,
+    "number_medium": 60,
+    "number_guess": 100,
 }
 
 UNLOCK_THRESHOLDS: dict[str, int] = {
-    "name_easy":  0,
-    "name_guess": 10,
-    "name_hard":  40,
+    "name_easy":     0,
+    "name_guess":   10,
+    "name_hard":    40,
+    "number_easy":   0,
+    "number_medium":10,
+    "number_guess": 40,
 }
 
 
