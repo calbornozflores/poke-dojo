@@ -8,13 +8,17 @@
     <p class="journey-subtitle">Your EVO score tracks skill growth across all your games. It rises with every strong performance.</p>
   </div>
 
+  <div id="trainer-level-section" class="trainer-level-section">
+    <div class="trainer-level-label">Trainer Level</div>
+    <div class="trainer-level-number" id="trainer-level-number">Lv. 1</div>
+    <div class="xp-bar-track">
+      <div class="xp-bar-fill" id="xp-bar-fill"></div>
+    </div>
+    <div class="xp-bar-label" id="xp-bar-label">0 / — XP</div>
+  </div>
+
   <div class="tab-bar">
-    <button class="tab-btn active" data-game="">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png"
-           alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">
-      All Modes
-    </button>
-    <button class="tab-btn" data-game="name_it">
+    <button class="tab-btn active" data-game="name_it">
       <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png"
            alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">
       Name It
@@ -45,11 +49,6 @@
   </div>
 
   <div id="journey-chart-area" class="journey-chart-area hidden">
-    <div class="journey-current-score">
-      <div class="journey-evo-label">Current EVO Score</div>
-      <div class="journey-evo-value" id="journey-evo-value">0</div>
-    </div>
-
     <div class="journey-chart-wrapper">
       <div class="journey-y-axis">
         <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png"
@@ -103,8 +102,8 @@
         <div class="journey-stat-value" id="journey-peak-evo">0</div>
       </div>
       <div class="journey-stat">
-        <div class="journey-stat-label">Avg Score</div>
-        <div class="journey-stat-value" id="journey-avg-score">—</div>
+        <div class="journey-stat-label">Current EVO</div>
+        <div class="journey-stat-value" id="journey-evo-value">—</div>
       </div>
     </div>
   </div>
@@ -116,7 +115,7 @@
   const username = localStorage.getItem("poke_username");
   if (!username) window.location.href = "/";
 
-  let activeGameType = sessionStorage.getItem("journey_tab") ?? "";
+  let activeGameType = sessionStorage.getItem("journey_tab") ?? "name_it";
   const SVG_W = 760, SVG_H = 260;
   const PAD_L = 10, PAD_R = 20, PAD_T = 10, PAD_B = 10;
   const CHART_W = SVG_W - PAD_L - PAD_R;
@@ -219,20 +218,26 @@
 
       document.getElementById("journey-loading").classList.add("hidden");
 
+      // Always update trainer level bar regardless of history
+      if (data.player_level !== undefined) {
+        document.getElementById("trainer-level-number").textContent = `Lv. ${data.player_level}`;
+        const pct = data.xp_needed > 0 ? Math.min(100, (data.xp_current / data.xp_needed) * 100) : 0;
+        document.getElementById("xp-bar-fill").style.width = pct.toFixed(1) + "%";
+        document.getElementById("xp-bar-label").textContent =
+          `${data.xp_current.toFixed(1)} / ${data.xp_needed.toFixed(1)} XP`;
+      }
+
       if (!data.has_data || !data.history.length) {
         document.getElementById("journey-empty").classList.remove("hidden");
         return;
       }
 
-      document.getElementById("journey-evo-value").textContent = data.current_score.toFixed(1);
-
       const history = data.history;
       const peak    = Math.max(...history.map(h => h.evo_score));
-      const avgScore = history.reduce((s, h) => s + h.final_score, 0) / history.length;
 
       document.getElementById("journey-total-games").textContent = history.length;
       document.getElementById("journey-peak-evo").textContent   = peak.toFixed(1);
-      document.getElementById("journey-avg-score").textContent  = avgScore.toFixed(1) + " pts";
+      document.getElementById("journey-evo-value").textContent  = data.current_score.toFixed(1);
 
       document.getElementById("journey-chart-area").classList.remove("hidden");
       renderChart(history);

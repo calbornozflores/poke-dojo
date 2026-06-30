@@ -6,6 +6,7 @@ from typing import Optional
 
 from app.database import get_db
 from app.models import GameResult, User
+from app.services.level_system import level_from_xp
 
 router = APIRouter(prefix="/scores", tags=["scores"])
 
@@ -73,6 +74,28 @@ def leaderboard(
     ]
 
     return LeaderboardResponse(scores=scores)
+
+
+@router.get("/trainers")
+def trainers_leaderboard(db: Session = Depends(get_db)):
+    rows = (
+        db.query(User)
+        .filter(User.total_xp > 0)
+        .order_by(User.total_xp.desc())
+        .limit(100)
+        .all()
+    )
+    return {
+        "trainers": [
+            {
+                "rank": i + 1,
+                "username": u.username,
+                "player_level": level_from_xp(u.total_xp),
+                "total_xp": round(u.total_xp, 1),
+            }
+            for i, u in enumerate(rows)
+        ]
+    }
 
 
 @router.get("/user/{username}", response_model=UserDetailResponse)

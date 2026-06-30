@@ -78,6 +78,14 @@ def run_migrations():
             except Exception:
                 pass
 
+        # Phase 6: trainer XP for level system
+        for col, ddl in [("total_xp", "REAL DEFAULT 0.0")]:
+            try:
+                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
+                conn.commit()
+            except Exception:
+                pass
+
 
 def get_db():
     db = SessionLocal()
