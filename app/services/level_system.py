@@ -15,6 +15,9 @@ DIFFICULTY_CAPS: dict[str, int] = {
     "number_easy":   30,
     "number_medium": 60,
     "number_guess": 100,
+    "type_easy":     30,
+    "type_medium":   60,
+    "type_hard":    100,
 }
 
 UNLOCK_THRESHOLDS: dict[str, int] = {
@@ -24,6 +27,9 @@ UNLOCK_THRESHOLDS: dict[str, int] = {
     "number_easy":   0,
     "number_medium":10,
     "number_guess": 40,
+    "type_easy":     0,
+    "type_medium":  10,
+    "type_hard":    40,
 }
 
 

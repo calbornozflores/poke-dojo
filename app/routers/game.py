@@ -60,6 +60,7 @@ _DIFFICULTY_SCALE: dict[str, tuple[str, float]] = {
     "number_medium": ("number_guess",  60.0),
     "number_guess":  ("number_guess", 100.0),
     "type_easy":     ("guess_type",    30.0),
+    "type_medium":   ("guess_type",    60.0),
     "type_hard":     ("guess_type",   100.0),
 }
 
@@ -342,10 +343,11 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
             recent_ids = list(session.recent_ids)
             player_level = session.player_level
 
-    # Trainer level gating + Pokémon level for Name It and Guess Number modes
+    # Trainer level gating + Pokémon level for Name It, Guess Number, and Type modes
     pokemon_level = 1
     number_range_hint: str | None = None
     _NUMBER_MODES = ("number_easy", "number_medium", "number_guess")
+    _TYPE_MODES = ("type_easy", "type_medium", "type_hard")
 
     if req.game_type in ("name_easy", "name_guess", "name_hard"):
         if not is_mode_unlocked(req.game_type, player_level):
@@ -391,6 +393,16 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
             )
             number_range_hint = f"{lo} – {hi}"
 
+    # Trainer level gating + Pokémon level for Type modes
+    if req.game_type in _TYPE_MODES:
+        if not is_mode_unlocked(req.game_type, player_level):
+            return StartResponse(
+                pokemon_id=0, sprite_url="", artwork_url="", name=None,
+                challenge_unlocked=False, games_played=games_played,
+                mode_locked=True, player_level=player_level,
+            )
+        pokemon_level = generate_pokemon_level(req.game_type, player_level)
+
     # Build type/name choices
     type_choices: list[str] = []
     name_choices: list[str] = []
@@ -398,6 +410,12 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
         pokemon_types = [t for t in [pokemon.type1, pokemon.type2] if t]
         wrong = [t for t in ALL_TYPES if t not in pokemon_types]
         choices = pokemon_types + random.sample(wrong, 4 - len(pokemon_types))
+        random.shuffle(choices)
+        type_choices = choices
+    elif req.game_type == "type_medium":
+        pokemon_types = [t for t in [pokemon.type1, pokemon.type2] if t]
+        wrong = [t for t in ALL_TYPES if t not in pokemon_types]
+        choices = pokemon_types + random.sample(wrong, 9 - len(pokemon_types))
         random.shuffle(choices)
         type_choices = choices
     elif req.game_type == "type_hard":
@@ -455,7 +473,7 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
         correct_types = [t for t in [pokemon.type1, pokemon.type2] if t]
         user_types = [req.guess.lower()] if req.guess else []
 
-    elif req.game_type == "type_hard":
+    elif req.game_type in ("type_hard", "type_medium"):
         selected = [t.strip().lower() for t in req.guess.split(",") if t.strip()]
         pokemon_types = [t.lower() for t in [pokemon.type1, pokemon.type2] if t]
         n_types = len(pokemon_types)
@@ -545,9 +563,10 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
             new_combined = current_combined
             write_combined = False
 
-        # XP gain (Name It and Guess Number modes)
+        # XP gain (Name It, Guess Number, and Guess the Type modes)
         if req.game_type in ("name_easy", "name_guess", "name_hard",
-                             "number_easy", "number_medium", "number_guess"):
+                             "number_easy", "number_medium", "number_guess",
+                             "type_easy", "type_medium", "type_hard"):
             current_xp = (
                 session.total_xp if session
                 else (db.query(User.total_xp).filter(User.id == user_id).scalar() or 0.0)

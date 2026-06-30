@@ -63,10 +63,11 @@
     <p id="guessnumber-empty" class="centered-msg hidden">No Guess Number scores yet.</p>
   </div>
 
-  <!-- Guess the Type leaderboard (Easy / Hard sub-switch) -->
+  <!-- Guess the Type leaderboard (Easy / Medium / Hard sub-switch) -->
   <div id="tab-type" class="tab-content hidden">
     <div class="type-sub-switch">
       <button class="type-sub-btn active" data-gt="type_easy">Easy</button>
+      <button class="type-sub-btn" data-gt="type_medium">Medium</button>
       <button class="type-sub-btn" data-gt="type_hard">Hard</button>
     </div>
     <div id="type-loading" class="centered-msg hidden">Loading...</div>
@@ -126,7 +127,7 @@
   let nameitSubActive = "name_guess";
   let guessnumberLoaded = { number_easy: false, number_medium: false, number_guess: false };
   let guessnumberSubActive = "number_guess";
-  let typeLoaded = { type_easy: false, type_hard: false };
+  let typeLoaded = { type_easy: false, type_medium: false, type_hard: false };
   let typeSubActive = "type_easy";
   let trainersLoaded = false;
 
@@ -260,7 +261,7 @@
   document.getElementById("refresh-btn").addEventListener("click", () => {
     nameitLoaded = { name_easy: false, name_guess: false, name_hard: false };
     guessnumberLoaded = { number_easy: false, number_medium: false, number_guess: false };
-    typeLoaded = { type_easy: false, type_hard: false };
+    typeLoaded = { type_easy: false, type_medium: false, type_hard: false };
     trainersLoaded = false;
     ["nameit","guessnumber","type","trainers"].forEach(key => {
       const loadEl = document.getElementById(key + "-loading");
