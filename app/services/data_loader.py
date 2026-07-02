@@ -91,6 +91,7 @@ def _fetch_one(pokemon_id: int, http: requests.Session) -> dict | None:
             "speed": stats.get("speed", 0),
             "height": data.get("height", 0),
             "weight": data.get("weight", 0),
+            "base_experience": data.get("base_experience", 100),
         }
     except Exception:
         return None
@@ -103,27 +104,37 @@ def run_fetch_sync() -> None:
 
     db: Session = SessionLocal()
     try:
-        existing = {
-            row[0]
-            for row in db.execute(
-                Pokemon.__table__.select().with_only_columns(Pokemon.__table__.c.id)
+        rows = db.execute(
+            Pokemon.__table__.select().with_only_columns(
+                Pokemon.__table__.c.id, Pokemon.__table__.c.base_experience
             )
-        }
-        _state["fetched"] = len(existing)
+        ).all()
+        # Complete = exists AND has real base_experience (>0 means already fetched)
+        complete = {row[0] for row in rows if row[1] and row[1] > 0}
+        in_db    = {row[0] for row in rows}
+        _state["fetched"] = len(complete)
 
         http = requests.Session()
         http.headers["User-Agent"] = "poke-dojo/1.0"
 
         for pokemon_id in range(1, TOTAL + 1):
-            if pokemon_id in existing:
+            if pokemon_id in complete:
                 continue
             data = _fetch_one(pokemon_id, http)
             if data:
                 try:
-                    db.add(Pokemon(**data))
+                    if pokemon_id in in_db:
+                        # Row exists but base_experience was 0 — update it
+                        db.execute(
+                            Pokemon.__table__.update()
+                            .where(Pokemon.__table__.c.id == pokemon_id)
+                            .values(base_experience=data["base_experience"])
+                        )
+                    else:
+                        db.add(Pokemon(**data))
                     db.commit()
                 except Exception:
-                    db.rollback()  # skip on duplicate (concurrent fetch or re-run)
+                    db.rollback()
             _state["fetched"] += 1
             time.sleep(0.3)
     finally:

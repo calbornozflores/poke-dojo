@@ -86,6 +86,14 @@ def run_migrations():
             except Exception:
                 pass
 
+        # Phase 7: base_experience per species (0 = not yet fetched, triggers re-fetch)
+        for col, ddl in [("base_experience", "INTEGER DEFAULT 0")]:
+            try:
+                conn.execute(text(f"ALTER TABLE pokemon ADD COLUMN {col} {ddl}"))
+                conn.commit()
+            except Exception:
+                pass
+
 
 def get_db():
     db = SessionLocal()

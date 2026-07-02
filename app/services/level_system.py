@@ -3,7 +3,7 @@ import random as _random
 
 LEVEL_CURVE_BASE = 1.25
 LEVEL_CURVE_EXP = 3
-XP_CONST = 1.5
+XP_CONST = 700
 POKEMON_LEVEL_RARITY_K = 2.5
 RELATIVE_LEVEL_CAP_OFFSET = 10
 RELATIVE_LEVEL_FLOOR_OFFSET = 5
@@ -70,5 +70,5 @@ def generate_pokemon_level(game_type: str, player_level: int, rng=_random) -> in
     return floor + math.floor(span * r)
 
 
-def calculate_xp_gain(pokemon_level: int, final_score: float) -> float:
-    return (pokemon_level * final_score) / XP_CONST
+def calculate_xp_gain(base_experience: int, pokemon_level: int, final_score: float) -> float:
+    return (base_experience * pokemon_level * final_score) / XP_CONST

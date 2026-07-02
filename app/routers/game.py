@@ -32,6 +32,7 @@ class _PkmnCache:
     type2: Optional[str]
     sprite_url: str
     generation: int
+    base_experience: int
 
 _pkmn: dict[int, _PkmnCache] = {}
 
@@ -39,13 +40,13 @@ def _ensure_pkmn_loaded(db: Session) -> None:
     if _pkmn:
         return
     for p in db.query(Pokemon).all():
-        _pkmn[p.id] = _PkmnCache(p.id, p.name, p.type1, p.type2, p.sprite_url, p.generation)
+        _pkmn[p.id] = _PkmnCache(p.id, p.name, p.type1, p.type2, p.sprite_url, p.generation, p.base_experience or 100)
 
 def _cached_pokemon(pokemon_id: int, db: Session) -> Optional[_PkmnCache]:
     if pokemon_id not in _pkmn:
         p = db.query(Pokemon).get(pokemon_id)
         if p:
-            _pkmn[pokemon_id] = _PkmnCache(p.id, p.name, p.type1, p.type2, p.sprite_url, p.generation)
+            _pkmn[pokemon_id] = _PkmnCache(p.id, p.name, p.type1, p.type2, p.sprite_url, p.generation, p.base_experience or 100)
     return _pkmn.get(pokemon_id)
 
 router = APIRouter(prefix="/game", tags=["game"])
@@ -572,7 +573,7 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
                 else (db.query(User.total_xp).filter(User.id == user_id).scalar() or 0.0)
             )
             player_level_before = level_from_xp(current_xp)
-            xp_gained = calculate_xp_gain(req.pokemon_level, final_score)
+            xp_gained = calculate_xp_gain(pokemon.base_experience, req.pokemon_level, final_score)
             total_xp_after = current_xp + xp_gained
             player_level_after = level_from_xp(total_xp_after)
             leveled_up = player_level_after > player_level_before
