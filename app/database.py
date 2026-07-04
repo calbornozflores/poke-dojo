@@ -94,6 +94,14 @@ def run_migrations():
             except Exception:
                 pass
 
+        # Phase 8: catch_rate from pokemon-species endpoint
+        for col, ddl in [("catch_rate", "INTEGER DEFAULT 0")]:
+            try:
+                conn.execute(text(f"ALTER TABLE pokemon ADD COLUMN {col} {ddl}"))
+                conn.commit()
+            except Exception:
+                pass
+
 
 def get_db():
     db = SessionLocal()

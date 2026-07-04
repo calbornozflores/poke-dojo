@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.database import engine, run_migrations
 from app.models import Base
-from app.routers import game, scores, challenge, journey, battle_arena, auth, daily_challenge
+from app.routers import game, scores, challenge, journey, battle_arena, auth, daily_challenge, pokedex
 from app.services import supabase_client
 from app.services.data_loader import (
     check_db_ready,
@@ -59,6 +59,7 @@ app.include_router(journey.router)
 app.include_router(battle_arena.router)
 app.include_router(auth.router)
 app.include_router(daily_challenge.router)
+app.include_router(pokedex.router)
 
 
 @app.on_event("startup")
@@ -125,6 +126,11 @@ async def arena_leaderboard_page(request: Request):
 @app.get("/daily-challenge")
 async def daily_challenge_page(request: Request):
     return templates.TemplateResponse(request=request, name="daily_challenge.html")
+
+
+@app.get("/pokedex")
+async def pokedex_page(request: Request):
+    return templates.TemplateResponse(request=request, name="pokedex.html")
 
 
 @app.get("/faq")

@@ -973,6 +973,27 @@
     }
 
     _prefetched = _prefetchNext();
+
+    // Catch banner
+    const oldBanner = document.getElementById("catch-banner");
+    if (oldBanner) oldBanner.remove();
+    const enc = data.pending_encounter;
+    if (enc && enc.can_catch) {
+      const banner = document.createElement("div");
+      banner.id = "catch-banner";
+      banner.className = "catch-banner";
+      banner.innerHTML = `
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${enc.pokemon_id}.png"
+             class="catch-banner-sprite" alt="${enc.pokemon_name}">
+        <div class="catch-banner-text">
+          <strong>A weakened ${enc.pokemon_name} is waiting!</strong>
+          <span>Level ${enc.level} — ready to catch</span>
+        </div>
+        <a href="/pokedex" class="btn btn-catch">Try to catch it!</a>
+        <button class="catch-banner-dismiss" onclick="this.closest('#catch-banner').remove()">✕</button>
+      `;
+      resultZone.after(banner);
+    }
   }
 
   function updateStats(data) {
