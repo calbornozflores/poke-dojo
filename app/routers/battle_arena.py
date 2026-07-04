@@ -15,6 +15,15 @@ router = APIRouter(prefix="/battle", tags=["battle"])
 REVEAL_DURATION = 10  # seconds for silhouette reveal
 
 
+def _compute_silhouette_level(round_number: int) -> float:
+    """0.0 = fully visible, 1.0 = full white silhouette. Ramps from round 31→50, then stays at 1.0."""
+    if round_number <= 30:
+        return 0.0
+    if round_number >= 50:
+        return 1.0
+    return (round_number - 30) / 20.0
+
+
 def _get_or_create_user(username: str, db: Session) -> User:
     user = db.query(User).filter(User.username == username).first()
     if not user:
@@ -99,6 +108,7 @@ class RoundData(BaseModel):
     correct_position: int    # 1/2/3
     generation: int
     reveal_duration: int     # seconds
+    silhouette_level: float  # 0.0 = fully visible, 1.0 = full silhouette (solo only)
 
 
 @router.get("/round/next", response_model=RoundData)
@@ -112,6 +122,7 @@ def next_round(match_id: int, round_number: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "No Pokémon available")
 
     options, correct_pos = _pick_options(pokemon)
+    silhouette_level = _compute_silhouette_level(round_number) if state.mode == "single" else 1.0
     return RoundData(
         match_id=match_id,
         round_number=round_number,
@@ -121,6 +132,7 @@ def next_round(match_id: int, round_number: int, db: Session = Depends(get_db)):
         correct_position=correct_pos,
         generation=pokemon.generation,
         reveal_duration=REVEAL_DURATION,
+        silhouette_level=silhouette_level,
     )
 
 

@@ -408,8 +408,13 @@ async function loadRound() {
   spriteEl.className = "arena-sprite";
   if (MODE === "vs") {
     spriteEl.classList.add("silhouette");
+    spriteEl.style.filter = "";
+  } else {
+    const sl = roundData.silhouette_level ?? 0;
+    spriteEl.style.filter = sl > 0
+      ? `brightness(${(1 - sl).toFixed(3)}) invert(${sl.toFixed(3)})`
+      : "";
   }
-  spriteEl.style.filter = "";
 
   const optionsEl = document.getElementById("arena-options");
   optionsEl.innerHTML = "";
@@ -514,8 +519,23 @@ function startReveal() {
     spriteEl.style.animationDuration = `${dur}s`;
     spriteEl.style.animationTimingFunction = "linear";
     spriteEl.style.animationFillMode = "forwards";
+  } else {
+    // Solo mode: WAAPI reveal from current silhouette level to fully visible
+    const sl = roundData.silhouette_level ?? 0;
+    if (sl > 0 && sl < 1.0) {
+      // Partial silhouette (rounds 31–49): animate to fully visible
+      spriteEl.getAnimations().forEach(a => a.cancel());
+      spriteEl.animate(
+        [
+          { filter: `brightness(${(1 - sl).toFixed(3)}) invert(${sl.toFixed(3)})` },
+          { filter: "none" },
+        ],
+        { duration: dur * 1000, easing: "linear", fill: "forwards" }
+      );
+    }
+    // sl === 0: fully visible, no animation needed
+    // sl >= 1.0: full silhouette stays white until player answers (round ≥ 50)
   }
-  // Solo mode: Pokémon is always fully visible, nothing to animate.
 
   clearTimeout(revealTimer);
   revealTimer = setTimeout(() => {
