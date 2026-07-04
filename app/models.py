@@ -160,5 +160,6 @@ class PendingEncounter(Base):
     username: Mapped[str] = mapped_column(String, nullable=False, unique=True, index=True)
     pokemon_id: Mapped[int] = mapped_column(Integer, ForeignKey("pokemon.id"), nullable=False)
     final_score: Mapped[float] = mapped_column(Float, nullable=False)
+    pokemon_level: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     throws_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

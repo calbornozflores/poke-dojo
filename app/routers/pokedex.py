@@ -81,7 +81,7 @@ def get_encounter(username: str = Query(""), db: Session = Depends(get_db)):
     if not p:
         return None
 
-    enc_level = round(enc.final_score)
+    enc_level = enc.pokemon_level
     owned = db.query(CaughtPokemon).filter_by(username=username, pokemon_id=enc.pokemon_id).first()
     can_catch = (owned is None) or (enc_level > owned.level)
     a = _catch_probability(p.catch_rate or 45, enc.final_score)
@@ -123,7 +123,7 @@ def throw_pokeball(req: ThrowRequest, db: Session = Depends(get_db)):
     throws_used = enc.throws_used
 
     if caught:
-        enc_level = round(enc.final_score)
+        enc_level = enc.pokemon_level
         owned = db.query(CaughtPokemon).filter_by(
             username=req.username, pokemon_id=enc.pokemon_id
         ).first()

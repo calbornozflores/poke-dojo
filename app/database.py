@@ -102,6 +102,14 @@ def run_migrations():
             except Exception:
                 pass
 
+        # Phase 9: pokemon_level on pending_encounters (actual game level, not score)
+        for col, ddl in [("pokemon_level", "INTEGER DEFAULT 1")]:
+            try:
+                conn.execute(text(f"ALTER TABLE pending_encounters ADD COLUMN {col} {ddl}"))
+                conn.commit()
+            except Exception:
+                pass
+
 
 def get_db():
     db = SessionLocal()
