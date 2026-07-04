@@ -38,11 +38,13 @@ def _get_generation(pokedex_id: int) -> int:
     return 9
 
 
-def _get_stage(pokemon_id: int, http: requests.Session) -> str:
+def _get_stage_and_catch_rate(pokemon_id: int, http: requests.Session) -> tuple[str, int]:
     try:
         r = http.get(f"https://pokeapi.co/api/v2/pokemon-species/{pokemon_id}/", timeout=10)
         r.raise_for_status()
-        chain_url = r.json()["evolution_chain"]["url"]
+        species_data = r.json()
+        catch_rate = int(species_data.get("capture_rate") or 45)
+        chain_url = species_data["evolution_chain"]["url"]
         r2 = http.get(chain_url, timeout=10)
         r2.raise_for_status()
 
@@ -57,9 +59,10 @@ def _get_stage(pokemon_id: int, http: requests.Session) -> str:
             return None
 
         depth = find_depth(r2.json()["chain"])
-        return ["basic", "stage_1", "stage_2"][min(depth or 0, 2)]
+        stage = ["basic", "stage_1", "stage_2"][min(depth or 0, 2)]
+        return stage, catch_rate
     except Exception:
-        return "basic"
+        return "basic", 45
 
 
 def _fetch_one(pokemon_id: int, http: requests.Session) -> dict | None:
@@ -75,11 +78,12 @@ def _fetch_one(pokemon_id: int, http: requests.Session) -> dict | None:
             .get("official-artwork", {})
             .get("front_default")
         )
+        stage, catch_rate = _get_stage_and_catch_rate(pokemon_id, http)
         return {
             "id": pokemon_id,
             "name": data["name"],
             "generation": _get_generation(pokemon_id),
-            "stage": _get_stage(pokemon_id, http),
+            "stage": stage,
             "sprite_url": sprite or "",
             "type1": types[0] if types else "normal",
             "type2": types[1] if len(types) > 1 else None,
@@ -92,6 +96,7 @@ def _fetch_one(pokemon_id: int, http: requests.Session) -> dict | None:
             "height": data.get("height", 0),
             "weight": data.get("weight", 0),
             "base_experience": data.get("base_experience", 100),
+            "catch_rate": catch_rate,
         }
     except Exception:
         return None
@@ -106,11 +111,13 @@ def run_fetch_sync() -> None:
     try:
         rows = db.execute(
             Pokemon.__table__.select().with_only_columns(
-                Pokemon.__table__.c.id, Pokemon.__table__.c.base_experience
+                Pokemon.__table__.c.id,
+                Pokemon.__table__.c.base_experience,
+                Pokemon.__table__.c.catch_rate,
             )
         ).all()
-        # Complete = exists AND has real base_experience (>0 means already fetched)
-        complete = {row[0] for row in rows if row[1] and row[1] > 0}
+        # Complete = exists AND has both base_experience and catch_rate populated
+        complete = {row[0] for row in rows if row[1] and row[1] > 0 and row[2] and row[2] > 0}
         in_db    = {row[0] for row in rows}
         _state["fetched"] = len(complete)
 
@@ -124,11 +131,13 @@ def run_fetch_sync() -> None:
             if data:
                 try:
                     if pokemon_id in in_db:
-                        # Row exists but base_experience was 0 — update it
                         db.execute(
                             Pokemon.__table__.update()
                             .where(Pokemon.__table__.c.id == pokemon_id)
-                            .values(base_experience=data["base_experience"])
+                            .values(
+                                base_experience=data["base_experience"],
+                                catch_rate=data["catch_rate"],
+                            )
                         )
                     else:
                         db.add(Pokemon(**data))

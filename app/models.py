@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from sqlalchemy import Integer, String, Float, Boolean, DateTime, ForeignKey, Date
+from sqlalchemy import Integer, String, Float, Boolean, DateTime, ForeignKey, Date, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -23,6 +23,7 @@ class Pokemon(Base):
     height: Mapped[int] = mapped_column(Integer, nullable=True, default=0)
     weight: Mapped[int] = mapped_column(Integer, nullable=True, default=0)
     base_experience: Mapped[int] = mapped_column(Integer, nullable=True, default=0)
+    catch_rate: Mapped[int] = mapped_column(Integer, nullable=True, default=0)
 
     results: Mapped[list["GameResult"]] = relationship(back_populates="pokemon")
 
@@ -137,3 +138,30 @@ class DailyChallengeGuess(Base):
     pokemon_id: Mapped[int] = mapped_column(Integer, ForeignKey("pokemon.id"), nullable=False)
     distance: Mapped[float] = mapped_column(Float, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class CaughtPokemon(Base):
+    __tablename__ = "caught_pokemon"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    pokemon_id: Mapped[int] = mapped_column(Integer, ForeignKey("pokemon.id"), nullable=False)
+    level: Mapped[int] = mapped_column(Integer, nullable=False)
+    caught_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    attempts_used: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    __table_args__ = (UniqueConstraint("username", "pokemon_id"),)
+
+
+class PendingEncounter(Base):
+    __tablename__ = "pending_encounters"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    pokemon_id: Mapped[int] = mapped_column(Integer, ForeignKey("pokemon.id"), nullable=False)
+    final_score: Mapped[float] = mapped_column(Float, nullable=False)
+    pokemon_level: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    throws_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("username", "pokemon_id"),)

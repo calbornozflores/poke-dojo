@@ -973,6 +973,23 @@
     }
 
     _prefetched = _prefetchNext();
+
+    // Catch banner
+    const oldBanner = document.getElementById("catch-banner");
+    if (oldBanner) oldBanner.remove();
+    const enc = data.pending_encounter;
+    if (enc && enc.can_catch) {
+      const banner = document.createElement("div");
+      banner.id = "catch-banner";
+      banner.className = "catch-banner";
+      banner.innerHTML = `
+        <div class="catch-banner-text">
+          <strong>A fainted ${enc.pokemon_name} is waiting!</strong>
+        </div>
+        <a href="/pokedex" class="btn btn-catch">Try to catch it!</a>
+      `;
+      resultZone.appendChild(banner);
+    }
   }
 
   function updateStats(data) {

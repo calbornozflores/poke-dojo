@@ -2,13 +2,14 @@ import random
 import time
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User, GameResult, Pokemon, EvoScoreHistory
+from app.models import User, GameResult, Pokemon, EvoScoreHistory, PendingEncounter, CaughtPokemon
 from app.services.string_match import name_accuracy
 from app.services.pokemon_data import number_accuracy
 from app.services import xgboost_model
@@ -33,6 +34,7 @@ class _PkmnCache:
     sprite_url: str
     generation: int
     base_experience: int
+    catch_rate: int
 
 _pkmn: dict[int, _PkmnCache] = {}
 
@@ -40,13 +42,13 @@ def _ensure_pkmn_loaded(db: Session) -> None:
     if _pkmn:
         return
     for p in db.query(Pokemon).all():
-        _pkmn[p.id] = _PkmnCache(p.id, p.name, p.type1, p.type2, p.sprite_url, p.generation, p.base_experience or 100)
+        _pkmn[p.id] = _PkmnCache(p.id, p.name, p.type1, p.type2, p.sprite_url, p.generation, p.base_experience or 100, p.catch_rate or 45)
 
 def _cached_pokemon(pokemon_id: int, db: Session) -> Optional[_PkmnCache]:
     if pokemon_id not in _pkmn:
         p = db.query(Pokemon).get(pokemon_id)
         if p:
-            _pkmn[pokemon_id] = _PkmnCache(p.id, p.name, p.type1, p.type2, p.sprite_url, p.generation, p.base_experience or 100)
+            _pkmn[pokemon_id] = _PkmnCache(p.id, p.name, p.type1, p.type2, p.sprite_url, p.generation, p.base_experience or 100, p.catch_rate or 45)
     return _pkmn.get(pokemon_id)
 
 router = APIRouter(prefix="/game", tags=["game"])
@@ -222,6 +224,14 @@ class SubmitResponse(BaseModel):
     player_level_before: int = 1
     leveled_up: bool = False
     newly_unlocked_modes: list[str] = []
+    pending_encounter: dict | None = None
+
+
+_DOJO_GAME_TYPES = frozenset({
+    "name_easy", "name_guess", "name_hard",
+    "number_easy", "number_medium", "number_guess",
+    "type_easy", "type_medium", "type_hard",
+})
 
 
 @router.get("/profile/breakdown")
@@ -630,6 +640,39 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
         challenge_unlocked = games_played >= CHALLENGE_THRESHOLD
         evo_score = round(new_combined, 1)
 
+    # Upsert pending encounter for Dojo wins
+    pending_encounter_data: dict | None = None
+    if final_score > 0 and req.game_type in _DOJO_GAME_TYPES and req.username:
+        enc_level = req.pokemon_level
+        existing_enc = db.query(PendingEncounter).filter_by(
+            username=req.username, pokemon_id=pokemon.id
+        ).first()
+        if existing_enc:
+            existing_enc.final_score = final_score
+            existing_enc.pokemon_level = enc_level
+            existing_enc.throws_used = 0
+            existing_enc.created_at = datetime.utcnow()
+        else:
+            db.add(PendingEncounter(
+                username=req.username,
+                pokemon_id=pokemon.id,
+                final_score=final_score,
+                pokemon_level=enc_level,
+            ))
+        db.commit()
+
+        owned = db.query(CaughtPokemon).filter_by(
+            username=req.username, pokemon_id=pokemon.id
+        ).first()
+        can_catch = (owned is None) or (enc_level > owned.level)
+        pending_encounter_data = {
+            "pokemon_id": pokemon.id,
+            "pokemon_name": pokemon.name,
+            "sprite_url": pokemon.sprite_url,
+            "level": enc_level,
+            "can_catch": can_catch,
+        }
+
     return SubmitResponse(
         accuracy=round(accuracy, 1),
         final_score=final_score,
@@ -647,6 +690,7 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
         player_level_before=player_level_before,
         leveled_up=leveled_up,
         newly_unlocked_modes=newly_unlocked,
+        pending_encounter=pending_encounter_data,
     )
 
 
