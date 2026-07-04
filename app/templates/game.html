@@ -984,11 +984,9 @@
       banner.className = "catch-banner";
       banner.innerHTML = `
         <div class="catch-banner-text">
-          <strong>A weakened ${enc.pokemon_name} is waiting!</strong>
-          <span>Level ${enc.level} — ready to catch</span>
+          <strong>A fainted ${enc.pokemon_name} is waiting!</strong>
         </div>
         <a href="/pokedex" class="btn btn-catch">Try to catch it!</a>
-        <button class="catch-banner-dismiss" onclick="this.closest('#catch-banner').remove()">✕</button>
       `;
       resultZone.appendChild(banner);
     }
