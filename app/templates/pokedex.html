@@ -8,8 +8,15 @@
     <p class="pokedex-subtitle">Catch Pokémon by winning Dojo games. Your personal collection, by region.</p>
   </div>
 
-  <!-- Pending encounters list (dynamically rendered) -->
-  <div id="encounters-section" class="encounters-section hidden"></div>
+  <!-- Pending encounters carousel -->
+  <div id="encounters-section" class="encounters-section hidden">
+    <div class="encounters-carousel">
+      <button class="enc-nav-btn" id="enc-prev" onclick="navigateEncounters(-1)">&#8249;</button>
+      <div id="encounter-card"></div>
+      <button class="enc-nav-btn" id="enc-next" onclick="navigateEncounters(1)">&#8250;</button>
+    </div>
+    <p class="enc-nav-counter hidden" id="enc-counter"></p>
+  </div>
 
   <!-- Region tabs -->
   <div class="tab-bar" id="region-tab-bar">
@@ -86,16 +93,34 @@
 .pokedex-header h1 { font-size: 2rem; font-weight: 800; margin: 0 0 0.25rem; }
 .pokedex-subtitle { color: var(--text-muted); margin: 0; }
 
-/* Encounters section (stacks multiple encounter banners) */
-.encounters-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
+/* Encounter carousel */
+.encounters-section { margin-bottom: 1.5rem; }
 .encounters-section.hidden { display: none; }
 
-/* Encounter banner */
+.encounters-carousel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.enc-nav-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 32px; height: 32px;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.enc-nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.enc-nav-btn:disabled { opacity: 0.25; cursor: default; }
+
+#encounter-card { flex: 1; min-width: 0; }
+
 .encounter-banner {
   display: flex;
   align-items: center;
@@ -105,6 +130,14 @@
   border-radius: var(--radius);
   padding: 1rem 1.25rem;
 }
+
+.enc-nav-counter {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0.4rem 0 0;
+}
+.enc-nav-counter.hidden { display: none; }
 .enc-banner-sprite { width: 64px; height: 64px; object-fit: contain; image-rendering: pixelated; }
 .enc-banner-text { flex: 1; display: flex; flex-direction: column; gap: 0.2rem; }
 .enc-banner-text strong { font-size: 1rem; }
@@ -261,6 +294,7 @@
 const username = localStorage.getItem("poke_username") || "";
 const loadedGens = new Set();
 let encounters = [];
+let encIndex = 0;
 let pendingEncounter = null;
 let currentThrows = 0;
 const TOTAL_THROWS = 3;
@@ -282,10 +316,13 @@ async function loadEncounters() {
 function renderEncounters() {
   const section = document.getElementById("encounters-section");
   const catchable = encounters.filter(e => e.can_catch);
-  if (!catchable.length) { section.classList.add("hidden"); section.innerHTML = ""; return; }
-  section.classList.remove("hidden");
-  section.innerHTML = catchable.map(enc => `
-    <div class="encounter-banner" data-pid="${enc.pokemon_id}">
+  if (!catchable.length) { section.classList.add("hidden"); return; }
+
+  encIndex = Math.min(encIndex, catchable.length - 1);
+  const enc = catchable[encIndex];
+
+  document.getElementById("encounter-card").innerHTML = `
+    <div class="encounter-banner">
       <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${enc.pokemon_id}.png"
            alt="${enc.pokemon_name}" class="enc-banner-sprite">
       <div class="enc-banner-text">
@@ -297,7 +334,26 @@ function renderEncounters() {
         Try to catch it!
       </button>
     </div>
-  `).join("");
+  `;
+
+  document.getElementById("enc-prev").disabled = encIndex === 0;
+  document.getElementById("enc-next").disabled = encIndex === catchable.length - 1;
+
+  const counter = document.getElementById("enc-counter");
+  if (catchable.length > 1) {
+    counter.textContent = `${encIndex + 1} / ${catchable.length}`;
+    counter.classList.remove("hidden");
+  } else {
+    counter.classList.add("hidden");
+  }
+
+  section.classList.remove("hidden");
+}
+
+function navigateEncounters(dir) {
+  const catchable = encounters.filter(e => e.can_catch);
+  encIndex = Math.max(0, Math.min(encIndex + dir, catchable.length - 1));
+  renderEncounters();
 }
 
 async function loadRegion(gen) {
