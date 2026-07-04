@@ -8,15 +8,8 @@
     <p class="pokedex-subtitle">Catch Pokémon by winning Dojo games. Your personal collection, by region.</p>
   </div>
 
-  <!-- Pending encounter banner -->
-  <div id="encounter-banner" class="encounter-banner hidden">
-    <img id="enc-sprite" src="" alt="" class="enc-banner-sprite">
-    <div class="enc-banner-text">
-      <strong id="enc-banner-title">A weakened Pokémon is waiting!</strong>
-      <span id="enc-banner-sub"></span>
-    </div>
-    <button id="enc-catch-btn" class="btn btn-primary">Try to catch it!</button>
-  </div>
+  <!-- Pending encounters list (dynamically rendered) -->
+  <div id="encounters-section" class="encounters-section hidden"></div>
 
   <!-- Region tabs -->
   <div class="tab-bar" id="region-tab-bar">
@@ -59,13 +52,13 @@
           <circle cx="100" cy="100" r="80" fill="none" stroke="#ef4444" stroke-width="14" />
           <!-- Green arc (catch probability) -->
           <circle cx="100" cy="100" r="80" fill="none" stroke="#22c55e" stroke-width="14"
-                  stroke-linecap="round"
+                  stroke-linecap="butt"
                   id="green-arc"
                   stroke-dasharray="0 502"
                   transform="rotate(-90 100 100)" />
-          <!-- Pointer line -->
-          <line x1="100" y1="100" x2="100" y2="18" stroke="white" stroke-width="3"
-                stroke-linecap="round" id="catch-pointer" />
+          <!-- Pointer line — spans ring only (inner edge y=27 to outer edge y=11) -->
+          <line x1="100" y1="27" x2="100" y2="11" stroke="white" stroke-width="4"
+                stroke-linecap="butt" id="catch-pointer" />
         </svg>
         <img id="modal-sprite" src="" alt="" class="throw-sprite">
       </div>
@@ -93,6 +86,15 @@
 .pokedex-header h1 { font-size: 2rem; font-weight: 800; margin: 0 0 0.25rem; }
 .pokedex-subtitle { color: var(--text-muted); margin: 0; }
 
+/* Encounters section (stacks multiple encounter banners) */
+.encounters-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.encounters-section.hidden { display: none; }
+
 /* Encounter banner */
 .encounter-banner {
   display: flex;
@@ -102,9 +104,7 @@
   border: 1px solid var(--accent);
   border-radius: var(--radius);
   padding: 1rem 1.25rem;
-  margin-bottom: 1.5rem;
 }
-.encounter-banner.hidden { display: none; }
 .enc-banner-sprite { width: 64px; height: 64px; object-fit: contain; image-rendering: pixelated; }
 .enc-banner-text { flex: 1; display: flex; flex-direction: column; gap: 0.2rem; }
 .enc-banner-text strong { font-size: 1rem; }
@@ -213,14 +213,10 @@
   position: relative; z-index: 1;
 }
 
-/* Pointer rotation animation */
-@keyframes spin-pointer {
-  from { transform: rotate(var(--spin-start, 0deg)); }
-  to   { transform: rotate(var(--spin-end, 1440deg)); }
-}
-.catch-pointer-spinning {
-  transform-origin: 100px 100px;
-  animation: spin-pointer var(--spin-duration, 2.5s) cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+/* Pointer rotation — origin via WAAPI, no CSS animation needed */
+#catch-pointer {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
 }
 
 /* Throw slots */
@@ -264,6 +260,7 @@
 <script>
 const username = localStorage.getItem("poke_username") || "";
 const loadedGens = new Set();
+let encounters = [];
 let pendingEncounter = null;
 let currentThrows = 0;
 const TOTAL_THROWS = 3;
@@ -274,26 +271,33 @@ const GEN_NAMES = {
   6:"Kalos",7:"Alola",8:"Galar",9:"Paldea"
 };
 
-async function loadEncounter() {
+async function loadEncounters() {
   if (!username) return;
-  const r = await fetch(`/pokedex/encounter?username=${encodeURIComponent(username)}`);
+  const r = await fetch(`/pokedex/encounters?username=${encodeURIComponent(username)}`);
   if (!r.ok) return;
-  const enc = await r.json();
-  pendingEncounter = enc;
+  encounters = await r.json();
+  renderEncounters();
+}
 
-  const banner = document.getElementById("encounter-banner");
-  if (enc && enc.can_catch) {
-    document.getElementById("enc-sprite").src =
-      `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${enc.pokemon_id}.png`;
-    document.getElementById("enc-banner-title").textContent =
-      `A weakened ${enc.pokemon_name} is waiting!`;
-    document.getElementById("enc-banner-sub").textContent =
-      `Level ${enc.level} — ${enc.throws_remaining} throw${enc.throws_remaining !== 1 ? "s" : ""} remaining`;
-    banner.classList.remove("hidden");
-    document.getElementById("enc-catch-btn").onclick = () => openThrowModal(enc);
-  } else {
-    banner.classList.add("hidden");
-  }
+function renderEncounters() {
+  const section = document.getElementById("encounters-section");
+  const catchable = encounters.filter(e => e.can_catch);
+  if (!catchable.length) { section.classList.add("hidden"); section.innerHTML = ""; return; }
+  section.classList.remove("hidden");
+  section.innerHTML = catchable.map(enc => `
+    <div class="encounter-banner" data-pid="${enc.pokemon_id}">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${enc.pokemon_id}.png"
+           alt="${enc.pokemon_name}" class="enc-banner-sprite">
+      <div class="enc-banner-text">
+        <strong>A weakened ${enc.pokemon_name} is waiting!</strong>
+        <span>Level ${enc.level} — ${enc.throws_remaining} throw${enc.throws_remaining !== 1 ? "s" : ""} remaining</span>
+      </div>
+      <button class="btn btn-primary"
+              onclick="openThrowModal(encounters.find(e=>e.pokemon_id===${enc.pokemon_id}))">
+        Try to catch it!
+      </button>
+    </div>
+  `).join("");
 }
 
 async function loadRegion(gen) {
@@ -332,10 +336,13 @@ async function loadRegion(gen) {
       ${p.caught ? `<span class="pdx-level">Lv ${p.level}</span>` : ""}
     `;
 
-    if (p.is_pending && pendingEncounter && pendingEncounter.can_catch) {
-      tile.style.cursor = "pointer";
-      tile.title = "Click to catch!";
-      tile.addEventListener("click", () => openThrowModal(pendingEncounter));
+    if (p.is_pending) {
+      const enc = encounters.find(e => e.pokemon_id === p.id && e.can_catch);
+      if (enc) {
+        tile.style.cursor = "pointer";
+        tile.title = "Click to catch!";
+        tile.addEventListener("click", () => openThrowModal(enc));
+      }
     }
 
     grid.appendChild(tile);
@@ -372,10 +379,8 @@ function openThrowModal(enc) {
   const arc = document.getElementById("green-arc");
   arc.setAttribute("stroke-dasharray", `${greenLen} ${circumference}`);
 
-  // Reset pointer
-  const pointer = document.getElementById("catch-pointer");
-  pointer.style.transform = "";
-  pointer.classList.remove("catch-pointer-spinning");
+  // Cancel any in-progress pointer animation
+  document.getElementById("catch-pointer").getAnimations().forEach(a => a.cancel());
 
   // Reset slots
   for (let i = 1; i <= 3; i++) {
@@ -438,19 +443,13 @@ document.getElementById("throw-btn").addEventListener("click", async () => {
   const duration = 2.0 + Math.random() * 0.8;
 
   const pointer = document.getElementById("catch-pointer");
-  pointer.style.cssText = `
-    transform-origin: 100px 100px;
-    transform: rotate(0deg);
-  `;
-  pointer.classList.remove("catch-pointer-spinning");
-  // Force reflow
+  pointer.getAnimations().forEach(a => a.cancel());
   void pointer.offsetWidth;
-  pointer.style.setProperty("--spin-end", `${totalDeg}deg`);
-  pointer.style.setProperty("--spin-duration", `${duration}s`);
-  pointer.classList.add("catch-pointer-spinning");
-
-  // Wait for animation
-  await new Promise(res => setTimeout(res, duration * 1000));
+  const anim = pointer.animate(
+    [{ transform: "rotate(0deg)" }, { transform: `rotate(${totalDeg}deg)` }],
+    { duration: duration * 1000, easing: "cubic-bezier(0.2, 0.8, 0.4, 1)", fill: "forwards" }
+  );
+  await anim.finished;
 
   // Update slot
   const slotEl = document.getElementById(`slot-${currentThrows}`);
@@ -467,9 +466,9 @@ document.getElementById("throw-btn").addEventListener("click", async () => {
     btn.classList.add("hidden");
     doneMsg.textContent = "Added to your Pokédex!";
     doneMsg.classList.remove("hidden");
-    document.getElementById("encounter-banner").classList.add("hidden");
+    encounters = encounters.filter(e => e.pokemon_id !== pendingEncounter.pokemon_id);
     pendingEncounter = null;
-    // Refresh the active region grid
+    renderEncounters();
     const activeGen = parseInt(document.querySelector("#region-tab-bar .tab-btn.active").dataset.gen);
     loadedGens.delete(activeGen);
     loadRegion(activeGen);
@@ -479,8 +478,9 @@ document.getElementById("throw-btn").addEventListener("click", async () => {
     btn.classList.add("hidden");
     doneMsg.textContent = "Win another Dojo round to generate a new encounter.";
     doneMsg.classList.remove("hidden");
-    document.getElementById("encounter-banner").classList.add("hidden");
+    encounters = encounters.filter(e => e.pokemon_id !== pendingEncounter.pokemon_id);
     pendingEncounter = null;
+    renderEncounters();
   } else {
     // missed, throws remain
     resultText.textContent = `It broke free! ${data.throws_remaining} throw${data.throws_remaining !== 1 ? "s" : ""} remaining.`;
@@ -490,7 +490,7 @@ document.getElementById("throw-btn").addEventListener("click", async () => {
 });
 
 // Init
-loadEncounter();
+loadEncounters();
 loadRegion(1);
 </script>
 {% endblock %}

@@ -157,9 +157,11 @@ class PendingEncounter(Base):
     __tablename__ = "pending_encounters"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    username: Mapped[str] = mapped_column(String, nullable=False, unique=True, index=True)
+    username: Mapped[str] = mapped_column(String, nullable=False, index=True)
     pokemon_id: Mapped[int] = mapped_column(Integer, ForeignKey("pokemon.id"), nullable=False)
     final_score: Mapped[float] = mapped_column(Float, nullable=False)
     pokemon_level: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     throws_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("username", "pokemon_id"),)

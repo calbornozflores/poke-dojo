@@ -110,6 +110,34 @@ def run_migrations():
             except Exception:
                 pass
 
+        # Phase 10: Widen pending_encounters unique from (username) → (username, pokemon_id)
+        try:
+            old_idx = conn.execute(text(
+                "SELECT name FROM sqlite_master WHERE type='index' "
+                "AND tbl_name='pending_encounters' "
+                "AND sql LIKE '%username%' AND sql NOT LIKE '%pokemon_id%'"
+            )).fetchone()
+            if old_idx:
+                conn.execute(text("DROP TABLE pending_encounters"))
+                conn.execute(text("""CREATE TABLE pending_encounters (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL,
+                    pokemon_id INTEGER NOT NULL REFERENCES pokemon(id),
+                    final_score REAL NOT NULL,
+                    throws_used INTEGER NOT NULL DEFAULT 0,
+                    created_at DATETIME,
+                    pokemon_level INTEGER NOT NULL DEFAULT 1
+                )"""))
+                conn.execute(text(
+                    "CREATE INDEX ix_pending_encounters_username "
+                    "ON pending_encounters(username)"))
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX uq_pending_enc_user_pkmn "
+                    "ON pending_encounters(username, pokemon_id)"))
+                conn.commit()
+        except Exception:
+            pass
+
 
 def get_db():
     db = SessionLocal()

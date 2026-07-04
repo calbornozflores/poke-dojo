@@ -27,7 +27,7 @@ GEN_SIZES = {1: 151, 2: 100, 3: 135, 4: 107, 5: 156, 6: 72, 7: 88, 8: 96, 9: 120
 def _catch_probability(catch_rate: int, final_score: float) -> float:
     hp_fraction = (100.0 - final_score) / 100.0
     a = (3.0 - 2.0 * hp_fraction) * catch_rate / 255.0
-    return max(0.05, min(1.0, a))
+    return max(0.05, min(0.95, a))
 
 
 @router.get("/data")
@@ -39,13 +39,12 @@ def pokedex_data(
     pokemon_in_gen = db.query(Pokemon).filter(Pokemon.generation == gen).order_by(Pokemon.id).all()
 
     caught_map: dict[int, CaughtPokemon] = {}
-    pending_id: int | None = None
+    pending_ids: set[int] = set()
     if username:
         for row in db.query(CaughtPokemon).filter(CaughtPokemon.username == username).all():
             caught_map[row.pokemon_id] = row
-        enc = db.query(PendingEncounter).filter(PendingEncounter.username == username).first()
-        if enc:
-            pending_id = enc.pokemon_id
+        for enc in db.query(PendingEncounter).filter(PendingEncounter.username == username).all():
+            pending_ids.add(enc.pokemon_id)
 
     result = []
     for p in pokemon_in_gen:
@@ -57,7 +56,7 @@ def pokedex_data(
             "caught": caught is not None,
             "level": caught.level if caught else None,
             "caught_at": caught.caught_at.strftime("%Y-%m-%d") if caught else None,
-            "is_pending": p.id == pending_id,
+            "is_pending": p.id in pending_ids,
         })
 
     caught_count = sum(1 for r in result if r["caught"])
@@ -97,6 +96,37 @@ def get_encounter(username: str = Query(""), db: Session = Depends(get_db)):
         "catch_probability": round(a, 4),
         "hp_fraction": round((100.0 - enc.final_score) / 100.0, 4),
     }
+
+
+@router.get("/encounters")
+def get_encounters(username: str = Query(""), db: Session = Depends(get_db)):
+    if not username:
+        return []
+    encs = (
+        db.query(PendingEncounter)
+        .filter(PendingEncounter.username == username)
+        .order_by(PendingEncounter.created_at.desc())
+        .all()
+    )
+    result = []
+    for enc in encs:
+        p = db.query(Pokemon).get(enc.pokemon_id)
+        if not p:
+            continue
+        owned = db.query(CaughtPokemon).filter_by(username=username, pokemon_id=enc.pokemon_id).first()
+        can_catch = (owned is None) or (enc.pokemon_level > owned.level)
+        a = _catch_probability(p.catch_rate or 45, enc.final_score)
+        result.append({
+            "pokemon_id": p.id,
+            "pokemon_name": p.name,
+            "level": enc.pokemon_level,
+            "can_catch": can_catch,
+            "throws_used": enc.throws_used,
+            "throws_remaining": 3 - enc.throws_used,
+            "catch_probability": round(a, 4),
+            "hp_fraction": round((100.0 - enc.final_score) / 100.0, 4),
+        })
+    return result
 
 
 class ThrowRequest(BaseModel):

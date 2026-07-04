@@ -644,9 +644,10 @@ def submit_answer(req: SubmitRequest, db: Session = Depends(get_db)):
     pending_encounter_data: dict | None = None
     if final_score > 0 and req.game_type in _DOJO_GAME_TYPES and req.username:
         enc_level = req.pokemon_level
-        existing_enc = db.query(PendingEncounter).filter_by(username=req.username).first()
+        existing_enc = db.query(PendingEncounter).filter_by(
+            username=req.username, pokemon_id=pokemon.id
+        ).first()
         if existing_enc:
-            existing_enc.pokemon_id = pokemon.id
             existing_enc.final_score = final_score
             existing_enc.pokemon_level = enc_level
             existing_enc.throws_used = 0
