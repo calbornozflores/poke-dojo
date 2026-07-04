@@ -113,8 +113,8 @@
       </div>
     </div>
 
-    <div class="arena-pokemon-stage">
-      <img id="arena-sprite" src="" alt="Pokémon silhouette" class="arena-sprite" />
+    <div class="arena-pokemon-stage" id="arena-pokemon-stage">
+      <img id="arena-sprite" src="" alt="" class="arena-sprite" />
     </div>
 
     <div class="arena-options" id="arena-options">
@@ -238,6 +238,7 @@ let luvdiscLives = 3;
 let shadowActive = false;
 let shadowCatches = 0;
 let lastRoundResult = null;
+let prefetch = null; // { matchId, roundNumber, jsonPromise, data }
 
 // VS key bindings
 const VS_P1_KEYS = { q: 1, w: 2, e: 3 };
@@ -349,6 +350,7 @@ document.getElementById("start-match-btn").addEventListener("click", async () =>
   shadowActive = false;
   shadowCatches = 0;
   lastRoundResult = null;
+  clearPrefetch();
 
   if (MODE === "single") {
     document.getElementById("luvdisc-bar").classList.remove("hidden");
@@ -361,6 +363,30 @@ document.getElementById("start-match-btn").addEventListener("click", async () =>
 
 function officialArtwork(pokemonId) {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
+}
+
+// ── Round prefetching ───────────────────────────────────────────────────────
+// Kicked off as soon as the current round's result comes back, so the next
+// round's data + artwork are usually already loaded by the time the player
+// moves on — overlapping network latency with the time spent looking at
+// the score/life-lost flash instead of paying for it up front.
+function prefetchNextRound(mId, rNum) {
+  if (prefetch && prefetch.matchId === mId && prefetch.roundNumber === rNum) return;
+  const jsonPromise = fetch(`/battle/round/next?match_id=${mId}&round_number=${rNum}`)
+    .then(res => res.ok ? res.json() : null)
+    .then(data => {
+      if (data && prefetch && prefetch.matchId === mId && prefetch.roundNumber === rNum) {
+        prefetch.data = data;
+        new Image().src = officialArtwork(data.pokemon_id);
+      }
+      return data;
+    })
+    .catch(() => null);
+  prefetch = { matchId: mId, roundNumber: rNum, jsonPromise, data: null };
+}
+
+function clearPrefetch() {
+  prefetch = null;
 }
 
 // ── Luvdisc bar ───────────────────────────────────────────────────────────
@@ -383,9 +409,17 @@ async function loadRound() {
     }
   }
 
-  const res = await fetch(`/battle/round/next?match_id=${matchId}&round_number=${currentRound}`);
-  if (!res.ok) { endMatch(); return; }
-  roundData = await res.json();
+  let data;
+  if (prefetch && prefetch.matchId === matchId && prefetch.roundNumber === currentRound) {
+    data = prefetch.data || await prefetch.jsonPromise;
+  } else {
+    const res = await fetch(`/battle/round/next?match_id=${matchId}&round_number=${currentRound}`);
+    if (!res.ok) { endMatch(); return; }
+    data = await res.json();
+  }
+  clearPrefetch();
+  if (!data) { endMatch(); return; }
+  roundData = data;
   roundOver = false;
 
   document.getElementById("arena-round-num").textContent =
@@ -436,17 +470,22 @@ async function loadRound() {
   showScreen("round-screen");
 
   // Wait for the sprite image to load before starting the countdown
+  const stageEl = document.getElementById("arena-pokemon-stage");
+  stageEl.classList.add("is-loading");
+  spriteEl.classList.add("is-loading");
   let _revealStarted = false;
   function _doStartReveal() {
     if (_revealStarted) return;
     _revealStarted = true;
     spriteEl.onload = null;
+    stageEl.classList.remove("is-loading");
+    spriteEl.classList.remove("is-loading");
     startReveal();
   }
   spriteEl.onload = _doStartReveal;
   spriteEl.src = officialArtwork(roundData.pokemon_id);
   if (spriteEl.complete && spriteEl.naturalWidth > 0) {
-    _doStartReveal(); // already cached
+    _doStartReveal(); // already cached (prefetch hit)
   }
 }
 
@@ -477,7 +516,7 @@ function showLifeLostFlash(reason, callback) {
   setTimeout(() => {
     flashEl.classList.add("hidden");
     if (callback) callback();
-  }, 1300);
+  }, 600);
 }
 
 // ── Remove Luvdisc ────────────────────────────────────────────────────────
@@ -634,6 +673,9 @@ async function submitRound(p1key, p1ms, p2key, p2ms, soloEndReason = null) {
   if (!res.ok) return;
   const result = await res.json();
   lastRoundResult = result;
+  if (MODE !== "vs" || currentRound < totalRounds) {
+    prefetchNextRound(matchId, currentRound + 1);
+  }
 
   const spriteEl = document.getElementById("arena-sprite");
   spriteEl.getAnimations().forEach(a => a.cancel());
@@ -765,6 +807,7 @@ function updateScoreboard() {
 
 // ── End match (VS) ────────────────────────────────────────────────────────
 async function endMatch() {
+  clearPrefetch();
   const res = await fetch("/battle/match/finish", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ match_id: matchId }),
@@ -807,6 +850,7 @@ document.getElementById("rematch-btn").addEventListener("click", () => {
 
 // ── End single player run → analytics ────────────────────────────────────
 async function endSingleRun(reason) {
+  clearPrefetch();
   await fetch("/battle/match/finish", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ match_id: matchId }),

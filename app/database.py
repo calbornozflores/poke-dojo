@@ -139,6 +139,24 @@ def run_migrations():
             pass
 
 
+INDEX_STATEMENTS = [
+    "CREATE INDEX IF NOT EXISTS ix_competitive_matches_player1 ON competitive_matches(player1)",
+    "CREATE INDEX IF NOT EXISTS ix_competitive_matches_mode ON competitive_matches(mode)",
+    "CREATE INDEX IF NOT EXISTS ix_competitive_results_match_id ON competitive_results(match_id)",
+    "CREATE INDEX IF NOT EXISTS ix_competitive_results_pokemon_id ON competitive_results(pokemon_id)",
+    "CREATE INDEX IF NOT EXISTS ix_competitive_results_player1_was_correct ON competitive_results(player1_was_correct)",
+]
+
+
+def ensure_indexes() -> None:
+    """Idempotent index creation. Runs for both SQLite and Postgres, unlike
+    run_migrations() which skips Postgres entirely."""
+    with engine.connect() as conn:
+        for stmt in INDEX_STATEMENTS:
+            conn.execute(text(stmt))
+        conn.commit()
+
+
 def get_db():
     db = SessionLocal()
     try:

@@ -4,11 +4,11 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
+from sqlalchemy import desc
 
 from app.database import get_db
 from app.models import Pokemon, User, CompetitiveMatch, CompetitiveResult
-from app.services import shadow_model, supabase_client
+from app.services import supabase_client, pokemon_cache, match_state
 
 router = APIRouter(prefix="/battle", tags=["battle"])
 
@@ -34,40 +34,22 @@ def _get_or_create_user(username: str, db: Session) -> User:
     return user
 
 
-def _pick_options(correct: Pokemon, db: Session) -> list[dict]:
+def _pick_options(correct: pokemon_cache.PokemonLite) -> tuple[list[str], int]:
     """Return 3 shuffled name options: correct + 2 wrong, preferring same first letter."""
-    first_letter = correct.name[0].upper()
-
-    # Prefer: wrong options starting with the same letter
-    wrong_pool = (
-        db.query(Pokemon)
-        .filter(Pokemon.name.ilike(first_letter + "%"), Pokemon.id != correct.id)
-        .order_by(func.random())
-        .limit(2)
-        .all()
-    )
-    # Fallback: same generation
-    if len(wrong_pool) < 2:
-        wrong_pool = (
-            db.query(Pokemon)
-            .filter(Pokemon.generation == correct.generation, Pokemon.id != correct.id)
-            .order_by(func.random())
-            .limit(2)
-            .all()
-        )
-    # Final fallback: any Pokémon
-    if len(wrong_pool) < 2:
-        wrong_pool = (
-            db.query(Pokemon)
-            .filter(Pokemon.id != correct.id)
-            .order_by(func.random())
-            .limit(2)
-            .all()
-        )
-    names = [correct.name] + [p.name for p in wrong_pool]
+    wrong = pokemon_cache.pick_wrong_options(correct, n=2)
+    names = [correct.name] + [p.name for p in wrong]
     random.shuffle(names)
     correct_pos = names.index(correct.name) + 1  # 1-indexed
     return names, correct_pos
+
+
+def _get_state(match_id: int, db: Session) -> match_state.MatchState:
+    state = match_state.get(match_id)
+    if state is None:
+        state = match_state.rehydrate(match_id, db)
+        if state is None:
+            raise HTTPException(404, "Match not found")
+    return state
 
 
 # ── Match lifecycle ──────────────────────────────────────────────────────────
@@ -106,6 +88,7 @@ def start_match(req: StartMatchRequest, db: Session = Depends(get_db)):
     db.add(match)
     db.commit()
     db.refresh(match)
+    match_state.start(match.id, match.mode, match.player1, db)
     return StartMatchResponse(
         match_id=match.id,
         mode=match.mode,
@@ -130,21 +113,16 @@ class RoundData(BaseModel):
 
 @router.get("/round/next", response_model=RoundData)
 def next_round(match_id: int, round_number: int, db: Session = Depends(get_db)):
-    match = db.get(CompetitiveMatch, match_id)
-    if not match:
-        raise HTTPException(404, "Match not found")
+    state = _get_state(match_id, db)
+    if not pokemon_cache.is_warm():
+        pokemon_cache.warm_cache(db)
 
-    # Avoid re-using Pokémon already seen this match
-    used_ids = {r.pokemon_id for r in match.competitive_results}
-    query = db.query(Pokemon)
-    if used_ids:
-        query = query.filter(~Pokemon.id.in_(used_ids))
-    pokemon = query.order_by(func.random()).first()
+    pokemon = pokemon_cache.pick_unused(state.used_pokemon_ids)
     if not pokemon:
         raise HTTPException(404, "No Pokémon available")
 
-    options, correct_pos = _pick_options(pokemon, db)
-    shadow_level = _compute_shadow_level(round_number) if match.mode == "single" else 1.0
+    options, correct_pos = _pick_options(pokemon)
+    shadow_level = _compute_shadow_level(round_number) if state.mode == "single" else 1.0
     return RoundData(
         match_id=match_id,
         round_number=round_number,
@@ -185,11 +163,11 @@ class RoundResult(BaseModel):
 
 @router.post("/round/submit", response_model=RoundResult)
 def submit_round(req: SubmitRoundRequest, db: Session = Depends(get_db)):
-    match = db.get(CompetitiveMatch, req.match_id)
-    if not match:
-        raise HTTPException(404, "Match not found")
+    state = _get_state(req.match_id, db)
+    if not pokemon_cache.is_warm():
+        pokemon_cache.warm_cache(db)
 
-    pokemon = db.get(Pokemon, req.pokemon_id)
+    pokemon = pokemon_cache.get_by_id(req.pokemon_id)
     if not pokemon:
         raise HTTPException(404, "Pokémon not found")
 
@@ -207,14 +185,14 @@ def submit_round(req: SubmitRoundRequest, db: Session = Depends(get_db)):
     p1_correct, p1_score = calc_score(req.player1_key_pressed, req.player1_response_ms)
     p2_correct, p2_score = calc_score(req.player2_key_pressed, req.player2_response_ms)
 
-    # Shadow prediction (solo only) — train on first round of every 5th match, predict every round
+    # Shadow prediction (solo only) — predicted from this match's cached history
     shadow_predicted = None
     shadow_wins = False
     round_shadow_level = 0.0
-    if match.mode == "single":
+    if state.mode == "single":
         round_shadow_level = _compute_shadow_level(req.round_number)
         if p1_correct and req.player1_response_ms is not None:
-            shadow_predicted = shadow_model.predict(match.player1, req.pokemon_id, round_shadow_level, db)
+            shadow_predicted = match_state.predict(req.match_id, req.pokemon_id)
             if shadow_predicted is not None:
                 shadow_wins = req.player1_response_ms > shadow_predicted
 
@@ -237,11 +215,13 @@ def submit_round(req: SubmitRoundRequest, db: Session = Depends(get_db)):
     db.add(result)
     db.commit()
 
+    match_state.record_round(req.match_id, req.pokemon_id, p1_correct, req.player1_response_ms)
+
     return RoundResult(
         player1_was_correct=p1_correct,
         player1_score=p1_score,
-        player2_was_correct=p2_correct if match.mode == "vs" else None,
-        player2_score=p2_score if match.mode == "vs" else None,
+        player2_was_correct=p2_correct if state.mode == "vs" else None,
+        player2_score=p2_score if state.mode == "vs" else None,
         correct_position=req.correct_option_position,
         pokemon_name=pokemon.name,
         sprite_url=pokemon.sprite_url,
@@ -297,9 +277,14 @@ def finish_match(req: FinishMatchRequest, db: Session = Depends(get_db)):
     match.rounds = len(results)
     db.commit()
 
+    match_state.discard(req.match_id)
+
+    if not pokemon_cache.is_warm():
+        pokemon_cache.warm_cache(db)
+
     round_data = []
     for r in results:
-        p = db.get(Pokemon, r.pokemon_id)
+        p = pokemon_cache.get_by_id(r.pokemon_id)
         round_data.append({
             "round_number": r.round_number,
             "pokemon_id": r.pokemon_id,

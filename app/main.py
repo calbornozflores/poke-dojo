@@ -12,10 +12,10 @@ logger = logging.getLogger(__name__)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.database import engine, run_migrations
+from app.database import engine, run_migrations, ensure_indexes, SessionLocal
 from app.models import Base
 from app.routers import game, scores, challenge, journey, battle_arena, auth, daily_challenge, pokedex
-from app.services import supabase_client
+from app.services import supabase_client, pokemon_cache
 from app.services.data_loader import (
     check_db_ready,
     fetch_all_pokemon_background,
@@ -25,6 +25,7 @@ from app.services.data_loader import (
 
 Base.metadata.create_all(bind=engine)
 run_migrations()
+ensure_indexes()
 
 app = FastAPI(title="poke-dojo")
 
@@ -71,6 +72,12 @@ async def startup() -> None:
     else:
         loader_state["needed"] = True
         asyncio.create_task(fetch_all_pokemon_background())
+
+    db = SessionLocal()
+    try:
+        pokemon_cache.warm_cache(db)
+    finally:
+        db.close()
 
 
 # ── Page routes ───────────────────────────────────────────────────────────────
