@@ -15,15 +15,6 @@ router = APIRouter(prefix="/battle", tags=["battle"])
 REVEAL_DURATION = 10  # seconds for silhouette reveal
 
 
-def _compute_shadow_level(round_number: int) -> float:
-    """0.0 = fully visible, 1.0 = full white silhouette. Ramps from round 31→50."""
-    if round_number <= 30:
-        return 0.0
-    if round_number >= 50:
-        return 1.0
-    return (round_number - 30) / 20.0
-
-
 def _get_or_create_user(username: str, db: Session) -> User:
     user = db.query(User).filter(User.username == username).first()
     if not user:
@@ -88,7 +79,7 @@ def start_match(req: StartMatchRequest, db: Session = Depends(get_db)):
     db.add(match)
     db.commit()
     db.refresh(match)
-    match_state.start(match.id, match.mode, match.player1, db)
+    match_state.start(match.id, match.mode)
     return StartMatchResponse(
         match_id=match.id,
         mode=match.mode,
@@ -108,7 +99,6 @@ class RoundData(BaseModel):
     correct_position: int    # 1/2/3
     generation: int
     reveal_duration: int     # seconds
-    shadow_level: float      # 0.0 = fully visible, 1.0 = full silhouette (solo only)
 
 
 @router.get("/round/next", response_model=RoundData)
@@ -122,7 +112,6 @@ def next_round(match_id: int, round_number: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "No Pokémon available")
 
     options, correct_pos = _pick_options(pokemon)
-    shadow_level = _compute_shadow_level(round_number) if state.mode == "single" else 1.0
     return RoundData(
         match_id=match_id,
         round_number=round_number,
@@ -132,7 +121,6 @@ def next_round(match_id: int, round_number: int, db: Session = Depends(get_db)):
         correct_position=correct_pos,
         generation=pokemon.generation,
         reveal_duration=REVEAL_DURATION,
-        shadow_level=shadow_level,
     )
 
 
@@ -157,8 +145,6 @@ class RoundResult(BaseModel):
     correct_position: int
     pokemon_name: str
     sprite_url: str
-    shadow_predicted_ms: int | None = None
-    shadow_wins_round: bool = False
 
 
 @router.post("/round/submit", response_model=RoundResult)
@@ -185,17 +171,6 @@ def submit_round(req: SubmitRoundRequest, db: Session = Depends(get_db)):
     p1_correct, p1_score = calc_score(req.player1_key_pressed, req.player1_response_ms)
     p2_correct, p2_score = calc_score(req.player2_key_pressed, req.player2_response_ms)
 
-    # Shadow prediction (solo only) — predicted from this match's cached history
-    shadow_predicted = None
-    shadow_wins = False
-    round_shadow_level = 0.0
-    if state.mode == "single":
-        round_shadow_level = _compute_shadow_level(req.round_number)
-        if p1_correct and req.player1_response_ms is not None:
-            shadow_predicted = match_state.predict(req.match_id, req.pokemon_id)
-            if shadow_predicted is not None:
-                shadow_wins = req.player1_response_ms > shadow_predicted
-
     result = CompetitiveResult(
         match_id=req.match_id,
         round_number=req.round_number,
@@ -209,13 +184,11 @@ def submit_round(req: SubmitRoundRequest, db: Session = Depends(get_db)):
         player2_response_ms=req.player2_response_ms,
         player2_was_correct=p2_correct,
         player2_score=p2_score,
-        shadow_predicted_ms=shadow_predicted,
-        shadow_level=round_shadow_level,
     )
     db.add(result)
     db.commit()
 
-    match_state.record_round(req.match_id, req.pokemon_id, p1_correct, req.player1_response_ms)
+    match_state.record_round(req.match_id, req.pokemon_id)
 
     return RoundResult(
         player1_was_correct=p1_correct,
@@ -225,8 +198,6 @@ def submit_round(req: SubmitRoundRequest, db: Session = Depends(get_db)):
         correct_position=req.correct_option_position,
         pokemon_name=pokemon.name,
         sprite_url=pokemon.sprite_url,
-        shadow_predicted_ms=shadow_predicted,
-        shadow_wins_round=shadow_wins,
     )
 
 
@@ -322,9 +293,7 @@ class AnalyticsRound(BaseModel):
     generation: int
     type1: str
     actual_ms: int | None
-    shadow_ms: int | None
     was_correct: bool
-    shadow_won: bool
 
 
 class MatchAnalytics(BaseModel):
@@ -351,12 +320,6 @@ def match_analytics(match_id: int, db: Session = Depends(get_db)):
         poke = db.get(Pokemon, r.pokemon_id)
         if not poke:
             continue
-        shadow_won = (
-            r.player1_response_ms is not None
-            and r.shadow_predicted_ms is not None
-            and r.player1_was_correct
-            and r.player1_response_ms > r.shadow_predicted_ms
-        )
         rounds_data.append(AnalyticsRound(
             round_number=r.round_number,
             pokemon_id=poke.id,
@@ -364,9 +327,7 @@ def match_analytics(match_id: int, db: Session = Depends(get_db)):
             generation=poke.generation,
             type1=poke.type1,
             actual_ms=r.player1_response_ms,
-            shadow_ms=r.shadow_predicted_ms,
             was_correct=r.player1_was_correct,
-            shadow_won=shadow_won,
         ))
 
     # Slowest categories across ALL of this player's solo history
@@ -511,7 +472,6 @@ class GlobalLeaderEntry(BaseModel):
     username: str
     score: int
     rounds: int
-    shadow_won_rounds: int
 
 
 @router.post("/submit-global-score")
@@ -535,12 +495,6 @@ def submit_global_score(req: GlobalScoreRequest, db: Session = Depends(get_db)):
     )
     total_score = sum(r.player1_score for r in results)
     rounds_played = len(results)
-    shadow_won_rounds = sum(
-        1 for r in results
-        if r.shadow_predicted_ms and r.player1_response_ms
-        and r.player1_was_correct
-        and r.player1_response_ms > r.shadow_predicted_ms
-    )
 
     client = supabase_client.get_admin_client()
     row = client.table("players").select("id, username").eq("google_id", user["id"]).execute()
@@ -564,7 +518,6 @@ def submit_global_score(req: GlobalScoreRequest, db: Session = Depends(get_db)):
             "username": username,
             "score": total_score,
             "rounds": rounds_played,
-            "shadow_won_rounds": shadow_won_rounds,
         }, on_conflict="player_id").execute()
 
     return {"ok": True, "score": total_score, "is_best": total_score > current_best, "username": username}
@@ -579,7 +532,7 @@ def global_leaderboard():
     client = supabase_client.get_admin_client()
     result = (
         client.table("solo_runs")
-        .select("username, score, rounds, shadow_won_rounds")
+        .select("username, score, rounds")
         .order("score", desc=True)
         .limit(50)
         .execute()

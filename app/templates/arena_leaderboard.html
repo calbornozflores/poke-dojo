@@ -35,7 +35,6 @@
           {% if supabase_configured %}
           <th>Best Score</th>
           <th>Rounds</th>
-          <th>Shadow Wins</th>
           {% else %}
           <th>Best Run Score</th>
           <th>Longest Streak</th>
@@ -164,7 +163,6 @@
           <td><strong>${escapeHtml(e.username)}</strong></td>
           <td class="best">${e.score} pts</td>
           <td>${e.rounds}</td>
-          <td>${e.shadow_won_rounds}</td>
         </tr>`).join("");
       document.getElementById("solo-table").classList.remove("hidden");
     } catch {

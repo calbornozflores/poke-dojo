@@ -13,15 +13,6 @@
     </div>
   </div>
 
-  <!-- ── SHADOW ACTIVATION BANNER ─────────────────────────────────────── -->
-  <div id="shadow-banner" class="shadow-banner hidden">
-    <div class="shadow-banner-inner">
-      <div class="shadow-banner-icon">👤</div>
-      <div class="shadow-banner-text">Your Shadow wakes up…</div>
-      <div class="shadow-banner-sub">It's been watching. Now it strikes.</div>
-    </div>
-  </div>
-
   <!-- ── PRE-MATCH SETUP ───────────────────────────────────────────────── -->
   <div id="setup-screen" class="arena-screen">
     <div class="arena-setup-card">
@@ -57,7 +48,7 @@
 
       <div id="setup-single" class="hidden">
         <h1 class="arena-title"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png" class="arena-title-sprite" alt=""> Solo Challenge</h1>
-        <p class="arena-subtitle">Endless rounds — 3 lives (Luvdisc hearts). Wrong answer, timeout, or being slower than your Shadow removes one. Survive as long as you can.</p>
+        <p class="arena-subtitle">Endless rounds — 3 lives (Luvdisc hearts). A wrong answer or timeout removes one. Survive as long as you can.</p>
         <div class="arena-player-block" style="margin:0 auto;max-width:300px">
           <div class="arena-player-label">Your Name</div>
           <input id="solo-name" class="arena-name-input" placeholder="Enter trainer name…" maxlength="20" />
@@ -85,7 +76,7 @@
         </div>
         <div class="mobile-solo-rules" style="background:rgba(108,99,255,0.08);border:1px solid var(--border);border-radius:10px;padding:1rem;margin:1rem 0;font-size:0.85rem;color:var(--text-muted);line-height:1.6;">
           <strong style="color:var(--text);display:block;margin-bottom:0.5rem;">How to play on mobile</strong>
-          A Pokémon silhouette appears — tap the correct name from the 3 options before the timer runs out. A wrong answer, timeout, or being beaten by your Shadow costs a Luvdisc life. Survive as long as you can.
+          A Pokémon silhouette appears — tap the correct name from the 3 options before the timer runs out. A wrong answer or timeout costs a Luvdisc life. Survive as long as you can.
         </div>
       </div>
 
@@ -166,10 +157,6 @@
             <div class="analytics-stat-val" id="sg-score-val">0</div>
             <div class="analytics-stat-label">Score</div>
           </div>
-          <div class="analytics-stat">
-            <div class="analytics-stat-val" id="sg-shadow-stat">—</div>
-            <div class="analytics-stat-label">Shadow</div>
-          </div>
         </div>
       </div>
 
@@ -177,8 +164,6 @@
         <div class="analytics-section-title">
           Response time per round
           <span class="legend-item"><span class="legend-dot" style="background:#a78bfa"></span> You</span>
-          <span class="legend-item"><span class="legend-dot legend-dot-dash" style="background:#fb923c"></span> Shadow</span>
-          <span class="legend-item"><span class="legend-dot" style="background:#f87171"></span> Shadow won</span>
         </div>
         <div class="analytics-chart-wrap">
           <svg id="analytics-svg" viewBox="0 0 760 180" preserveAspectRatio="xMidYMid meet" class="analytics-svg"></svg>
@@ -235,8 +220,6 @@ let soloRound = 0;
 let soloTimerDuration = 10;
 
 let luvdiscLives = 3;
-let shadowActive = false;
-let shadowCatches = 0;
 let lastRoundResult = null;
 let prefetch = null; // { matchId, roundNumber, jsonPromise, data }
 
@@ -347,8 +330,6 @@ document.getElementById("start-match-btn").addEventListener("click", async () =>
   currentRound = soloRound = 0;
   soloTimerDuration = 10;
   luvdiscLives = 3;
-  shadowActive = false;
-  shadowCatches = 0;
   lastRoundResult = null;
   clearPrefetch();
 
@@ -402,11 +383,6 @@ async function loadRound() {
   if (MODE === "single") {
     soloRound = currentRound;
     updateSoloTimer();
-
-    if (currentRound === 20 && !shadowActive) {
-      shadowActive = true;
-      await showShadowBanner();
-    }
   }
 
   let data;
@@ -432,13 +408,8 @@ async function loadRound() {
   spriteEl.className = "arena-sprite";
   if (MODE === "vs") {
     spriteEl.classList.add("silhouette");
-    spriteEl.style.filter = "";
-  } else {
-    const sl = roundData.shadow_level ?? 0;
-    spriteEl.style.filter = sl > 0
-      ? `brightness(${(1 - sl).toFixed(3)}) invert(${sl.toFixed(3)})`
-      : "";
   }
+  spriteEl.style.filter = "";
 
   const optionsEl = document.getElementById("arena-options");
   optionsEl.innerHTML = "";
@@ -463,8 +434,7 @@ async function loadRound() {
   if (MODE === "vs") {
     infoEl.textContent = "P1: Q/W/E  •  P2: I/O/P";
   } else {
-    const shadowHint = shadowActive ? "  •  👤 Shadow watching" : "";
-    infoEl.textContent = `Timer: ${soloTimerDuration}s  •  Press your key to answer${shadowHint}`;
+    infoEl.textContent = `Timer: ${soloTimerDuration}s  •  Press your key to answer`;
   }
 
   showScreen("round-screen");
@@ -489,23 +459,11 @@ async function loadRound() {
   }
 }
 
-// ── Shadow banner ─────────────────────────────────────────────────────────
-function showShadowBanner() {
-  return new Promise(resolve => {
-    const banner = document.getElementById("shadow-banner");
-    banner.classList.remove("hidden");
-    setTimeout(() => {
-      banner.classList.add("hidden");
-      resolve();
-    }, 2600);
-  });
-}
-
 // ── Life-lost flash ───────────────────────────────────────────────────────
 function showLifeLostFlash(reason, callback) {
   const flashEl = document.getElementById("life-lost-flash");
   document.getElementById("flash-reason").textContent = reason;
-  document.getElementById("flash-icon").textContent = reason.startsWith("Shadow") ? "👤" : "💔";
+  document.getElementById("flash-icon").textContent = "💔";
 
   const row = document.getElementById("flash-luvdisc-row");
   row.innerHTML = Array.from({ length: 3 }, (_, i) =>
@@ -556,23 +514,8 @@ function startReveal() {
     spriteEl.style.animationDuration = `${dur}s`;
     spriteEl.style.animationTimingFunction = "linear";
     spriteEl.style.animationFillMode = "forwards";
-  } else {
-    // Solo mode: WAAPI reveal from current shadow level to fully visible
-    const sl = roundData.shadow_level ?? 0;
-    if (sl > 0 && sl < 1.0) {
-      // Partial silhouette (rounds 31–49): animate to fully visible
-      spriteEl.getAnimations().forEach(a => a.cancel());
-      spriteEl.animate(
-        [
-          { filter: `brightness(${(1 - sl).toFixed(3)}) invert(${sl.toFixed(3)})` },
-          { filter: "none" },
-        ],
-        { duration: dur * 1000, easing: "linear", fill: "forwards" }
-      );
-    }
-    // sl === 0: fully visible, no animation needed
-    // sl >= 1.0: full silhouette stays white until player answers
   }
+  // Solo mode: Pokémon is always fully visible, nothing to animate.
 
   clearTimeout(revealTimer);
   revealTimer = setTimeout(() => {
@@ -699,12 +642,6 @@ async function submitRound(p1key, p1ms, p2key, p2ms, soloEndReason = null) {
     removeLuvdisc("Wrong answer!");
     return;
   }
-  // Correct answer — check Shadow
-  if (shadowActive && result.shadow_wins_round) {
-    shadowCatches++;
-    removeLuvdisc("Shadow caught you!");
-    return;
-  }
   // All good
   showRoundResult(result);
 }
@@ -723,15 +660,9 @@ function showRoundResult(result) {
   } else {
     const ms = result.player1_response_ms;
     const timeStr = ms ? `${(ms/1000).toFixed(2)}s` : "—";
-    let extra = "";
-    if (result.shadow_predicted_ms && result.player1_was_correct && shadowActive) {
-      const sIcon = result.shadow_wins_round ? "👤 Shadow beat you" : "✓ Faster than Shadow";
-      const sColor = result.shadow_wins_round ? "#fb923c" : "#22c55e";
-      extra = `<div class="rr-shadow-line" style="color:${sColor}">${sIcon} · predicted ${(result.shadow_predicted_ms/1000).toFixed(2)}s</div>`;
-    }
     barsEl.innerHTML = `<div class="rr-solo-result ${result.player1_was_correct ? 'correct' : 'wrong'}">
       ${result.player1_was_correct ? "✓ Correct" : "✗ Wrong"} · ${result.player1_score} pts · ${timeStr}
-    </div>${extra}`;
+    </div>`;
   }
 
   const nextBtn = document.getElementById("next-round-btn");
@@ -872,19 +803,14 @@ async function endSingleRun(reason) {
   {% endif %}
 
   const emojiEl = document.getElementById("analytics-emoji");
-  if (shadowCatches >= 3) {
-    emojiEl.innerHTML = "👤";
-  } else if (soloRound >= 10) {
+  if (soloRound >= 10) {
     emojiEl.innerHTML = `<img src="${officialArtwork(289)}" class="analytics-slaking" alt="Slaking">`;
   } else {
     emojiEl.innerHTML = `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/92.png" class="analytics-slaking" alt="Gastly">`;
   }
-  document.getElementById("analytics-run-title").textContent =
-    shadowCatches >= 3 ? "Caught by Your Shadow" : reason;
+  document.getElementById("analytics-run-title").textContent = reason;
   document.getElementById("sg-rounds").textContent = soloRound;
   document.getElementById("sg-score-val").textContent = soloScore + " pts";
-  document.getElementById("sg-shadow-stat").textContent =
-    shadowActive ? `${shadowCatches}/3 caught` : "Not active";
 
   showScreen("single-gameover-screen");
 
@@ -913,8 +839,7 @@ function renderAnalytics(data) {
 }
 
 function renderAnalyticsChart(rounds) {
-  const hasShadow = rounds.some(r => r.shadow_ms !== null);
-  const allMs = rounds.flatMap(r => [r.actual_ms, r.shadow_ms]).filter(v => v !== null && v > 0);
+  const allMs = rounds.map(r => r.actual_ms).filter(v => v !== null && v > 0);
   if (!allMs.length) return;
   const maxMs = Math.max(...allMs);
   if (maxMs === 0) return;
@@ -941,10 +866,7 @@ function renderAnalyticsChart(rounds) {
   }
 
   const playerPts = rounds.map((r, i) => r.actual_ms ? [toX(i), toY(r.actual_ms)] : null).filter(Boolean);
-  const shadowPts = hasShadow ? rounds.map((r, i) => r.shadow_ms ? [toX(i), toY(r.shadow_ms)] : null).filter(Boolean) : [];
-
   const playerPath = buildPath(playerPts);
-  const shadowPath = buildPath(shadowPts);
 
   const svg = document.getElementById("analytics-svg");
 
@@ -956,13 +878,8 @@ function renderAnalyticsChart(rounds) {
             <line x1="${PAD_L}" y1="${y}" x2="${W - PAD_R}" y2="${y}" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>`;
   }).join("");
 
-  const shadowLine = shadowPath
-    ? `<path d="${shadowPath}" fill="none" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.75"/>`
-    : "";
-
   svg.innerHTML = `
     ${yLabels}
-    ${shadowLine}
     <path d="${playerPath}" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   `;
 
@@ -970,25 +887,12 @@ function renderAnalyticsChart(rounds) {
   rounds.forEach((r, i) => {
     if (!r.actual_ms) return;
     const x = toX(i), y = toY(r.actual_ms);
-    const fill = r.shadow_won ? "#f87171" : "#a78bfa";
-    const dotR = r.shadow_won ? 6 : 4;
     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     circle.setAttribute("cx", x); circle.setAttribute("cy", y);
-    circle.setAttribute("r", dotR); circle.setAttribute("fill", fill);
+    circle.setAttribute("r", 4); circle.setAttribute("fill", "#a78bfa");
     circle.setAttribute("stroke", "#0f0f1a"); circle.setAttribute("stroke-width", "2");
 
     svg.appendChild(circle);
-  });
-
-  // Shadow dots — rendered after player dots so they sit on top
-  rounds.forEach((r, i) => {
-    if (!r.shadow_ms) return;
-    const sx = toX(i), sy = toY(r.shadow_ms);
-    const sc = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    sc.setAttribute("cx", sx); sc.setAttribute("cy", sy);
-    sc.setAttribute("r", 3); sc.setAttribute("fill", "#fb923c");
-    sc.setAttribute("stroke", "#0f0f1a"); sc.setAttribute("stroke-width", "1.5");
-    svg.appendChild(sc);
   });
 
   document.getElementById("analytics-chart-section").classList.remove("hidden");
@@ -1027,7 +931,7 @@ function renderAnalyticsCats(byGen, byType) {
 // ── Solo timer progression ────────────────────────────────────────────────
 function updateSoloTimer() {
   const reduction = Math.floor(soloRound / 10);
-  soloTimerDuration = Math.max(5, 10 - reduction);
+  soloTimerDuration = Math.max(1, 10 - reduction);
 }
 
 // ── Solo: any key advances from round-result screen ───────────────────────

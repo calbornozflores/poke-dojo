@@ -40,7 +40,6 @@ app/
     data_loader.py   Background PokeAPI fetch with progress
     string_match.py  rapidfuzz accuracy for Name It
     pokemon_data.py  Random / Professor Oak Pokémon selection
-    shadow_model.py  Per-user Shadow model for Solo Challenge
     xgboost_model.py Per-user XGBoost + SHAP category analysis
   templates/         Jinja2 HTML (base, index, game, scores, profile,
                        trainer_journey, battle_arena, arena_leaderboard, loading)
@@ -63,7 +62,7 @@ static/
 
 ### Battle Arena
 - **VS Mode**: 2 players, same keyboard. Silhouette reveals over 10s. P1 = Q/W/E, P2 = I/O/P.
-- **Solo Challenge**: endless rounds, 3 Luvdisc lives, custom key bindings, tightening timer. Your Shadow (trained on your response times) competes against you.
+- **Solo Challenge**: endless rounds, 3 Luvdisc lives, custom key bindings, tightening timer down to a 1s floor.
 
 ## Key design decisions
 
@@ -72,7 +71,6 @@ static/
 - **EVO score**: exponential moving average of final scores, tracked across all games and charted on Trainer Journey.
 - **SHAP bars in Profile**: AI bars sort categories hardest-first (positive SHAP = hard, negative = easy). Falls back to accuracy sort when model not yet trained.
 - **Same-letter options in Arena**: wrong-answer options prefer the same first letter as the correct Pokémon (SQLAlchemy `ilike` query).
-- **Shadow model**: per-user rolling average of response times per Pokémon ID, stored in `data/shadow_model_{username}.json`.
 - **Data**: fetched from PokeAPI once, cached in SQLite. Sprites served via PokeAPI CDN — no local download.
 - **Accuracy formulas**:
   - Name It: `rapidfuzz.fuzz.ratio(guess, answer)` → 0–100
