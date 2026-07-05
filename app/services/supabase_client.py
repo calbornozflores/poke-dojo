@@ -8,6 +8,10 @@ _player_cache: dict[str, tuple] = {}  # google_id -> (username, expiry)
 _TOKEN_TTL = 300    # 5 min (Supabase tokens valid 1h, refreshed by SDK)
 _PLAYER_TTL = 3600  # 1 hr (usernames don't change)
 
+# Hidden domain used for native-signup accounts that skip providing a real email.
+# Never sent to the browser — only ever compared against server-side.
+PLACEHOLDER_EMAIL_DOMAIN = "users.pokedojo.internal"
+
 
 def is_global_mode() -> bool:
     """Returns True when running against Supabase PostgreSQL (DATABASE_URL set)."""
@@ -77,6 +81,12 @@ def get_admin_client():
     """Service-role client — bypasses RLS. Used only server-side, never sent to browser."""
     from supabase import create_client
     return create_client(_url(), _service_key())
+
+
+def get_anon_client():
+    """Anon-key client — used server-side for password sign-in (never sees the service key)."""
+    from supabase import create_client
+    return create_client(_url(), _anon_key())
 
 
 def verify_token(access_token: str) -> Optional[dict]:

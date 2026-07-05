@@ -120,6 +120,11 @@ async def trainer_journey(request: Request):
     return templates.TemplateResponse(request=request, name="trainer_journey.html")
 
 
+@app.get("/account")
+async def account_page(request: Request):
+    return templates.TemplateResponse(request=request, name="account.html")
+
+
 @app.get("/battle-arena")
 async def battle_arena_page(request: Request):
     return templates.TemplateResponse(request=request, name="battle_arena.html")
@@ -158,6 +163,16 @@ async def auth_callback_page(request: Request):
 @app.get("/auth/claim")
 async def auth_claim_page(request: Request):
     return templates.TemplateResponse(request=request, name="auth_claim.html")
+
+
+@app.get("/auth/signup")
+async def auth_signup_page(request: Request):
+    return templates.TemplateResponse(request=request, name="auth_native.html", context={"initial_tab": "signup"})
+
+
+@app.get("/auth/login")
+async def auth_login_page(request: Request):
+    return templates.TemplateResponse(request=request, name="auth_native.html", context={"initial_tab": "login"})
 
 
 # ── API ───────────────────────────────────────────────────────────────────────

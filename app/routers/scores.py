@@ -76,6 +76,15 @@ def leaderboard(
     return LeaderboardResponse(scores=scores)
 
 
+def get_user_rank(db: Session, username: str, total_xp: float) -> tuple[Optional[int], int]:
+    """Global XP rank for an arbitrary user (uncapped, unlike /trainers' top-100)."""
+    ranked_total = db.query(func.count(User.id)).filter(User.total_xp > 0).scalar() or 0
+    if total_xp <= 0:
+        return None, ranked_total
+    higher = db.query(func.count(User.id)).filter(User.total_xp > total_xp).scalar() or 0
+    return higher + 1, ranked_total
+
+
 @router.get("/trainers")
 def trainers_leaderboard(db: Session = Depends(get_db)):
     rows = (

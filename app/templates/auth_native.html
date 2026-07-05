@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Sign Up / Log In — Poke Dojo{% endblock %}
+
+{% block content %}
+<div class="hero">
+  <div class="hero-card">
+    <h1>Poke Dojo Account</h1>
+
+    <div class="hero-actions" style="margin-bottom:1.25rem">
+      <button id="tab-signup-btn" class="btn btn-primary">Sign Up</button>
+      <button id="tab-login-btn" class="btn btn-ghost">Log In</button>
+    </div>
+
+    <div id="signup-panel">
+      <div class="username-form">
+        <label for="signup-username">Trainer name</label>
+        <div class="input-row"><input type="text" id="signup-username" placeholder="e.g. AshKetchum97" maxlength="20" autocomplete="username" /></div>
+
+        <label for="signup-password" style="margin-top:0.75rem">Password</label>
+        <div class="input-row"><input type="password" id="signup-password" placeholder="At least 8 characters" autocomplete="new-password" /></div>
+
+        <label for="signup-confirm" style="margin-top:0.75rem">Confirm password</label>
+        <div class="input-row"><input type="password" id="signup-confirm" placeholder="Repeat your password" autocomplete="new-password" /></div>
+
+        <label for="signup-email" style="margin-top:0.75rem">Email (optional)</label>
+        <div class="input-row"><input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email" /></div>
+
+        <div id="no-email-warning" class="privacy-notice hidden">
+          ⚠️ You haven't added an email. Without one, there is no way to recover your password
+          if you forget it — this cannot be undone later. You can still add an email afterward
+          from your Account page, but only <em>before</em> you forget your password will that help.
+          <label style="display:block;margin-top:0.5rem;font-weight:600;">
+            <input type="checkbox" id="no-email-ack" /> I understand I won't be able to recover my password without an email.
+          </label>
+        </div>
+
+        <button id="signup-btn" class="btn btn-primary" style="margin-top:1rem">Create Account</button>
+        <p class="hint" id="signup-hint">3–20 characters · letters, numbers, hyphens, underscores · no real names, emails, or phone numbers</p>
+      </div>
+    </div>
+
+    <div id="login-panel" class="hidden">
+      <div class="username-form">
+        <label for="login-username">Trainer name</label>
+        <div class="input-row"><input type="text" id="login-username" placeholder="Your trainer name" autocomplete="username" /></div>
+
+        <label for="login-password" style="margin-top:0.75rem">Password</label>
+        <div class="input-row"><input type="password" id="login-password" placeholder="Your password" autocomplete="current-password" /></div>
+
+        <button id="login-btn" class="btn btn-primary" style="margin-top:1rem">Log In</button>
+        <p class="hint" id="login-hint"></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if supabase_configured %}
+<script>
+const params = new URLSearchParams(location.search);
+const nextUrl = params.get("next") || "/";
+const initialTab = "{{ initial_tab }}";
+
+const signupPanel = document.getElementById("signup-panel");
+const loginPanel = document.getElementById("login-panel");
+const tabSignupBtn = document.getElementById("tab-signup-btn");
+const tabLoginBtn = document.getElementById("tab-login-btn");
+
+function showTab(tab) {
+  const isSignup = tab === "signup";
+  signupPanel.classList.toggle("hidden", !isSignup);
+  loginPanel.classList.toggle("hidden", isSignup);
+  tabSignupBtn.className = isSignup ? "btn btn-primary" : "btn btn-ghost";
+  tabLoginBtn.className = isSignup ? "btn btn-ghost" : "btn btn-primary";
+}
+tabSignupBtn.addEventListener("click", () => showTab("signup"));
+tabLoginBtn.addEventListener("click", () => showTab("login"));
+showTab(initialTab === "login" ? "login" : "signup");
+
+async function adoptSession(access_token, refresh_token, username) {
+  await _supabaseClient.auth.setSession({ access_token, refresh_token });
+  localStorage.setItem("poke_username", username);
+  window.location.href = nextUrl;
+}
+
+// ── Sign Up ──────────────────────────────────────────────────────────────
+const emailInput = document.getElementById("signup-email");
+const noEmailWarning = document.getElementById("no-email-warning");
+const noEmailAck = document.getElementById("no-email-ack");
+const signupBtn = document.getElementById("signup-btn");
+const signupHint = document.getElementById("signup-hint");
+
+emailInput.addEventListener("input", () => {
+  noEmailWarning.classList.toggle("hidden", emailInput.value.trim().length > 0);
+});
+
+signupBtn.addEventListener("click", async () => {
+  const username = document.getElementById("signup-username").value.trim();
+  const password = document.getElementById("signup-password").value;
+  const confirm = document.getElementById("signup-confirm").value;
+  const email = emailInput.value.trim();
+
+  if (!username) { signupHint.textContent = "Please enter a trainer name."; signupHint.className = "hint error"; return; }
+  if (password.length < 8) { signupHint.textContent = "Password must be at least 8 characters."; signupHint.className = "hint error"; return; }
+  if (password !== confirm) { signupHint.textContent = "Passwords don't match."; signupHint.className = "hint error"; return; }
+  if (!email && !noEmailAck.checked) {
+    noEmailWarning.classList.remove("hidden");
+    signupHint.textContent = "Please confirm you understand the password-recovery warning above.";
+    signupHint.className = "hint error";
+    return;
+  }
+
+  signupBtn.disabled = true;
+  signupBtn.textContent = "Creating…";
+
+  try {
+    const resp = await fetch("/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password, email: email || null }),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      signupHint.textContent = data.detail ?? "Could not create account.";
+      signupHint.className = "hint error";
+      signupBtn.disabled = false;
+      signupBtn.textContent = "Create Account";
+      return;
+    }
+
+    if (data.access_token) {
+      await adoptSession(data.access_token, data.refresh_token, data.username);
+    } else if (data.email_confirmation_pending) {
+      signupHint.textContent = "Account created! Check your email to confirm it, then log in.";
+      signupHint.className = "hint";
+      signupBtn.disabled = false;
+      signupBtn.textContent = "Create Account";
+      showTab("login");
+    }
+  } catch (_) {
+    signupHint.textContent = "Something went wrong. Please try again.";
+    signupHint.className = "hint error";
+    signupBtn.disabled = false;
+    signupBtn.textContent = "Create Account";
+  }
+});
+
+// ── Log In ───────────────────────────────────────────────────────────────
+const loginBtn = document.getElementById("login-btn");
+const loginHint = document.getElementById("login-hint");
+
+loginBtn.addEventListener("click", async () => {
+  const username = document.getElementById("login-username").value.trim();
+  const password = document.getElementById("login-password").value;
+  if (!username || !password) {
+    loginHint.textContent = "Please enter your trainer name and password.";
+    loginHint.className = "hint error";
+    return;
+  }
+
+  loginBtn.disabled = true;
+  loginBtn.textContent = "Logging in…";
+
+  try {
+    const resp = await fetch("/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      loginHint.textContent = data.detail ?? "Invalid username or password.";
+      loginHint.className = "hint error";
+      loginBtn.disabled = false;
+      loginBtn.textContent = "Log In";
+      return;
+    }
+
+    await adoptSession(data.access_token, data.refresh_token, data.username);
+  } catch (_) {
+    loginHint.textContent = "Something went wrong. Please try again.";
+    loginHint.className = "hint error";
+    loginBtn.disabled = false;
+    loginBtn.textContent = "Log In";
+  }
+});
+</script>
+{% else %}
+<script>window.location.href = "/";</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}My Account — Poke Dojo{% endblock %}
+
+{% block content %}
+<div class="journey-page">
+  <div class="journey-header">
+    <h1>My Account</h1>
+    <p class="journey-subtitle">Private to you — this page is never visible to other players.</p>
+  </div>
+
+  <div id="account-loading" class="journey-loading">
+    <div class="profile-spinner"></div>
+    <p>Loading your account…</p>
+  </div>
+
+  <div id="account-content" class="hidden">
+    <div class="hero-card" style="margin-bottom:1.5rem">
+      <div class="trainer-level-label">Trainer Name</div>
+      <div class="trainer-level-number" id="account-username" style="font-size:1.5rem"></div>
+    </div>
+
+    <div id="trainer-level-section" class="trainer-level-section">
+      <div class="trainer-level-label">Trainer Level</div>
+      <div class="trainer-level-number" id="account-level">Lv. 1</div>
+      <div class="xp-bar-track">
+        <div class="xp-bar-fill" id="account-xp-fill"></div>
+      </div>
+      <div class="xp-bar-label" id="account-xp-label">0 / — XP</div>
+    </div>
+
+    <div class="hero-card" style="margin-bottom:1.5rem">
+      <div class="trainer-level-label">Global Ranking</div>
+      <div class="trainer-level-number" id="account-rank" style="font-size:1.5rem"></div>
+    </div>
+
+    <div class="hero-card">
+      <div class="trainer-level-label">Email</div>
+      <div id="account-email-locked" class="hint hidden" style="margin-top:0.5rem"></div>
+
+      <div id="account-email-editable" class="hidden">
+        <p class="hint" id="account-email-current" style="margin-top:0.5rem"></p>
+        <label for="account-email-input" style="margin-top:0.75rem;display:block">
+          <span id="account-email-form-label"></span>
+        </label>
+        <div class="input-row">
+          <input type="email" id="account-email-input" placeholder="you@example.com" autocomplete="email" />
+          <button id="account-email-btn" class="btn btn-primary">Save</button>
+        </div>
+        <p class="hint" id="account-email-hint"></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if supabase_configured %}
+<script>
+(async () => {
+  const { data: { session } } = await _supabaseClient.auth.getSession();
+  if (!session) {
+    window.location.href = "/auth/login?next=/account";
+    return;
+  }
+
+  let data;
+  try {
+    const resp = await fetch("/auth/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ access_token: session.access_token }),
+    });
+    if (resp.status === 404) { window.location.href = "/auth/claim"; return; }
+    if (!resp.ok) { window.location.href = "/"; return; }
+    data = await resp.json();
+  } catch (_) {
+    window.location.href = "/";
+    return;
+  }
+
+  document.getElementById("account-loading").classList.add("hidden");
+  document.getElementById("account-content").classList.remove("hidden");
+
+  document.getElementById("account-username").textContent = data.username;
+  document.getElementById("account-level").textContent = `Lv. ${data.player_level}`;
+  const pct = data.xp_needed > 0 ? Math.min(100, (data.xp_current / data.xp_needed) * 100) : 0;
+  document.getElementById("account-xp-fill").style.width = pct.toFixed(1) + "%";
+  document.getElementById("account-xp-label").textContent =
+    `${data.xp_current.toFixed(1)} / ${data.xp_needed.toFixed(1)} XP`;
+
+  const rankEl = document.getElementById("account-rank");
+  rankEl.textContent = data.rank
+    ? `#${data.rank} of ${data.ranked_total} trainers`
+    : "Not ranked yet — play a few games to earn XP";
+
+  const lockedEl = document.getElementById("account-email-locked");
+  const editableEl = document.getElementById("account-email-editable");
+
+  if (!data.is_native) {
+    lockedEl.textContent = "Your email is managed by Google and can't be changed here. To update it, change it in your Google Account settings.";
+    lockedEl.classList.remove("hidden");
+  } else {
+    editableEl.classList.remove("hidden");
+    const currentEl = document.getElementById("account-email-current");
+    const labelEl = document.getElementById("account-email-form-label");
+    const emailInput = document.getElementById("account-email-input");
+
+    if (data.has_real_email) {
+      currentEl.textContent = `Current email: ${data.email}`;
+      labelEl.textContent = "Change email";
+    } else {
+      currentEl.textContent = "No email on file — add one so you can recover your password if you ever forget it.";
+      labelEl.textContent = "Add an email";
+    }
+    emailInput.value = data.has_real_email ? data.email : "";
+
+    document.getElementById("account-email-btn").addEventListener("click", async () => {
+      const newEmail = emailInput.value.trim();
+      const hintEl = document.getElementById("account-email-hint");
+      if (!newEmail) { hintEl.textContent = "Please enter an email."; hintEl.className = "hint error"; return; }
+
+      try {
+        const { error } = await _supabaseClient.auth.updateUser({ email: newEmail });
+        if (error) {
+          hintEl.textContent = error.message || "Could not update email.";
+          hintEl.className = "hint error";
+          return;
+        }
+        hintEl.textContent = `Confirmation email sent to ${newEmail}. Your email won't update until you click the link in that message.`;
+        hintEl.className = "hint";
+      } catch (_) {
+        hintEl.textContent = "Something went wrong. Please try again.";
+        hintEl.className = "hint error";
+      }
+    });
+  }
+})();
+</script>
+{% else %}
+<script>window.location.href = "/";</script>
+{% endif %}
+{% endblock %}

@@ -84,6 +84,32 @@
 <script>
   const username = localStorage.getItem("poke_username");
 
+  // Resolves to the Supabase-VERIFIED username (or null) — used to gate the
+  // profile link, since a guest's localStorage name can coincidentally match
+  // a real player's name without actually being an authenticated account.
+  let authedUsername = null;
+  const authedUsernameReady = (async () => {
+    {% if supabase_configured %}
+    try {
+      const { data: { session } } = await _supabaseClient.auth.getSession();
+      if (!session) return;
+      const resp = await fetch("/auth/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: session.access_token }),
+      });
+      if (!resp.ok) return;
+      const info = await resp.json();
+      if (info.authenticated && info.username) authedUsername = info.username;
+    } catch (_) {}
+    {% endif %}
+  })();
+
+  function nameCell(name) {
+    const own = authedUsername && name === authedUsername;
+    return own ? `<a href="/account">${escapeHtml(name)}</a>` : escapeHtml(name);
+  }
+
   function escapeHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
                     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -106,7 +132,7 @@
       return `
       <tr class="${rankCls} ${hlCls}">
         <td>${i + 1}</td>
-        <td><strong>${escapeHtml(s.username)}</strong></td>
+        <td><strong>${nameCell(s.username)}</strong></td>
         <td>${s.total_games}</td>
         <td class="acc-cell">${fmtScore(s.avg_score)}</td>
         <td class="best">${fmtScore(s.best_score)}</td>
@@ -119,6 +145,7 @@
   async function loadTab(gameType, prefix) {
     const res = await fetch(gameType ? `/scores/leaderboard?game_type=${gameType}` : "/scores/leaderboard");
     const data = await res.json();
+    await authedUsernameReady;
     renderRows(`${prefix}-body`, `${prefix}-table`, `${prefix}-loading`, `${prefix}-empty`, data.scores);
   }
 
@@ -231,6 +258,7 @@
     try {
       const res = await fetch("/scores/trainers");
       const data = await res.json();
+      await authedUsernameReady;
       document.getElementById("trainers-loading").classList.add("hidden");
       const trainers = data.trainers || [];
       if (!trainers.length) {
@@ -244,7 +272,7 @@
         return `
         <tr class="${rankCls} ${hlCls}">
           <td>${t.rank}</td>
-          <td><strong>${escapeHtml(t.username)}</strong></td>
+          <td><strong>${nameCell(t.username)}</strong></td>
           <td>Lv. ${t.player_level}</td>
           <td>${t.total_xp.toFixed(1)} XP</td>
         </tr>`;

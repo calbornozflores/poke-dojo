@@ -30,7 +30,7 @@
           <a href="/arena-leaderboard">Arena</a>
         </div>
       </div>
-      <a href="/profile" id="nav-profile">My Profile</a>
+      <a href="/profile" id="nav-profile">Stats</a>
       <a href="/journey" id="nav-journey">Trainer Journey</a>
       <div class="nav-dropdown" id="nav-help-wrap">
         <button class="nav-dropdown-trigger" id="nav-help-btn">Help ▾</button>
@@ -52,7 +52,7 @@
         <a href="/leaderboard" class="mobile-nav-sublink">Dojo</a>
         <a href="/arena-leaderboard" class="mobile-nav-sublink">Arena</a>
       </div>
-      <a href="/profile" class="mobile-nav-link">My Profile</a>
+      <a href="/profile" class="mobile-nav-link">Stats</a>
       <a href="/journey" class="mobile-nav-link">Trainer Journey</a>
       <div class="mobile-nav-group">
         <div class="mobile-nav-group-label">Help</div>
@@ -125,7 +125,9 @@
         const info = await resp.json();
         if (info.authenticated && info.username) {
           localStorage.setItem("poke_username", info.username);
-          document.getElementById("nav-user").textContent = "🌐 " + info.username;
+          const navUser = document.getElementById("nav-user");
+          navUser.innerHTML = '🌐 <a href="/account" id="nav-user-link"></a>';
+          document.getElementById("nav-user-link").textContent = info.username;
           _loadStreak(info.username);
         } else if (info.authenticated && !info.username) {
           if (!window.location.pathname.startsWith("/auth/")) {

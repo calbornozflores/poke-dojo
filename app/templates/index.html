@@ -14,6 +14,10 @@
         <svg width="18" height="18" viewBox="0 0 18 18" style="vertical-align:middle;margin-right:8px"><path d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.84-1.57 2.4v2h2.53c1.49-1.37 2.27-3.38 2.27-5.4 0-.37-.04-.73-.1-1z" fill="#4285F4"/><path d="M8.98 17c2.16 0 3.97-.71 5.3-1.93l-2.54-2c-.72.48-1.64.77-2.76.77-2.12 0-3.91-1.43-4.55-3.35H1.8v2.07C3.13 15.19 5.88 17 8.98 17z" fill="#34A853"/><path d="M4.43 10.49a5.4 5.4 0 0 1 0-3.43V4.99H1.8a8.96 8.96 0 0 0 0 8.07l2.63-2.57z" fill="#FBBC05"/><path d="M8.98 3.58c1.19 0 2.26.41 3.1 1.21l2.32-2.32C12.95 1.18 11.13.36 8.98.36 5.88.36 3.13 2.16 1.8 4.99l2.63 2.07c.64-1.92 2.43-3.48 4.55-3.48z" fill="#EA4335"/></svg>
         Sign in with Google
       </button>
+      <div class="hero-actions" style="margin:0.5rem 0">
+        <a href="/auth/signup" class="btn btn-ghost">Create Account</a>
+        <a href="/auth/login" class="btn btn-ghost">Log In</a>
+      </div>
       <div class="auth-divider"><span>or play as guest</span></div>
       {% endif %}
       <label for="username-input">Choose your trainer name:</label>
@@ -103,7 +107,13 @@
     usernameSection.classList.add("hidden");
     returningSection.classList.remove("hidden");
     returningName.textContent = name;
-    document.getElementById("nav-user").textContent = isGlobal ? "🌐 " + name : name;
+    const navUser = document.getElementById("nav-user");
+    if (isGlobal) {
+      navUser.innerHTML = '🌐 <a href="/account" id="nav-user-link"></a>';
+      document.getElementById("nav-user-link").textContent = name;
+    } else {
+      navUser.textContent = name;
+    }
     if (isGlobal) {
       document.getElementById("returning-badge").classList.remove("hidden");
       document.getElementById("logout-btn").classList.remove("hidden");

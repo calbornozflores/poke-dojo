@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 # Leet-speak: digit substitutions only (charset is already [a-zA-Z0-9-_])
 _LEET = str.maketrans("01345678", "oieasbbt")
 
@@ -45,3 +47,30 @@ def is_banned(username: str) -> bool:
                 return True
 
     return False
+
+
+_EMAIL_RE = re.compile(r'[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}', re.IGNORECASE)
+
+
+def contains_pii(username: str) -> bool:
+    """True if username looks like an email address or a phone/ID-like digit run."""
+    if _EMAIL_RE.search(username):
+        return True
+    # Strip separators so "555-1234" / "555 1234" are also caught, not just raw digit runs
+    stripped = re.sub(r'[\s\-.]', '', username)
+    return bool(re.search(r'\d{7,}', stripped))
+
+
+def validate_username(name: str) -> str | None:
+    """Single source of truth for username rules. Returns an error message, or None if valid."""
+    if len(name) < 3 or len(name) > 20:
+        return "Username must be 3–20 characters"
+    if not all(c.isalnum() or c in "-_" for c in name):
+        return "Only letters, numbers, hyphens, and underscores allowed"
+    if name.isdigit():
+        return "Username must contain at least one letter"
+    if contains_pii(name):
+        return "Avoid emails, phone numbers, or ID-like numbers in your username"
+    if is_banned(name):
+        return "That name is not allowed"
+    return None
