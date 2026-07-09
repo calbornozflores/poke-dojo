@@ -175,6 +175,11 @@ async def auth_login_page(request: Request):
     return templates.TemplateResponse(request=request, name="auth_native.html", context={"initial_tab": "login"})
 
 
+@app.get("/auth/reset-password")
+async def auth_reset_password_page(request: Request):
+    return templates.TemplateResponse(request=request, name="auth_reset_password.html")
+
+
 # ── API ───────────────────────────────────────────────────────────────────────
 
 @app.get("/api/status")

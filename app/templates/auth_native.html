@@ -25,7 +25,7 @@
         <label for="signup-email" style="margin-top:0.75rem">Email (optional)</label>
         <div class="input-row"><input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email" /></div>
 
-        <div id="no-email-warning" class="privacy-notice hidden">
+        <div id="no-email-warning" class="privacy-notice">
           ⚠️ You haven't added an email. Without one, there is no way to recover your password
           if you forget it — this cannot be undone later. You can still add an email afterward
           from your Account page, but only <em>before</em> you forget your password will that help.
@@ -49,6 +49,20 @@
 
         <button id="login-btn" class="btn btn-primary" style="margin-top:1rem">Log In</button>
         <p class="hint" id="login-hint"></p>
+        <p class="hint"><a href="#" id="forgot-password-link">Forgot your password?</a></p>
+      </div>
+    </div>
+
+    <div id="recover-panel" class="hidden">
+      <div class="username-form">
+        <label for="recover-username">Trainer name</label>
+        <div class="input-row"><input type="text" id="recover-username" placeholder="Your trainer name" autocomplete="username" /></div>
+
+        <button id="recover-btn" class="btn btn-primary" style="margin-top:1rem">Send Reset Link</button>
+        <p class="hint" id="recover-hint">
+          Only accounts with an email on file can receive a reset link — accounts created without one can't be recovered.
+        </p>
+        <p class="hint"><a href="#" id="back-to-login-link">Back to Log In</a></p>
       </div>
     </div>
   </div>
@@ -64,6 +78,7 @@ const initialTab = "{{ initial_tab }}";
 
 const signupPanel = document.getElementById("signup-panel");
 const loginPanel = document.getElementById("login-panel");
+const recoverPanel = document.getElementById("recover-panel");
 const tabSignupBtn = document.getElementById("tab-signup-btn");
 const tabLoginBtn = document.getElementById("tab-login-btn");
 
@@ -71,12 +86,27 @@ function showTab(tab) {
   const isSignup = tab === "signup";
   signupPanel.classList.toggle("hidden", !isSignup);
   loginPanel.classList.toggle("hidden", isSignup);
+  recoverPanel.classList.add("hidden");
   tabSignupBtn.className = isSignup ? "btn btn-primary" : "btn btn-ghost";
   tabLoginBtn.className = isSignup ? "btn btn-ghost" : "btn btn-primary";
 }
 tabSignupBtn.addEventListener("click", () => showTab("signup"));
 tabLoginBtn.addEventListener("click", () => showTab("login"));
 showTab(initialTab === "login" ? "login" : "signup");
+
+function showRecoverPanel() {
+  signupPanel.classList.add("hidden");
+  loginPanel.classList.add("hidden");
+  recoverPanel.classList.remove("hidden");
+}
+document.getElementById("forgot-password-link").addEventListener("click", e => {
+  e.preventDefault();
+  showRecoverPanel();
+});
+document.getElementById("back-to-login-link").addEventListener("click", e => {
+  e.preventDefault();
+  showTab("login");
+});
 
 async function adoptSession(access_token, refresh_token, username) {
   await _supabaseClient.auth.setSession({ access_token, refresh_token });
@@ -185,6 +215,40 @@ loginBtn.addEventListener("click", async () => {
     loginHint.className = "hint error";
     loginBtn.disabled = false;
     loginBtn.textContent = "Log In";
+  }
+});
+
+// ── Forgot Password ─────────────────────────────────────────────────────
+const recoverBtn = document.getElementById("recover-btn");
+const recoverHint = document.getElementById("recover-hint");
+const recoverDefaultHint = recoverHint.textContent;
+
+recoverBtn.addEventListener("click", async () => {
+  const username = document.getElementById("recover-username").value.trim();
+  if (!username) {
+    recoverHint.textContent = "Please enter your trainer name.";
+    recoverHint.className = "hint error";
+    return;
+  }
+
+  recoverBtn.disabled = true;
+  recoverBtn.textContent = "Sending…";
+
+  try {
+    const resp = await fetch("/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username }),
+    });
+    const data = await resp.json();
+    recoverHint.textContent = data.message ?? recoverDefaultHint;
+    recoverHint.className = "hint";
+  } catch (_) {
+    recoverHint.textContent = "Something went wrong. Please try again.";
+    recoverHint.className = "hint error";
+  } finally {
+    recoverBtn.disabled = false;
+    recoverBtn.textContent = "Send Reset Link";
   }
 });
 </script>

@@ -2,7 +2,7 @@ from __future__ import annotations
 import os
 import re
 import secrets
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from sqlalchemy.orm import Session
@@ -195,6 +195,50 @@ def login(req: LoginRequest):
         access_token=signin.session.access_token,
         refresh_token=signin.session.refresh_token,
     )
+
+
+class ForgotPasswordRequest(BaseModel):
+    username: str
+
+
+class ForgotPasswordResponse(BaseModel):
+    ok: bool
+    message: str
+
+
+_RECOVERY_MESSAGE = "If that account has a recovery email on file, we've sent a password reset link to it."
+
+
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+def forgot_password(req: ForgotPasswordRequest, request: Request):
+    """Always returns the same generic message regardless of whether the
+    username exists, is a Google account, or has only a placeholder email —
+    prevents username enumeration and avoids leaking which accounts lack a
+    recovery email."""
+    generic = ForgotPasswordResponse(ok=True, message=_RECOVERY_MESSAGE)
+    if not supabase_client.is_configured():
+        return generic
+
+    name = req.username.strip().lower()
+    admin = supabase_client.get_admin_client()
+    row = admin.table("players").select("google_id").eq("username", name).execute()
+    if not row.data:
+        return generic
+
+    try:
+        auth_user = admin.auth.admin.get_user_by_id(row.data[0]["google_id"]).user
+        providers = auth_user.app_metadata.get("providers") or [auth_user.app_metadata.get("provider")]
+        is_native = "google" not in providers
+        email = auth_user.email or ""
+        has_real_email = is_native and bool(email) and not email.endswith(f"@{supabase_client.PLACEHOLDER_EMAIL_DOMAIN}")
+        if has_real_email:
+            redirect_to = str(request.base_url).rstrip("/") + "/auth/reset-password"
+            anon = supabase_client.get_anon_client()
+            anon.auth.reset_password_for_email(email, {"redirect_to": redirect_to})
+    except Exception:
+        pass
+
+    return generic
 
 
 @router.post("/verify", response_model=VerifyResponse)
