@@ -344,6 +344,14 @@ function officialArtwork(pokemonId) {
   return `/sprites/artwork/${pokemonId}.png`;
 }
 
+// Layered white glow that gives a silhouette a crisp, readable rim against
+// the dark stage background — mirrors the recipe in .arena-sprite.silhouette
+// (static/css/style.css). Keep the two in sync if either changes.
+const SILHOUETTE_GLOW =
+  "drop-shadow(0 0 2px rgba(255,255,255,0.9)) " +
+  "drop-shadow(0 0 6px rgba(255,255,255,0.6)) " +
+  "drop-shadow(0 0 16px rgba(255,255,255,0.35))";
+
 // ── Round prefetching ───────────────────────────────────────────────────────
 // Kicked off as soon as the current round's result comes back, so the next
 // round's data + artwork are usually already loaded by the time the player
@@ -410,7 +418,7 @@ async function loadRound() {
   } else {
     const sl = roundData.silhouette_level ?? 0;
     spriteEl.style.filter = sl > 0
-      ? `brightness(${(1 - sl).toFixed(3)}) invert(${sl.toFixed(3)})`
+      ? `brightness(${(1 - sl).toFixed(3)}) invert(${sl.toFixed(3)}) ${SILHOUETTE_GLOW}`
       : "";
   }
 
@@ -538,23 +546,10 @@ function startReveal() {
     spriteEl.style.animationDuration = `${dur}s`;
     spriteEl.style.animationTimingFunction = "linear";
     spriteEl.style.animationFillMode = "forwards";
-  } else {
-    // Solo mode: WAAPI reveal from current silhouette level to fully visible
-    const sl = roundData.silhouette_level ?? 0;
-    if (sl > 0 && sl < 1.0) {
-      // Partial silhouette (rounds 31–49): animate to fully visible
-      spriteEl.getAnimations().forEach(a => a.cancel());
-      spriteEl.animate(
-        [
-          { filter: `brightness(${(1 - sl).toFixed(3)}) invert(${sl.toFixed(3)})` },
-          { filter: "none" },
-        ],
-        { duration: dur * 1000, easing: "linear", fill: "forwards" }
-      );
-    }
-    // sl === 0: fully visible, no animation needed
-    // sl >= 1.0: full silhouette stays white until player answers (round ≥ 50)
   }
+  // Solo mode: no reveal animation — silhouette level is fixed for the whole
+  // round (difficulty ramps across rounds, not within one) via the static
+  // filter loadRound() already applied.
 
   clearTimeout(revealTimer);
   revealTimer = setTimeout(() => {
