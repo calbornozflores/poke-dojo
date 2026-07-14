@@ -49,10 +49,7 @@
       <div id="setup-single" class="hidden">
         <h1 class="arena-title"><img src="/sprites/pokemon/150.png" class="arena-title-sprite" alt=""> Solo Challenge</h1>
         <p class="arena-subtitle">Endless rounds — 3 lives (Luvdisc hearts). A wrong answer or timeout removes one. Survive as long as you can.</p>
-        <div class="arena-player-block" style="margin:0 auto;max-width:300px">
-          <div class="arena-player-label">Your Name</div>
-          <input id="solo-name" class="arena-name-input" placeholder="Enter trainer name…" maxlength="20" />
-        </div>
+        <p class="arena-subtitle" id="solo-playing-as" style="margin-top:-0.5rem"></p>
         <div class="arena-key-assign">
           <div class="arena-key-assign-label">Assign your keys for options 1, 2, 3:</div>
           <div class="arena-key-assign-row">
@@ -242,8 +239,10 @@ document.getElementById("setup-single").classList.toggle("hidden", MODE !== "sin
 
 if (MODE === "vs") {
   document.getElementById("p1-name").value = username;
+} else if (!username) {
+  window.location.href = "/";
 } else {
-  document.getElementById("solo-name").value = username;
+  document.getElementById("solo-playing-as").innerHTML = `Playing as <strong>${escapeHtml(username)}</strong>`;
 }
 
 document.querySelectorAll(".rounds-pill").forEach(btn => {
@@ -307,8 +306,7 @@ document.getElementById("start-match-btn").addEventListener("click", async () =>
     if (!p1Name || !p2Name) { errEl.textContent = "Both player names required."; errEl.classList.remove("hidden"); return; }
     if (p1Name === p2Name)  { errEl.textContent = "Player names must be different."; errEl.classList.remove("hidden"); return; }
   } else {
-    soloName = document.getElementById("solo-name").value.trim();
-    if (!soloName) { errEl.textContent = "Enter your trainer name."; errEl.classList.remove("hidden"); return; }
+    soloName = username;
     if (!isMobile && soloKeySlots.some(k => k === null)) { errEl.textContent = "Assign all 3 keys first."; errEl.classList.remove("hidden"); return; }
     if (!isMobile) {
       SOLO_KEYS = {};
@@ -339,7 +337,7 @@ document.getElementById("start-match-btn").addEventListener("click", async () =>
   }
 
   showScreen("round-screen");
-  loadRound();
+  safeLoadRound();
 });
 
 function officialArtwork(pokemonId) {
@@ -420,7 +418,7 @@ async function loadRound() {
   optionsEl.innerHTML = "";
   const keyLabels = MODE === "vs"
     ? [["Q","I"], ["W","O"], ["E","P"]]
-    : soloKeySlots.map(k => [k.toUpperCase()]);
+    : soloKeySlots.map(k => k ? [k.toUpperCase()] : []);
   roundData.options.forEach((name, i) => {
     const btn = document.createElement("button");
     btn.className = "arena-option-btn";
@@ -472,6 +470,17 @@ async function loadRound() {
   if (spriteEl.complete && spriteEl.naturalWidth > 0) {
     _doStartReveal(); // already cached (prefetch hit)
   }
+}
+
+// loadRound() is invoked fire-and-forget from several places (match start,
+// next-round buttons/countdowns) — this wrapper keeps a thrown/rejected
+// error from silently freezing the UI with stale placeholder text.
+function safeLoadRound() {
+  loadRound().catch(err => {
+    console.error(err);
+    document.getElementById("arena-round-info").textContent =
+      "Something went wrong loading this round — please refresh and try again.";
+  });
 }
 
 // ── Life-lost flash ───────────────────────────────────────────────────────
@@ -700,7 +709,7 @@ function showRoundResult(result) {
 
   if (MODE === "vs") {
     const isLast = currentRound >= totalRounds;
-    const nextAction = isLast ? endMatch : loadRound;
+    const nextAction = isLast ? endMatch : safeLoadRound;
     nextBtn.textContent = isLast ? "See Final Results" : "Next Round";
     nextBtn.onclick = () => { clearVSCountdown(); nextAction(); };
 
@@ -721,7 +730,7 @@ function showRoundResult(result) {
 
   } else {
     nextBtn.textContent = "Next Round";
-    nextBtn.onclick = loadRound;
+    nextBtn.onclick = safeLoadRound;
     countdownEl.textContent = "Press any key or Enter to continue…";
     countdownEl.classList.remove("hidden");
   }
