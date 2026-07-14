@@ -9,6 +9,7 @@ from sqlalchemy import desc
 from app.database import get_db
 from app.models import Pokemon, User, CompetitiveMatch, CompetitiveResult
 from app.services import supabase_client, pokemon_cache, match_state
+from app.services.sprite_proxy import rewrite_sprite_url
 
 router = APIRouter(prefix="/battle", tags=["battle"])
 
@@ -127,7 +128,7 @@ def next_round(match_id: int, round_number: int, db: Session = Depends(get_db)):
         match_id=match_id,
         round_number=round_number,
         pokemon_id=pokemon.id,
-        sprite_url=pokemon.sprite_url,
+        sprite_url=rewrite_sprite_url(pokemon.sprite_url),
         options=options,
         correct_position=correct_pos,
         generation=pokemon.generation,
@@ -209,7 +210,7 @@ def submit_round(req: SubmitRoundRequest, db: Session = Depends(get_db)):
         player2_score=p2_score if state.mode == "vs" else None,
         correct_position=req.correct_option_position,
         pokemon_name=pokemon.name,
-        sprite_url=pokemon.sprite_url,
+        sprite_url=rewrite_sprite_url(pokemon.sprite_url),
     )
 
 
@@ -272,7 +273,7 @@ def finish_match(req: FinishMatchRequest, db: Session = Depends(get_db)):
             "round_number": r.round_number,
             "pokemon_id": r.pokemon_id,
             "pokemon_name": p.name if p else "?",
-            "sprite_url": p.sprite_url if p else "",
+            "sprite_url": rewrite_sprite_url(p.sprite_url) if p else "",
             "correct_position": r.correct_option_position,
             "player1_key": r.player1_key_pressed,
             "player1_ms": r.player1_response_ms,

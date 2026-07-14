@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Pokemon, CaughtPokemon, PendingEncounter
+from app.services.sprite_proxy import rewrite_sprite_url
 
 router = APIRouter(prefix="/pokedex", tags=["pokedex"])
 
@@ -52,7 +53,7 @@ def pokedex_data(
         result.append({
             "id": p.id,
             "name": p.name,
-            "sprite_url": p.sprite_url,
+            "sprite_url": rewrite_sprite_url(p.sprite_url),
             "caught": caught is not None,
             "level": caught.level if caught else None,
             "caught_at": caught.caught_at.strftime("%Y-%m-%d") if caught else None,
@@ -88,7 +89,7 @@ def get_encounter(username: str = Query(""), db: Session = Depends(get_db)):
     return {
         "pokemon_id": p.id,
         "pokemon_name": p.name,
-        "sprite_url": p.sprite_url,
+        "sprite_url": rewrite_sprite_url(p.sprite_url),
         "level": enc_level,
         "can_catch": can_catch,
         "throws_used": enc.throws_used,

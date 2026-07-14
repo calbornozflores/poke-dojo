@@ -1671,6 +1671,7 @@ a:hover { color: var(--accent-hover); }
   animation: arenaSpriteShimmer 1.2s ease-in-out infinite;
 }
 .arena-sprite.is-loading { opacity: 0; }
+.arena-sprite.load-error { opacity: 0; }
 @keyframes arenaSpriteShimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }

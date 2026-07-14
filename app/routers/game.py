@@ -14,6 +14,7 @@ from app.services.string_match import name_accuracy
 from app.services.pokemon_data import number_accuracy
 from app.services import xgboost_model
 from app.services.supabase_client import is_authenticated_user
+from app.services.sprite_proxy import proxy_url, rewrite_sprite_url, type_proxy_url, TYPE_IDS
 from app.services.level_system import (
     level_from_xp,
     xp_for_level,
@@ -272,13 +273,6 @@ def profile_breakdown(
             type_acc[poke.type2].append(result.accuracy)
 
     MIN_N = 5
-    _TYPE_IDS = {
-        "normal": 1, "fighting": 2, "flying": 3, "poison": 4, "ground": 5,
-        "rock": 6, "bug": 7, "ghost": 8, "steel": 9, "fire": 10, "water": 11,
-        "grass": 12, "electric": 13, "psychic": 14, "ice": 15, "dragon": 16,
-        "dark": 17, "fairy": 18,
-    }
-    _CDN = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-ix/scarlet-violet"
     _STAGE_ORDER  = {"basic": 0, "stage_1": 1, "stage_2": 2}
     _STAGE_LABELS = {"basic": "Basic", "stage_1": "Stage 1", "stage_2": "Stage 2"}
 
@@ -299,12 +293,12 @@ def profile_breakdown(
     by_type = sorted([
         {
             "label": t.capitalize(),
-            "icon":  f"{_CDN}/{_TYPE_IDS[t]}.png",
+            "icon":  type_proxy_url(t),
             "avg":   _avg(accs),
             "n":     len(accs),
         }
         for t, accs in type_acc.items()
-        if len(accs) >= MIN_N and t in _TYPE_IDS
+        if len(accs) >= MIN_N and t in TYPE_IDS
     ], key=lambda x: x["avg"])
 
     return {
@@ -442,8 +436,8 @@ def start_game(req: StartRequest, db: Session = Depends(get_db)):
 
     return StartResponse(
         pokemon_id=pokemon.id,
-        sprite_url=pokemon.sprite_url,
-        artwork_url=f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{pokemon.id}.png",
+        sprite_url=rewrite_sprite_url(pokemon.sprite_url),
+        artwork_url=proxy_url(pokemon.id, "artwork"),
         name=pokemon.name if show_name else None,
         challenge_unlocked=challenge_unlocked,
         games_played=games_played,

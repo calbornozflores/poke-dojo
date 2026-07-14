@@ -17,7 +17,7 @@
   <div id="setup-screen" class="arena-screen">
     <div class="arena-setup-card">
       <div id="setup-vs" class="hidden">
-        <h1 class="arena-title"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/11.png" class="arena-title-sprite" alt=""><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/11.png" class="arena-title-sprite arena-title-sprite-flip" alt=""> VS Mode</h1>
+        <h1 class="arena-title"><img src="/sprites/pokemon/11.png" class="arena-title-sprite" alt=""><img src="/sprites/pokemon/11.png" class="arena-title-sprite arena-title-sprite-flip" alt=""> VS Mode</h1>
         <p class="arena-subtitle">2 players share the same keyboard. First to identify the Pokémon wins the round.</p>
         <div class="mobile-vs-warning" style="background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.35);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:#fb923c;text-align:center;">
           ⌨️ VS Mode is a desktop-only experience — it requires a physical keyboard (Q/W/E for P1, I/O/P for P2).
@@ -47,7 +47,7 @@
       </div>
 
       <div id="setup-single" class="hidden">
-        <h1 class="arena-title"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png" class="arena-title-sprite" alt=""> Solo Challenge</h1>
+        <h1 class="arena-title"><img src="/sprites/pokemon/150.png" class="arena-title-sprite" alt=""> Solo Challenge</h1>
         <p class="arena-subtitle">Endless rounds — 3 lives (Luvdisc hearts). A wrong answer or timeout removes one. Survive as long as you can.</p>
         <div class="arena-player-block" style="margin:0 auto;max-width:300px">
           <div class="arena-player-label">Your Name</div>
@@ -95,9 +95,9 @@
       <div class="arena-round-num" id="arena-round-num">Round 1</div>
       <div class="arena-scoreboard" id="arena-scoreboard"></div>
       <div id="luvdisc-bar" class="luvdisc-bar hidden">
-        <img id="luvdisc-0" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/370.png" class="luvdisc-heart" alt="♥">
-        <img id="luvdisc-1" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/370.png" class="luvdisc-heart" alt="♥">
-        <img id="luvdisc-2" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/370.png" class="luvdisc-heart" alt="♥">
+        <img id="luvdisc-0" src="/sprites/artwork/370.png" class="luvdisc-heart" alt="♥">
+        <img id="luvdisc-1" src="/sprites/artwork/370.png" class="luvdisc-heart" alt="♥">
+        <img id="luvdisc-2" src="/sprites/artwork/370.png" class="luvdisc-heart" alt="♥">
       </div>
       <div class="arena-reveal-bar-wrap">
         <div class="arena-reveal-bar" id="arena-reveal-bar"></div>
@@ -343,7 +343,7 @@ document.getElementById("start-match-btn").addEventListener("click", async () =>
 });
 
 function officialArtwork(pokemonId) {
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
+  return `/sprites/artwork/${pokemonId}.png`;
 }
 
 // ── Round prefetching ───────────────────────────────────────────────────────
@@ -453,10 +453,20 @@ async function loadRound() {
     if (_revealStarted) return;
     _revealStarted = true;
     spriteEl.onload = null;
+    spriteEl.onerror = null;
     stageEl.classList.remove("is-loading");
     spriteEl.classList.remove("is-loading");
     startReveal();
   }
+  // If the sprite image fails to load, don't leave the round stuck forever —
+  // hide the broken-image glyph, let the player answer from the option text
+  // alone, and start the round normally.
+  spriteEl.onerror = () => {
+    spriteEl.classList.add("load-error");
+    document.getElementById("arena-round-info").textContent =
+      "Image failed to load — pick from the options below.";
+    _doStartReveal();
+  };
   spriteEl.onload = _doStartReveal;
   spriteEl.src = officialArtwork(roundData.pokemon_id);
   if (spriteEl.complete && spriteEl.naturalWidth > 0) {
@@ -826,7 +836,7 @@ async function endSingleRun(reason) {
   if (soloRound >= 10) {
     emojiEl.innerHTML = `<img src="${officialArtwork(289)}" class="analytics-slaking" alt="Slaking">`;
   } else {
-    emojiEl.innerHTML = `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/92.png" class="analytics-slaking" alt="Gastly">`;
+    emojiEl.innerHTML = `<img src="/sprites/artwork/92.png" class="analytics-slaking" alt="Gastly">`;
   }
   document.getElementById("analytics-run-title").textContent = reason;
   document.getElementById("sg-rounds").textContent = soloRound;

@@ -323,7 +323,7 @@ function renderEncounters() {
 
   document.getElementById("encounter-card").innerHTML = `
     <div class="encounter-banner">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${enc.pokemon_id}.png"
+      <img src="/sprites/pokemon/${enc.pokemon_id}.png"
            alt="${enc.pokemon_name}" class="enc-banner-sprite">
       <div class="enc-banner-text">
         <strong>A weakened ${enc.pokemon_name} is waiting!</strong>
@@ -381,7 +381,7 @@ async function loadRegion(gen) {
     tile.className = "pdx-tile" + (p.caught ? " caught" : "") + (p.is_pending ? " pending" : "");
     tile.dataset.pokemonId = p.id;
 
-    const spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${p.id}.png`;
+    const spriteUrl = `/sprites/artwork/${p.id}.png`;
     const imgClass = p.caught ? "" : "uncaught-sprite";
 
     tile.innerHTML = `
@@ -427,7 +427,7 @@ function openThrowModal(enc) {
   document.getElementById("modal-hp-text").textContent =
     `HP: ${Math.round(enc.hp_fraction * 100)}% remaining · Catch chance: ${Math.round(enc.catch_probability * 100)}% per throw`;
   document.getElementById("modal-sprite").src =
-    `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${enc.pokemon_id}.png`;
+    `/sprites/artwork/${enc.pokemon_id}.png`;
 
   // Green arc
   const circumference = 2 * Math.PI * 80; // r=80

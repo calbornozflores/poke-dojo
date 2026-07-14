@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 data/pokemon.db
 data/challenge_model_*.json
+data/sprite_cache/
 .env
 *.egg-info/
 dist/

@@ -10,7 +10,7 @@
   <div class="daily-screen hidden" id="screen-game">
     <div class="daily-header">
       <div>
-        <div class="daily-header-title"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/132.png" alt="Ditto" style="width:28px;height:28px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Who's that Pokémon?</div>
+        <div class="daily-header-title"><img src="/sprites/pokemon/132.png" alt="Ditto" style="width:28px;height:28px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Who's that Pokémon?</div>
         <div class="daily-header-date" id="game-date-label"></div>
       </div>
       <div class="daily-header-right">
@@ -62,7 +62,7 @@
   <div class="daily-screen hidden" id="screen-solved">
     <div class="daily-header">
       <div>
-        <div class="daily-header-title"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/132.png" alt="Ditto" style="width:28px;height:28px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Daily Challenge</div>
+        <div class="daily-header-title"><img src="/sprites/pokemon/132.png" alt="Ditto" style="width:28px;height:28px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">Daily Challenge</div>
         <div class="daily-header-date" id="solved-date-label"></div>
       </div>
       <div class="daily-header-right">
@@ -175,7 +175,7 @@ async function init() {
     renderGuessList('daily-guess-list');
     renderGuessList('solved-guess-list');
     document.getElementById('solved-sprite').src =
-      `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${answerPokemonId}.png`;
+      `/sprites/artwork/${answerPokemonId}.png`;
     document.getElementById('solved-title').textContent =
       `Solved in ${status.guesses} guess${status.guesses===1?'':'es'}!`;
     document.getElementById('solved-sub').textContent = 'Come back tomorrow for a new Pokémon.';
@@ -381,7 +381,7 @@ function renderGuessList(containerId) {
 // ── Solved screen ──────────────────────────────────────────────────────────
 async function showSolvedScreen(guessCount) {
   document.getElementById('solved-sprite').src =
-    `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${answerPokemonId}.png`;
+    `/sprites/artwork/${answerPokemonId}.png`;
   document.getElementById('solved-title').textContent =
     guessCount === 1 ? '🎉 First try!' : `Solved in ${guessCount} guess${guessCount===1?'':'es'}!`;
   document.getElementById('solved-sub').textContent = 'Come back tomorrow for a new Pokémon.';

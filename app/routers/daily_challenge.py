@@ -9,6 +9,7 @@ from datetime import timedelta
 from app.database import get_db
 from app.models import Pokemon, DailyPokemon, DailyChallengeResult, DailyChallengeGuess, User
 from app.services.supabase_client import is_authenticated_user
+from app.services.sprite_proxy import rewrite_sprite_url
 
 router = APIRouter(prefix="/daily", tags=["daily"])
 
@@ -305,7 +306,7 @@ def search_pokemon(q: str = Query(..., min_length=1), db: Session = Depends(get_
         SearchResult(
             id=p.id,
             name=p.name,
-            sprite_url=p.sprite_url,
+            sprite_url=rewrite_sprite_url(p.sprite_url),
             type1=p.type1,
             type2=p.type2,
             generation=p.generation,
@@ -332,7 +333,7 @@ def get_guesses(username: str = Query(...), db: Session = Depends(get_db)):
             guess_number=g.guess_number,
             pokemon_id=p.id,
             name=p.name,
-            sprite_url=p.sprite_url,
+            sprite_url=rewrite_sprite_url(p.sprite_url),
             type1=p.type1,
             type2=p.type2,
             generation=p.generation,

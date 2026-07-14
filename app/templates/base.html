@@ -103,7 +103,7 @@
           const id = streak >= 30 ? 609 : streak >= 7 ? 608 : 607;
           const el = document.getElementById("nav-streak");
           el.innerHTML =
-            `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png">` +
+            `<img src="/sprites/pokemon/${id}.png">` +
             `<span>${streak}</span>`;
           el.classList.remove("hidden");
         }

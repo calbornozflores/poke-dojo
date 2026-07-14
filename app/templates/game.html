@@ -12,7 +12,7 @@
       <div class="game-section-label">DOJO</div>
 
       <button class="mode-btn active" id="btn-game1" data-game="name_guess">
-        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" class="mode-sprite">Name It
+        <img src="/sprites/pokemon/25.png" alt="" class="mode-sprite">Name It
       </button>
       <div id="name-submode" class="type-submode hidden">
         <button class="submode-pill" id="submode-name-easy">Easy</button>
@@ -21,7 +21,7 @@
       </div>
 
       <button class="mode-btn" id="btn-game2" data-game="number_guess">
-        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" alt="" class="mode-sprite">Guess Number
+        <img src="/sprites/pokemon/493.png" alt="" class="mode-sprite">Guess Number
       </button>
       <div id="number-submode" class="type-submode hidden">
         <button class="submode-pill active" id="submode-number-easy">Easy</button>
@@ -30,7 +30,7 @@
       </div>
 
       <button class="mode-btn" id="btn-type">
-        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" alt="" class="mode-sprite">Guess the Type
+        <img src="/sprites/pokemon/133.png" alt="" class="mode-sprite">Guess the Type
       </button>
       <div id="type-submode" class="type-submode hidden">
         <button class="submode-pill active" id="submode-easy">Easy</button>
@@ -41,15 +41,15 @@
       <!-- BATTLE ARENA section -->
       <div class="game-section-label battle-label">BATTLE ARENA</div>
       <a href="/battle-arena?mode=vs" class="mode-btn battle-btn" id="btn-vs">
-        <span class="battle-btn-icon"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/11.png" class="battle-btn-sprite" alt=""><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/11.png" class="battle-btn-sprite battle-btn-sprite-flip" alt=""></span>
+        <span class="battle-btn-icon"><img src="/sprites/pokemon/11.png" class="battle-btn-sprite" alt=""><img src="/sprites/pokemon/11.png" class="battle-btn-sprite battle-btn-sprite-flip" alt=""></span>
         <span class="battle-btn-text">VS Mode<span class="battle-btn-sub">2 players, same keyboard</span></span>
       </a>
       <a href="/battle-arena?mode=single" class="mode-btn battle-btn" id="btn-solo">
-        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png" class="battle-btn-sprite" alt="">
+        <img src="/sprites/pokemon/150.png" class="battle-btn-sprite" alt="">
         <span class="battle-btn-text">Solo Challenge<span class="battle-btn-sub">Endless, tightening clock</span></span>
       </a>
       <a href="/daily-challenge" class="mode-btn battle-btn" id="btn-daily">
-        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/132.png" class="battle-btn-sprite" alt="">
+        <img src="/sprites/pokemon/132.png" class="battle-btn-sprite" alt="">
         <span class="battle-btn-text">Daily Challenge<span class="battle-btn-sub">Same Pokémon for everyone</span></span>
       </a>
 
@@ -225,7 +225,7 @@
     dragon:16, dark:17, fairy:18,
   };
   function typeIconUrl(type) {
-    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-ix/scarlet-violet/${TYPE_IDS[type]}.png`;
+    return `/sprites/type/${type}.png`;
   }
   function typeBadge(type) {
     const color = TYPE_COLORS[type] || '#888';
